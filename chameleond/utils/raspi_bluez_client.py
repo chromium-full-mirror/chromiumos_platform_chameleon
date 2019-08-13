@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -6,24 +8,16 @@
    standalone verification of functionality.
 """
 
-from __future__ import print_function
-
-import bluez_service_consts
-import dbus
-import dbus.service
-import dbus.mainloop.glib
 import logging
 import threading
 import time
 
-# Refer to comment re 'ImportError' in raspi_bluez_service.py
-try:
-  from bluetooth import *
-except ImportError:
-  pass
+import dbus
+import dbus.mainloop.glib
+import dbus.service
 
-from bluez_service_consts import *
-from dbus.mainloop.glib import DBusGMainLoop
+from bluez_service_consts import BLUEZ_KEYBOARD_SERVICE_NAME, \
+    BLUEZ_KEYBOARD_SERVICE_PATH, keymap, modmap
 
 
 class BluezKeyboardClient(object):
@@ -54,25 +48,30 @@ class BluezKeyboardClient(object):
     # mapping of printable characters to keymapkey values
     # for characters that cannot be part of a legal field name.
     self._char_to_key_map = {
-        "'": ("KEY_APOSTROPHE", "MOD_NONE"),
-        " ": ("KEY_SPACE", "MOD_NONE"),
-        ".": ("KEY_PERIOD", "MOD_NONE"),
-        "\n": ("KEY_ENTER", "MOD_NONE"),
-        "!": ("KEY_1", "MOD_SHIFT_LEFT")
+        "\'": ('KEY_APOSTROPHE', 'MOD_NONE'),
+        ' ': ('KEY_SPACE', 'MOD_NONE'),
+        '.': ('KEY_PERIOD', 'MOD_NONE'),
+        '\n': ('KEY_ENTER', 'MOD_NONE'),
+        '!': ('KEY_1', 'MOD_SHIFT_LEFT')
     }
     self._bus = dbus.SystemBus()
     self._service = self._bus.get_object(BLUEZ_KEYBOARD_SERVICE_NAME,
                                          BLUEZ_KEYBOARD_SERVICE_PATH)
     self._iface = dbus.Interface(self._service, BLUEZ_KEYBOARD_SERVICE_NAME)
+    self._signal = None
 
   def keys_sent_handler(self):
     pass
 
   def keys_error_handler(self, err):
-    logging.error("keys_error_handler: %s", err)
+    logging.error('keys_error_handler: %s', err)
 
-  def send_report(self):
+  def send_report(self, report=None):
     """sends a single frame of the current key state to the emulator server"""
+
+    # In case we've been sent a report from a trace, use it
+    if report is not None:
+      self._report = report
 
     modifier = self._report[2]
     self._iface.send_keys(modifier, self._report[4:10],
@@ -93,14 +92,14 @@ class BluezKeyboardClient(object):
 
   def register_connected_handler(self):
     self._signal = self._bus.add_signal_receiver(
-        path="/org/chromium/autotest/btkbservice",
+        path='/org/chromium/autotest/btkbservice',
         handler_function=self.send_string_thread,
-        dbus_interface="org.chromium.autotest.btkbservice",
-        signal_name="connected")
+        dbus_interface='org.chromium.autotest.btkbservice',
+        signal_name='connected')
 
   def send_string_thread(self):
     threadid = threading.Thread(target=self.send_string,
-                                args=("You can't handle the tooth!",))
+                                args=("You can\'t handle the tooth!",))
     threadid.start()
 
   def send_string(self, string_to_send):
@@ -118,7 +117,7 @@ class BluezKeyboardClient(object):
         # Set SHIFT key if uppercase
         if c.upper() == c:
           self._report[2] = modmap['MOD_SHIFT_LEFT']
-        keymapkey = "KEY_"+c.upper()
+        keymapkey = 'KEY_'+c.upper()
 
       scancode = keymap[keymapkey]
       self.send_key_down(scancode)

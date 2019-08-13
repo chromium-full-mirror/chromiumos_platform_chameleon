@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -6,14 +8,14 @@
    on Raspberry Pi.
 """
 
-from __future__ import print_function
+import logging
+import os
+import threading
+import time
 
 import dbus
 import dbus.mainloop.glib
 import dbus.service
-import logging
-import os
-import threading
 
 # Libraries needed on raspberry pi. ImportError on
 # Fizz can be ignored.
@@ -22,13 +24,16 @@ try:
 except ImportError:
   pass
 
+from bluetooth_hid import BluetoothHID
 from bluetooth_peripheral_kit import PeripheralKit
 from bluetooth_peripheral_kit import PeripheralKitException
+from bluez_service_consts import KEYBOARD_PERIPHERAL_DEVICE_CLASS
+from chameleond.utils.raspi_bluez_client import BluezKeyboardClient
 
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
 DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'
 DBUS_BLUEZ_DEVICE_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Device1'
-BLUEZ_KEYBOARD_DEVICE_NAME = "KEYBD_REF"
+BLUEZ_KEYBOARD_DEVICE_NAME = 'KEYBD_REF'
 
 
 class BluezPeripheralException(PeripheralKitException):
@@ -36,13 +41,17 @@ class BluezPeripheralException(PeripheralKitException):
   pass
 
 
-class BluezPeripheral(PeripheralKit):
+class BluezPeripheral(PeripheralKit, BluetoothHID):
   """This is an abstraction of a Bluez peripheral."""
 
   def __init__(self):
     super(BluezPeripheral, self).__init__()
     self._settings = {}
     self._setup_dbus_loop()
+
+    self.remote_address = None
+
+    self._client = None
 
     # Bluez DBus constants - npnext
     self._dbus_system_bus = dbus.SystemBus()
@@ -51,21 +60,19 @@ class BluezPeripheral(PeripheralKit):
                                                             'org.bluez',\
                                                             '/org/bluez/hci0'),\
                                           'org.freedesktop.DBus.Properties')
-    # Make sure device is powered up and discoverable
+
+    # Power on the device - this should only need to happen once
     self._dbus_hci_props.Set('org.bluez.Adapter1',
                              'Powered',
                              dbus.Boolean(1))
-    self._dbus_hci_props.Set('org.bluez.Adapter1',
-                             'Discoverable',
-                             dbus.Boolean(1))
-    logging.debug("Bluetooth adapter powered-up and discoverable")
-    # Set device class and name. These are read-only DBus properties,
-    # so need to be set using system calls.
-    os.system("sudo hciconfig hci0 class 0x002540")
-    os.system("bluetoothctl > /dev/null << EOF \n system-alias " +
-              BLUEZ_KEYBOARD_DEVICE_NAME +
-              "\n quit \n EOF")
-    logging.debug("Bluetooth adapter name %s" % BLUEZ_KEYBOARD_DEVICE_NAME)
+
+    # Initialize remaining parameters
+    self.Init()
+
+    self.SetAdvertisedName(BLUEZ_KEYBOARD_DEVICE_NAME)
+
+    logging.debug('Bluetooth adapter name %s, class %s',
+                  BLUEZ_KEYBOARD_DEVICE_NAME, hex(self.GetClassOfService()))
 
 
   def _setup_dbus_loop(self):
@@ -82,25 +89,88 @@ class BluezPeripheral(PeripheralKit):
       A dictionary from PeripheralKit.CAP_* strings to an appropriate value.
       See PeripheralKit for details.
     """
-    return {PeripheralKit.CAP_TRANSPORTS: [PeripheralKit.TRANSPORT_BREDR],
-            PeripheralKit.CAP_HAS_PIN: True,
-            PeripheralKit.CAP_INIT_CONNECT: True}
+    capabilities = {PeripheralKit.CAP_TRANSPORTS:
+                    [PeripheralKit.TRANSPORT_BREDR, PeripheralKit.TRANSPORT_LE],
+                    PeripheralKit.CAP_HAS_PIN: True,
+                    PeripheralKit.CAP_INIT_CONNECT: True}
+
+    return capabilities
+
+
+  # Power cycle the device
+  def PowerCycle(self):
+    return self.Reboot()
+
+
+  # Override BluetoothHID's implementation of init
+  def Init(self, factory_reset=True):
+    """Ensures our chip is in the correct state for the tests to be run"""
+
+    # Make sure device is powered up and discoverable
+    self._dbus_hci_props.Set('org.bluez.Adapter1',
+                             'Discoverable',
+                             dbus.Boolean(1))
+
+    # NOTE that class type param should be dependent on the stored class type
+    # i.e. when an A2DP service is using this driver, class should reflect that
+    self.SetClassOfService(KEYBOARD_PERIPHERAL_DEVICE_CLASS)
+
+    return True
+
+
+  def CreateSerialDevice(self):
+    """Device setup and recovery
+
+        In the current test framework, CreateSerialDevice is called for
+        device initialization or to try and correct an error. While we
+        don't have a serial connection, this function is used in the same
+        way - device setup and recovery
+    """
+
+    return self.Init()
+
+
+  # Check the serial device we aren't using
+  def CheckSerialConnection(self):
+    return True
+
+
+  # Close the serial device we aren't using
+  def Close(self):
+    return True
 
 
   def EnterCommandMode(self):
-    raise NotImplementedError("Not Implemented")
+    return True
+
+
+  def GetPort(self):
+    return '/dev/fakedev'
 
 
   def LeaveCommandMode(self, force=False):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def Reboot(self):
-    raise NotImplementedError("Not Implemented")
+    logging.info('REBOOTING')
+
+    # Turn it off
+    self._dbus_hci_props.Set('org.bluez.Adapter1',
+                             'Powered',
+                             dbus.Boolean(0))
+
+    # Turn it back on again
+    self._dbus_hci_props.Set('org.bluez.Adapter1',
+                             'Powered',
+                             dbus.Boolean(1))
+
+    # Put ourselves back into correct state for discovery
+    return self.Init()
 
 
   def FactoryReset(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def GetAdvertisedName(self):
@@ -109,51 +179,54 @@ class BluezPeripheral(PeripheralKit):
     Returns:
       The name that the kit advertises to other Bluetooth devices.
     """
-    return self._dbus_hci_props.Get('org.bluez.Adapter1', 'Alias')
+    return str(self._dbus_hci_props.Get('org.bluez.Adapter1', 'Alias'))
+
+  def SetAdvertisedName(self, name):
+    self._dbus_hci_props.Set('org.bluez.Adapter1', 'Alias', dbus.String(name))
 
 
   def GetFirmwareVersion(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def GetOperationMode(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def SetMasterMode(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def SetSlaveMode(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def GetAuthenticationMode(self):
-    raise NotImplementedError("Not Implemented")
+    return PeripheralKit.OPEN_MODE
 
 
   def SetAuthenticationMode(self, mode):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def GetPinCode(self):
-    raise NotImplementedError("Not Implemented")
+    return '0000'
 
 
   def SetPinCode(self, pin):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def GetServiceProfile(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def SetServiceProfileSPP(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def SetServiceProfileHID(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def GetLocalBluetoothAddress(self):
@@ -163,42 +236,91 @@ class BluezPeripheral(PeripheralKit):
     (dbus.exceptions.DBus.Error.UnknownObject)
     """
     try:
-      addr = self._dbus_hci_props.Get('org.bluez.Adapter1', 'Address')
-    except:
+      addr = str(self._dbus_hci_props.Get('org.bluez.Adapter1', 'Address'))
+    except dbus.exceptions.DBusException:
       addr = None
     return addr
 
 
   def GetConnectionStatus(self):
-    raise NotImplementedError("Not Implemented")
+    """Determine whether the device has an active connection
+
+    Returns:
+      True if a connection is active, False otherwise
+    """
+
+    # If we can't find a connected object, no active connections
+    if self.GetRemoteConnectedBluetoothAddress() is not None:
+      return True
+
+    return False
 
 
   def EnableConnectionStatusMessage(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def DisableConnectionStatusMessage(self):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
+
+
+  def _GetDeviceWithAddress(self, addr):
+    manager = dbus.Interface(self._dbus_system_bus.get_object('org.bluez', '/'),
+                             'org.freedesktop.DBus.ObjectManager')
+
+    objects = manager.GetManagedObjects()
+
+    # Go through each object in org.bluez.Device1 until
+    # we find the one that matches our desired address
+    for path, ifaces in objects.items():
+      device = ifaces.get(DBUS_BLUEZ_DEVICE_IFACE)
+
+      if device is not None and device['Address'] == addr:
+        obj = self._dbus_system_bus.get_object('org.bluez', path)
+        return dbus.Interface(obj, DBUS_BLUEZ_DEVICE_IFACE)
 
 
   def GetRemoteConnectedBluetoothAddress(self):
-    raise NotImplementedError("Not Implemented")
+    """Get the address of the current connected device, if applicable
+
+    Returns:
+      None if no connection can be found
+      Mac address of connected device i
+    """
+
+    # Grab ObjectManager and its objects
+    manager = dbus.Interface(self._dbus_system_bus.get_object('org.bluez', '/'),
+                             'org.freedesktop.DBus.ObjectManager')
+
+    objects = manager.GetManagedObjects()
+
+    # Go through each obj in org.bluez.Device1 and check "Connected" attribute
+    for _, ifaces in objects.items():
+      device = ifaces.get(DBUS_BLUEZ_DEVICE_IFACE)
+      if device is None:
+        continue
+      if device['Address'] is not None and device['Connected']:
+        return device['Address']
+
+    return None
 
 
   def GetHIDDeviceType(self):
-    raise NotImplementedError("Not Implemented")
+    return PeripheralKit.KEYBOARD
 
 
   def SetHIDType(self, device_type):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def GetClassOfService(self):
-    return self._dbus_hci_props.Get('org.bluez.Adapter1', 'Class')
+    return int(self._dbus_hci_props.Get('org.bluez.Adapter1', 'Class'))
 
 
   def SetClassOfService(self, class_of_service):
-    raise NotImplementedError("Not Implemented")
+    # Class is a read-only DBus property, so needs to be set using system calls.
+    cmd = 'sudo hciconfig hci0 class {}'.format(hex(class_of_service))
+    os.system(cmd)
 
 
   def GetClassOfDevice(self):
@@ -206,23 +328,49 @@ class BluezPeripheral(PeripheralKit):
 
 
   def _SetClassOfDevice(self, class_of_device):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def SetClassOfDevice(self, device_type):
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
 
   def SetRemoteAddress(self, remote_address):
-    raise NotImplementedError("Not Implemented")
+    self.remote_address = remote_address
 
 
   def Connect(self):
-    raise NotImplementedError("Not Implemented")
+    """Attempts to connect to the address specified with SetRemoteAddress()"""
+
+    if self.remote_address is not None:
+      logging.info('Attempting to connect to %s', self.remote_address)
+
+      # Grab the relevant device
+      device = self._GetDeviceWithAddress(self.remote_address)
+
+      # How to determine if this happens successfully?
+      # Do we need to trust first? Pair?
+      device.Connect()
+
+    else:
+      logging.warn('Cannot connect, no end address')
 
 
   def Disconnect(self):
-    raise NotImplementedError("Not Implemented")
+    """Requests a disconnect from the remote device
+
+    Returns:
+      True if connected device exists, False otherwise
+    """
+
+    # Can't do anything if we're not connected
+    if not self.GetConnectionStatus():
+      return False
+
+    device = self._GetDeviceWithAddress(self.remote_address)
+    device.Disconnect()
+
+    return True
 
 
 # (TODO) - revisit these functions upto _MouseButtonsRawHidValues
@@ -281,7 +429,7 @@ class BluezPeripheral(PeripheralKit):
             self._CheckValidScanCodes(keys)):
       return None
 
-    real_scan_codes = map(chr, keys)
+    real_scan_codes = [chr(key) for key in keys]
     padding_0s = (chr(0) * (self.RAW_REPORT_FORMAT_KEYBOARD_LEN_SCAN_CODES -
                             len(real_scan_codes)))
 
@@ -294,6 +442,23 @@ class BluezPeripheral(PeripheralKit):
             padding_0s)
 
 
+  def KeyboardSendTrace(self, input_scan_codes):
+    if self._client is None:
+      self._client = BluezKeyboardClient()
+
+    for scan_code in input_scan_codes:
+      time.sleep(.1)
+
+      self._client.send_report(report=scan_code)
+
+
+  def KeyboardSendString(self, string_to_send):
+    if self._client is None:
+      self._client = BluezKeyboardClient()
+
+    self._client.send_string(string_to_send)
+
+
   def _MouseButtonsRawHidValues(self):
     """Gives the raw HID values for whatever buttons are pressed."""
     currently_pressed = 0x0
@@ -303,7 +468,7 @@ class BluezPeripheral(PeripheralKit):
       elif button == PeripheralKit.MOUSE_BUTTON_RIGHT:
         currently_pressed |= self.RAW_HID_RIGHT_BUTTON
       else:
-        error = "Unknown mouse button in state: %s" % button
+        error = 'Unknown mouse button in state: %s' % button
         logging.error(error)
         raise BluezPeripheralException(error)
     return currently_pressed
@@ -361,14 +526,16 @@ class BluezPeripheral(PeripheralKit):
     raw_buttons = self._MouseButtonsRawHidValues()
     if raw_buttons:
       mouse_codes = self._RawMouseCodes(buttons=raw_buttons)
-      self.SerialSendReceive(mouse_codes, msg='BluezPeripheral: MousePressButtons')
+      self.SerialSendReceive(mouse_codes,
+                             msg='BluezPeripheral: MousePressButtons')
 
 
   def MouseReleaseAllButtons(self):
     """Release all mouse buttons."""
     self._MouseButtonStateClear()
     mouse_codes = self._RawMouseCodes(buttons=self.RAW_HID_BUTTONS_RELEASED)
-    self.SerialSendReceive(mouse_codes, msg='BluezPeripheral: MouseReleaseAllButtons')
+    self.SerialSendReceive(mouse_codes,
+                           msg='BluezPeripheral: MouseReleaseAllButtons')
 
 
   def _RawMouseCodes(self, buttons=0, x_stop=0, y_stop=0, wheel=0):
@@ -447,7 +614,7 @@ class BluezPeripheral(PeripheralKit):
     return (chr(self.UART_INPUT_SHORTHAND_MODE) +
             chr(len(keys) + 1) +
             chr(sum(modifiers)) +
-            ''.join(map(chr, keys)))
+            ''.join([chr(key) for key in keys]))
 
 
   def ReleaseShorthandCodes(self):
@@ -463,20 +630,20 @@ class BluezPeripheral(PeripheralKit):
 
   def GetKitInfo(self):
     """A simple demo of getting kit information."""
-    print ('advertised name: %s' % self.GetAdvertisedName())
-    print ('local bluetooth address: %s' % self.GetLocalBluetoothAddress())
+    logging.info('advertised name: %s', self.GetAdvertisedName())
+    logging.info('local bluetooth address: %s', self.GetLocalBluetoothAddress())
     class_of_service = self.GetClassOfService()
     try:
       class_of_service = hex(class_of_service)
     except TypeError:
       pass
-    print ('Class of service: %s' % class_of_service)
+    logging.info('Class of service: %s', class_of_service)
     class_of_device = self.GetClassOfDevice()
     try:
       class_of_device = hex(class_of_device)
     except TypeError:
       pass
-    print ('Class of device: %s' % class_of_device)
+    logging.info('Class of device: %s', class_of_device)
 
 
 if __name__ == '__main__':

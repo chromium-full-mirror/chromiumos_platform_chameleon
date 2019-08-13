@@ -79,10 +79,19 @@ class ChameleondDriver(ChameleondInterface):
 
     # The default platform is 'fpga', and could be 'chromeos' if specified.
     platform = kwargs.get('platform', 'fpga')
+
+    # Auto raspi detection to prevent fpga initialization / raspi crash
+    if os.path.isfile('/proc/device-tree/model'):
+      with open('/proc/device-tree/model', 'r') as f:
+        output = f.read()
+
+        if 'raspberry' in output.lower():
+          platform = 'raspi'
+
+    logging.info('platform: %s', platform)
+
     self._captured_params = {}
     self._process = None
-
-    logging.info("platform: %s", platform)
 
     # waihong@chromium.org suggests to use a lazy wrapper which instantiates
     # the following control objects when requested at the first time.
@@ -119,6 +128,15 @@ class ChameleondDriver(ChameleondInterface):
     self.audio_board = self._device_manager.GetChameleonDevice(ids.AUDIO_BOARD)
     self.bluetooth_mouse = self._device_manager.GetChameleonDevice(
         ids.BLUETOOTH_HID_MOUSE)
+
+    # TODO b:141308126
+    if self._device_manager.GetChameleonDevice(ids.BLUETOOTH_HID_KEYBOARD) \
+        is not None:
+      self.bluetooth_keyboard = self._device_manager.GetChameleonDevice(
+          ids.BLUETOOTH_HID_KEYBOARD).GetDevice()
+    else:
+      self.bluetooth_keyboard = None
+
     self.avsync_probe = self._device_manager.GetChameleonDevice(
         ids.AVSYNC_PROBE)
     self.motor_board = self._device_manager.GetChameleonDevice(ids.MOTOR_BOARD)
