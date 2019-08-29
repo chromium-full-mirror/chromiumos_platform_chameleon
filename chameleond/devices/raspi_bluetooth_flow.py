@@ -7,9 +7,7 @@
 
 from chameleond.devices import chameleon_device
 from chameleond.utils.bluetooth_raspi import BluezPeripheral
-from chameleond.utils.raspi_bluez_service import BluezKeyboardService
-from chameleond.utils.bluez_service_consts import \
-    KEYBOARD_PERIPHERAL_DEVICE_CLASS
+from chameleond.utils.bluetooth_peripheral_kit import PeripheralKit
 
 
 class RaspiFlow(chameleon_device.Flow):
@@ -18,33 +16,17 @@ class RaspiFlow(chameleon_device.Flow):
   # Should be BluezPeripheral for builtin bluetooth peripheral. May be different
   # for other subclasses (e.g. Intel ThP2 solution).
 
-  def __init__(self):
+  def __init__(self, device_address):
     """Initializes a Raspi flow object."""
     super(RaspiFlow, self).__init__()
-    self._bluez = BluezPeripheral()
-    self._dev_addr = self._bluez.GetLocalBluetoothAddress()
-    self._bluez_service = None
+    self._dev_addr = device_address
 
   def IsDetected(self):
     """Returns true if BT adapter is detected."""
     return self._dev_addr is not None
 
   def InitDevice(self):
-    """Initialize Bluez device.
-
-    Initializing Bluez parameters is mostly done in __init__().
-    This function initializes the service.
-    """
-    self._bluez_service = BluezKeyboardService(self._dev_addr)
-
-    # Unfortunately, it seems loading the keyboard profile in keyboardservice
-    # causes the class to be overwritten. Temp fix
-    # TODO b:139479446
-    self._bluez.SetClassOfService(KEYBOARD_PERIPHERAL_DEVICE_CLASS)
     return
-
-  def GetDevice(self):
-    return self._bluez
 
   def Reset(self):
     return
@@ -69,3 +51,16 @@ class RaspiFlow(chameleon_device.Flow):
 
   def DoFSM(self):
     return
+
+
+class RaspiHIDKeyboard(RaspiFlow, BluezPeripheral):
+  """This is the class loaded from fpga_tio.
+
+  We inherit from both Flow and PeripheralKit, as fpga_tio's interface needs
+  access to methods in both of them
+  """
+
+  def __init__(self):
+    # Instantiate bluez and raspi flow
+    BluezPeripheral.__init__(self, PeripheralKit.KEYBOARD)
+    RaspiFlow.__init__(self, self.GetLocalBluetoothAddress())

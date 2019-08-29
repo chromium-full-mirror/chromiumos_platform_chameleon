@@ -128,15 +128,8 @@ class ChameleondDriver(ChameleondInterface):
     self.audio_board = self._device_manager.GetChameleonDevice(ids.AUDIO_BOARD)
     self.bluetooth_mouse = self._device_manager.GetChameleonDevice(
         ids.BLUETOOTH_HID_MOUSE)
-
-    # TODO b:141308126
-    if self._device_manager.GetChameleonDevice(ids.BLUETOOTH_HID_KEYBOARD) \
-        is not None:
-      self.bluetooth_keyboard = self._device_manager.GetChameleonDevice(
-          ids.BLUETOOTH_HID_KEYBOARD).GetDevice()
-    else:
-      self.bluetooth_keyboard = None
-
+    self.bluetooth_keyboard = self._device_manager.GetChameleonDevice(
+        ids.BLUETOOTH_HID_KEYBOARD)
     self.avsync_probe = self._device_manager.GetChameleonDevice(
         ids.AVSYNC_PROBE)
     self.motor_board = self._device_manager.GetChameleonDevice(ids.MOTOR_BOARD)
@@ -197,7 +190,7 @@ class ChameleondDriver(ChameleondInterface):
 
   def init_devices_for_raspi(self):
     devices = {
-        ids.BLUETOOTH_HID_KEYBOARD: raspi_bluetooth_flow.RaspiFlow(),
+        ids.BLUETOOTH_HID_KEYBOARD: raspi_bluetooth_flow.RaspiHIDKeyboard(),
     }
     return devices
 

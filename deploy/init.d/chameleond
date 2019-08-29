@@ -29,9 +29,9 @@ RPI_INFO_FILE="/proc/device-tree/model"
 RETRY_PERIOD=10
 
 # Some custom settings if chameleon is raspberry pi
-if [ -f ${RPI_INFO_FILE} ] && cat ${RPI_INFO_FILE} | grep -qi 'raspberry' ; then
+if [ -f ${RPI_INFO_FILE} ] && grep -qi 'raspberry' ${RPI_INFO_FILE} ; then
     DAEMON_ARGS="${DAEMON_ARGS} platform=raspi"
-    RETRY_PERIOD=2
+    RETRY_PERIOD=1
 fi
 
 is_already_running () {
@@ -62,6 +62,8 @@ do_start () {
 do_stop () {
     if is_already_running; then
         start-stop-daemon --stop --pidfile "${PIDFILE}" --retry ${RETRY_PERIOD}
+        # Sometimes a hanging thread is left. Kill all instances of this script
+        pkill -f ${DAEMON}
         rm -f "${PIDFILE}"
     else
         echo "${DAEMON_NAME} is already stopped"

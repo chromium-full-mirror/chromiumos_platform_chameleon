@@ -10,6 +10,7 @@
 
 import logging
 import os
+import sys
 import threading
 import time
 
@@ -25,15 +26,17 @@ except ImportError:
   pass
 
 from bluetooth_hid import BluetoothHID
+from chameleond.utils.raspi_bluez_client import BluezKeyboardClient
+from chameleond.utils.raspi_bluez_service import BluezKeyboardService
 from bluetooth_peripheral_kit import PeripheralKit
 from bluetooth_peripheral_kit import PeripheralKitException
-from bluez_service_consts import KEYBOARD_PERIPHERAL_DEVICE_CLASS
-from chameleond.utils.raspi_bluez_client import BluezKeyboardClient
+from bluez_service_consts import PERIPHERAL_DEVICE_CLASS, PERIPHERAL_DEVICE_NAME
 
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
 DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'
 DBUS_BLUEZ_DEVICE_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Device1'
-BLUEZ_KEYBOARD_DEVICE_NAME = 'KEYBD_REF'
+
+MAX_DBUS_RETRY_ATTEMPTS = 3
 
 
 class BluezPeripheralException(PeripheralKitException):
@@ -44,7 +47,8 @@ class BluezPeripheralException(PeripheralKitException):
 class BluezPeripheral(PeripheralKit, BluetoothHID):
   """This is an abstraction of a Bluez peripheral."""
 
-  def __init__(self):
+
+  def __init__(self, device_type):
     super(BluezPeripheral, self).__init__()
     self._settings = {}
     self._setup_dbus_loop()
@@ -52,6 +56,9 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     self.remote_address = None
 
     self._client = None
+
+    # Device type, i.e. PeripheralKit.KEYBOARD
+    self._device_type = device_type
 
     # Bluez DBus constants - npnext
     self._dbus_system_bus = dbus.SystemBus()
@@ -62,17 +69,22 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
                                           'org.freedesktop.DBus.Properties')
 
     # Power on the device - this should only need to happen once
-    self._dbus_hci_props.Set('org.bluez.Adapter1',
-                             'Powered',
-                             dbus.Boolean(1))
+    # Occasionally the resource isn't up in time, so we retry
+    self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(1))
+
+    # Now that chip is powered, we can initiate our service. By creating service
+    # here, we can ensure initialization ensures in the correct order
+    self._bluez_service = BluezKeyboardService(self.GetLocalBluetoothAddress())
 
     # Initialize remaining parameters
     self.Init()
 
-    self.SetAdvertisedName(BLUEZ_KEYBOARD_DEVICE_NAME)
+    # TODO base this on _device_type
+    self.SetAdvertisedName(PERIPHERAL_DEVICE_NAME[self._device_type])
 
     logging.debug('Bluetooth adapter name %s, class %s',
-                  BLUEZ_KEYBOARD_DEVICE_NAME, hex(self.GetClassOfService()))
+                  PERIPHERAL_DEVICE_NAME[self._device_type],
+                  hex(self.GetClassOfService()))
 
 
   def _setup_dbus_loop(self):
@@ -80,6 +92,37 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     self._loop = GLib.MainLoop()
     self._thread = threading.Thread(target=self._loop.run)
     self._thread.start()
+
+
+  def _set_hci_prop(self, iface_name, prop_name, prop_val):
+    """Handles HCI property set
+
+    Sometimes resource isn't ready, so this utility will repeat commands
+    multiple times to allow more reliable operation
+
+    Returns:
+      True if set succeeds, False otherwise
+    """
+
+    for _ in range(MAX_DBUS_RETRY_ATTEMPTS):
+      try:
+        self._dbus_hci_props.Set(iface_name, prop_name, prop_val)
+
+        # Ensure property was successfully set
+        if self._dbus_hci_props.Get(iface_name, prop_name) == prop_val:
+          return True
+
+        else:
+          error_msg = 'Prop set but stale... try again'
+          logging.error(error_msg)
+          time.sleep(.1)
+
+      except dbus.exceptions.DBusException:
+        error_msg = 'Setting {} to {} again'.format(prop_name, prop_val)
+        logging.error(error_msg)
+        time.sleep(.1)
+
+    return False
 
 
   def GetCapabilities(self):
@@ -97,6 +140,18 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     return capabilities
 
 
+  def ResetStack(self):
+    """Restores BT stack to pristine state by restarting running services"""
+    reset_cmds = ['service bluetooth restart',
+                  '/etc/init.d/chameleond restart']
+
+    # Disable power
+    self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(0))
+
+    # Restart chameleon and bluetooth service
+    os.system(' && '.join(reset_cmds))
+
+
   # Power cycle the device
   def PowerCycle(self):
     return self.Reboot()
@@ -107,13 +162,10 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     """Ensures our chip is in the correct state for the tests to be run"""
 
     # Make sure device is powered up and discoverable
-    self._dbus_hci_props.Set('org.bluez.Adapter1',
-                             'Discoverable',
-                             dbus.Boolean(1))
+    self._set_hci_prop('org.bluez.Adapter1', 'Discoverable', dbus.Boolean(1))
 
-    # NOTE that class type param should be dependent on the stored class type
-    # i.e. when an A2DP service is using this driver, class should reflect that
-    self.SetClassOfService(KEYBOARD_PERIPHERAL_DEVICE_CLASS)
+    # Set class based on device we're emulating
+    self.SetClassOfService(PERIPHERAL_DEVICE_CLASS[self._device_type])
 
     return True
 
@@ -148,29 +200,17 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     return '/dev/fakedev'
 
 
-  def LeaveCommandMode(self, force=False):
-    raise NotImplementedError('Not Implemented')
-
-
   def Reboot(self):
     logging.info('REBOOTING')
 
     # Turn it off
-    self._dbus_hci_props.Set('org.bluez.Adapter1',
-                             'Powered',
-                             dbus.Boolean(0))
+    self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(0))
 
     # Turn it back on again
-    self._dbus_hci_props.Set('org.bluez.Adapter1',
-                             'Powered',
-                             dbus.Boolean(1))
+    self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(1))
 
     # Put ourselves back into correct state for discovery
     return self.Init()
-
-
-  def FactoryReset(self):
-    raise NotImplementedError('Not Implemented')
 
 
   def GetAdvertisedName(self):
@@ -182,51 +222,15 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     return str(self._dbus_hci_props.Get('org.bluez.Adapter1', 'Alias'))
 
   def SetAdvertisedName(self, name):
-    self._dbus_hci_props.Set('org.bluez.Adapter1', 'Alias', dbus.String(name))
-
-
-  def GetFirmwareVersion(self):
-    raise NotImplementedError('Not Implemented')
-
-
-  def GetOperationMode(self):
-    raise NotImplementedError('Not Implemented')
-
-
-  def SetMasterMode(self):
-    raise NotImplementedError('Not Implemented')
-
-
-  def SetSlaveMode(self):
-    raise NotImplementedError('Not Implemented')
+    self._set_hci_prop('org.bluez.Adapter1', 'Alias', dbus.String(name))
 
 
   def GetAuthenticationMode(self):
     return PeripheralKit.OPEN_MODE
 
 
-  def SetAuthenticationMode(self, mode):
-    raise NotImplementedError('Not Implemented')
-
-
   def GetPinCode(self):
     return '0000'
-
-
-  def SetPinCode(self, pin):
-    raise NotImplementedError('Not Implemented')
-
-
-  def GetServiceProfile(self):
-    raise NotImplementedError('Not Implemented')
-
-
-  def SetServiceProfileSPP(self):
-    raise NotImplementedError('Not Implemented')
-
-
-  def SetServiceProfileHID(self):
-    raise NotImplementedError('Not Implemented')
 
 
   def GetLocalBluetoothAddress(self):
@@ -254,14 +258,6 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
       return True
 
     return False
-
-
-  def EnableConnectionStatusMessage(self):
-    raise NotImplementedError('Not Implemented')
-
-
-  def DisableConnectionStatusMessage(self):
-    raise NotImplementedError('Not Implemented')
 
 
   def _GetDeviceWithAddress(self, addr):
@@ -306,11 +302,7 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
 
 
   def GetHIDDeviceType(self):
-    return PeripheralKit.KEYBOARD
-
-
-  def SetHIDType(self, device_type):
-    raise NotImplementedError('Not Implemented')
+    return self._device_type
 
 
   def GetClassOfService(self):
@@ -325,14 +317,6 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
 
   def GetClassOfDevice(self):
     return self.GetClassOfService()
-
-
-  def _SetClassOfDevice(self, class_of_device):
-    raise NotImplementedError('Not Implemented')
-
-
-  def SetClassOfDevice(self, device_type):
-    raise NotImplementedError('Not Implemented')
 
 
   def SetRemoteAddress(self, remote_address):
@@ -647,5 +631,8 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
 
 
 if __name__ == '__main__':
-  kit_instance = BluezPeripheral()
+  # To allow basic printing when run from command line
+  logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
+  kit_instance = BluezPeripheral(PeripheralKit.KEYBOARD)
   kit_instance.GetKitInfo()

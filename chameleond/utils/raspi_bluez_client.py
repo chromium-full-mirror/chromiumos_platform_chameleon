@@ -74,9 +74,9 @@ class BluezKeyboardClient(object):
       self._report = report
 
     modifier = self._report[2]
-    self._iface.send_keys(modifier, self._report[4:10],
-                          reply_handler=self.keys_sent_handler,
-                          error_handler=self.keys_error_handler)
+    self._iface.SendKeys(modifier, self._report[4:10],
+                         reply_handler=self.keys_sent_handler,
+                         error_handler=self.keys_error_handler)
 
   def send_key_down(self, scancode):
     """sends a key down event to the server"""
