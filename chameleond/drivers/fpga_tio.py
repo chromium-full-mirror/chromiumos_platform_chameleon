@@ -191,6 +191,7 @@ class ChameleondDriver(ChameleondInterface):
   def init_devices_for_raspi(self):
     devices = {
         ids.BLUETOOTH_HID_KEYBOARD: raspi_bluetooth_flow.RaspiHIDKeyboard(),
+        ids.BLUETOOTH_HID_MOUSE: raspi_bluetooth_flow.RaspiHIDMouse(),
     }
     return devices
 

@@ -25,12 +25,12 @@ try:
 except ImportError:
   pass
 
-from bluetooth_hid import BluetoothHID
-from chameleond.utils.raspi_bluez_client import BluezKeyboardClient
-from chameleond.utils.raspi_bluez_service import BluezKeyboardService
+from chameleond.utils.raspi_bluez_service import BluezService
 from bluetooth_peripheral_kit import PeripheralKit
 from bluetooth_peripheral_kit import PeripheralKitException
-from bluez_service_consts import PERIPHERAL_DEVICE_CLASS, PERIPHERAL_DEVICE_NAME
+from bluez_service_consts import PERIPHERAL_DEVICE_CLASS, \
+    PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
+    HID_SERVICE_UUID
 
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
 DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'
@@ -38,29 +38,49 @@ DBUS_BLUEZ_DEVICE_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Device1'
 
 MAX_DBUS_RETRY_ATTEMPTS = 3
 
+# Definitions of mouse button HID encodings
+RAW_HID_BUTTONS_RELEASED = 0x0
+RAW_HID_LEFT_BUTTON = 0x01
+RAW_HID_RIGHT_BUTTON = 0x02
+
+# UART input modes
+# raw mode
+UART_INPUT_RAW_MODE = 0xFD
+RAW_REPORT_START = 0xA1
+# Length of report format for keyboard
+RAW_REPORT_FORMAT_KEYBOARD_LENGTH = 9
+RAW_REPORT_FORMAT_KEYBOARD_DESCRIPTOR = 1
+RAW_REPORT_FORMAT_KEYBOARD_LEN_SCAN_CODES = 6
+
+# shorthand mode
+UART_INPUT_SHORTHAND_MODE = 0xFE
+SHORTHAND_REPORT_FORMAT_KEYBOARD_MAX_LEN_SCAN_CODES = 6
+# Length of report format for mouse
+RAW_REPORT_FORMAT_MOUSE_LENGTH = 5
+RAW_REPORT_FORMAT_MOUSE_DESCRIPTOR = 2
+
 
 class BluezPeripheralException(PeripheralKitException):
-  """A dummpy exception class for Bluez class."""
+  """A dummy exception class for Bluez class."""
   pass
 
 
-class BluezPeripheral(PeripheralKit, BluetoothHID):
+class BluezPeripheral(PeripheralKit):
   """This is an abstraction of a Bluez peripheral."""
 
 
-  def __init__(self, device_type):
+  def __init__(self):
     super(BluezPeripheral, self).__init__()
     self._settings = {}
     self._setup_dbus_loop()
 
     self.remote_address = None
-
-    self._client = None
-
-    # Device type, i.e. PeripheralKit.KEYBOARD
-    self._device_type = device_type
+    self._bluez_service = None
+    self._service = None
+    self._device_type = None
 
     # Bluez DBus constants - npnext
+    self._service_iface = None
     self._dbus_system_bus = dbus.SystemBus()
     self._dbus_hci_adapter_path = '/org/bluez/hci0'
     self._dbus_hci_props = dbus.Interface(self._dbus_system_bus.get_object(\
@@ -72,19 +92,7 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     # Occasionally the resource isn't up in time, so we retry
     self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(1))
 
-    # Now that chip is powered, we can initiate our service. By creating service
-    # here, we can ensure initialization ensures in the correct order
-    self._bluez_service = BluezKeyboardService(self.GetLocalBluetoothAddress())
-
-    # Initialize remaining parameters
-    self.Init()
-
-    # TODO base this on _device_type
-    self.SetAdvertisedName(PERIPHERAL_DEVICE_NAME[self._device_type])
-
-    logging.debug('Bluetooth adapter name %s, class %s',
-                  PERIPHERAL_DEVICE_NAME[self._device_type],
-                  hex(self.GetClassOfService()))
+    logging.debug('Bluetooth peripheral powered and waiting for bind to device')
 
 
   def _setup_dbus_loop(self):
@@ -140,6 +148,41 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     return capabilities
 
 
+  def SpecifyDeviceType(self, device_type):
+    """Instantiates one of our supported devices
+
+    The raspi stack is designed to emulate a single device at a time. This
+    function is called by autotest and defines which device must be emulated
+    for the current test
+
+    Args:
+      device_type: String device type, e.g. "MOUSE"
+    """
+
+    # Do nothing if we were already bound to this device
+    if self._device_type == device_type:
+      return True
+
+    if self._device_type is not None:
+      error = 'Peripheral already bound to device: {}'.format(self._device_type)
+      logging.error(error)
+      raise BluezPeripheralException(error)
+
+    # Set device type and initiate service based on it
+    self._device_type = device_type
+    self._bluez_service = BluezService(self._device_type,
+                                       self.GetLocalBluetoothAddress())
+    self.Init()
+    self.SetAdvertisedName(PERIPHERAL_DEVICE_NAME[self._device_type])
+
+    logging.info('Bluetooth peripheral now bound to %s', device_type)
+
+    # Give the service a moment to initialize
+    time.sleep(1)
+
+    return True
+
+
   def ResetStack(self):
     """Restores BT stack to pristine state by restarting running services"""
     reset_cmds = ['service bluetooth restart',
@@ -165,7 +208,8 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     self._set_hci_prop('org.bluez.Adapter1', 'Discoverable', dbus.Boolean(1))
 
     # Set class based on device we're emulating
-    self.SetClassOfService(PERIPHERAL_DEVICE_CLASS[self._device_type])
+    if self._device_type:
+      self.SetClassOfService(PERIPHERAL_DEVICE_CLASS[self._device_type])
 
     return True
 
@@ -212,14 +256,6 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     # Put ourselves back into correct state for discovery
     return self.Init()
 
-
-  def GetAdvertisedName(self):
-    """Get the name advertised by the kit.
-
-    Returns:
-      The name that the kit advertises to other Bluetooth devices.
-    """
-    return str(self._dbus_hci_props.Get('org.bluez.Adapter1', 'Alias'))
 
   def SetAdvertisedName(self, name):
     self._set_hci_prop('org.bluez.Adapter1', 'Alias', dbus.String(name))
@@ -301,43 +337,44 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     return None
 
 
-  def GetHIDDeviceType(self):
-    return self._device_type
-
-
-  def GetClassOfService(self):
-    return int(self._dbus_hci_props.Get('org.bluez.Adapter1', 'Class'))
-
-
   def SetClassOfService(self, class_of_service):
     # Class is a read-only DBus property, so needs to be set using system calls.
     cmd = 'sudo hciconfig hci0 class {}'.format(hex(class_of_service))
     os.system(cmd)
 
 
-  def GetClassOfDevice(self):
-    return self.GetClassOfService()
-
-
   def SetRemoteAddress(self, remote_address):
+    """Sets address later used for connect
+
+    Args:
+      remote_address: string denoting remote address
+    """
     self.remote_address = remote_address
+    return True
 
 
   def Connect(self):
     """Attempts to connect to the address specified with SetRemoteAddress()"""
 
-    if self.remote_address is not None:
-      logging.info('Attempting to connect to %s', self.remote_address)
+    if self.remote_address is None:
+      logging.error('Connect called with no remote address supplied')
+      return False
 
-      # Grab the relevant device
-      device = self._GetDeviceWithAddress(self.remote_address)
+    logging.debug('Attempting to connect to %s', self.remote_address)
 
-      # How to determine if this happens successfully?
-      # Do we need to trust first? Pair?
-      device.Connect()
+    # Grab the relevant device
+    device = self._GetDeviceWithAddress(self.remote_address)
 
-    else:
-      logging.warn('Cannot connect, no end address')
+    # TODO This allows pairing autotest to pass, but disconnects quickly and
+    # throws "Operation not available" exception
+    # b:140873438
+    try:
+      device.ConnectProfile(HID_SERVICE_UUID)
+
+    except Exception, e:
+      logging.warn('Catching connect exception: %s', e)
+
+    return True
 
 
   def Disconnect(self):
@@ -346,6 +383,8 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     Returns:
       True if connected device exists, False otherwise
     """
+
+    logging.debug('Disconnecting from adapter')
 
     # Can't do anything if we're not connected
     if not self.GetConnectionStatus():
@@ -357,7 +396,34 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     return True
 
 
-# (TODO) - revisit these functions upto _MouseButtonsRawHidValues
+  def SendHIDReport(self, report):
+    """Sends a hid report to our bluez service
+
+    Args:
+      report: scan code representing state of HID device
+    """
+
+    if not self._service_iface:
+      self._service = self._dbus_system_bus.get_object(BLUEZ_SERVICE_NAME,
+                                                       BLUEZ_SERVICE_PATH)
+      self._service_iface = dbus.Interface(self._service, BLUEZ_SERVICE_NAME)
+
+    # Passing with empty handlers allows operation to run async
+    self._service_iface.SendHIDReport(report,
+                                      reply_handler=self.KeysSentHandler,
+                                      error_handler=self.KeysErrorHandler)
+
+
+  def KeysSentHandler(self):
+    """Called when hid report send completes"""
+    pass
+
+
+  def KeysErrorHandler(self, err):
+    """Called in case of error on hid report send"""
+    logging.error('KeysErrorHandler: %s', err)
+
+
   def _CheckValidModifiers(self, modifiers):
     invalid_modifiers = [m for m in modifiers if m not in self.MODIFIERS]
     if invalid_modifiers:
@@ -414,33 +480,16 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
       return None
 
     real_scan_codes = [chr(key) for key in keys]
-    padding_0s = (chr(0) * (self.RAW_REPORT_FORMAT_KEYBOARD_LEN_SCAN_CODES -
+    padding_0s = (chr(0) * (RAW_REPORT_FORMAT_KEYBOARD_LEN_SCAN_CODES -
                             len(real_scan_codes)))
 
-    return (chr(self.UART_INPUT_RAW_MODE) +
-            chr(self.RAW_REPORT_FORMAT_KEYBOARD_LENGTH) +
-            chr(self.RAW_REPORT_FORMAT_KEYBOARD_DESCRIPTOR) +
+    return (chr(UART_INPUT_RAW_MODE) +
+            chr(RAW_REPORT_FORMAT_KEYBOARD_LENGTH) +
+            chr(RAW_REPORT_FORMAT_KEYBOARD_DESCRIPTOR) +
             chr(sum(modifiers)) +
             chr(0x0) +
             ''.join(real_scan_codes) +
             padding_0s)
-
-
-  def KeyboardSendTrace(self, input_scan_codes):
-    if self._client is None:
-      self._client = BluezKeyboardClient()
-
-    for scan_code in input_scan_codes:
-      time.sleep(.1)
-
-      self._client.send_report(report=scan_code)
-
-
-  def KeyboardSendString(self, string_to_send):
-    if self._client is None:
-      self._client = BluezKeyboardClient()
-
-    self._client.send_string(string_to_send)
 
 
   def _MouseButtonsRawHidValues(self):
@@ -448,9 +497,9 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     currently_pressed = 0x0
     for button in self._buttons_pressed:
       if button == PeripheralKit.MOUSE_BUTTON_LEFT:
-        currently_pressed |= self.RAW_HID_LEFT_BUTTON
+        currently_pressed |= RAW_HID_LEFT_BUTTON
       elif button == PeripheralKit.MOUSE_BUTTON_RIGHT:
-        currently_pressed |= self.RAW_HID_RIGHT_BUTTON
+        currently_pressed |= RAW_HID_RIGHT_BUTTON
       else:
         error = 'Unknown mouse button in state: %s' % button
         logging.error(error)
@@ -475,7 +524,7 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     if delta_x or delta_y:
       mouse_codes = self._RawMouseCodes(buttons=raw_buttons, x_stop=delta_x,
                                         y_stop=delta_y)
-      self.SerialSendReceive(mouse_codes, msg='BluezPeripheral: MouseMove')
+      self.SendHIDReport(mouse_codes)
 
 
   def MouseScroll(self, steps):
@@ -493,7 +542,7 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     raw_buttons = self._MouseButtonsRawHidValues()
     if steps:
       mouse_codes = self._RawMouseCodes(buttons=raw_buttons, wheel=steps)
-      self.SerialSendReceive(mouse_codes, msg='BluezPeripheral: MouseScroll')
+      self.SendHIDReport(mouse_codes)
 
 
   def MousePressButtons(self, buttons):
@@ -510,16 +559,14 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     raw_buttons = self._MouseButtonsRawHidValues()
     if raw_buttons:
       mouse_codes = self._RawMouseCodes(buttons=raw_buttons)
-      self.SerialSendReceive(mouse_codes,
-                             msg='BluezPeripheral: MousePressButtons')
+      self.SendHIDReport(mouse_codes)
 
 
   def MouseReleaseAllButtons(self):
     """Release all mouse buttons."""
     self._MouseButtonStateClear()
-    mouse_codes = self._RawMouseCodes(buttons=self.RAW_HID_BUTTONS_RELEASED)
-    self.SerialSendReceive(mouse_codes,
-                           msg='BluezPeripheral: MouseReleaseAllButtons')
+    mouse_codes = self._RawMouseCodes(buttons=RAW_HID_BUTTONS_RELEASED)
+    self.SendHIDReport(mouse_codes)
 
 
   def _RawMouseCodes(self, buttons=0, x_stop=0, y_stop=0, wheel=0):
@@ -558,9 +605,8 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
         return value + 256
       return value
 
-    return (chr(self.UART_INPUT_RAW_MODE) +
-            chr(self.RAW_REPORT_FORMAT_MOUSE_LENGTH) +
-            chr(self.RAW_REPORT_FORMAT_MOUSE_DESCRIPTOR) +
+    return (chr(RAW_REPORT_START) +
+            chr(RAW_REPORT_FORMAT_MOUSE_DESCRIPTOR) +
             chr(SignedChar(buttons)) +
             chr(SignedChar(x_stop)) +
             chr(SignedChar(y_stop)) +
@@ -592,10 +638,10 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
             self._CheckValidScanCodes(keys)):
       return None
 
-    if len(keys) > self.SHORTHAND_REPORT_FORMAT_KEYBOARD_MAX_LEN_SCAN_CODES:
+    if len(keys) > SHORTHAND_REPORT_FORMAT_KEYBOARD_MAX_LEN_SCAN_CODES:
       return None
 
-    return (chr(self.UART_INPUT_SHORTHAND_MODE) +
+    return (chr(UART_INPUT_SHORTHAND_MODE) +
             chr(len(keys) + 1) +
             chr(sum(modifiers)) +
             ''.join([chr(key) for key in keys]))
@@ -609,7 +655,7 @@ class BluezPeripheral(PeripheralKit, BluetoothHID):
     Returns:
       a special shorthand code string to release any pressed keys.
     """
-    return chr(self.UART_INPUT_SHORTHAND_MODE) + chr(0x0)
+    return chr(UART_INPUT_SHORTHAND_MODE) + chr(0x0)
 
 
   def GetKitInfo(self):
@@ -634,5 +680,5 @@ if __name__ == '__main__':
   # To allow basic printing when run from command line
   logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-  kit_instance = BluezPeripheral(PeripheralKit.KEYBOARD)
+  kit_instance = BluezPeripheral()
   kit_instance.GetKitInfo()

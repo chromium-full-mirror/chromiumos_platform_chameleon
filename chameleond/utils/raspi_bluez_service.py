@@ -28,13 +28,9 @@ try:
 except ImportError:
   pass
 
-from bluez_service_consts import BLUEZ_KEYBOARD_SERVICE_NAME, \
-    BLUEZ_KEYBOARD_SERVICE_PATH, BLUEZ_KEYBOARD_PROFILE_PATH
+from bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
+    BLUEZ_PROFILE_PATH, SERVICE_PROFILE_SDP_PATH, HID_SERVICE_UUID
 
-
-KEYBOARD_PROFILE_SDP_PATH = (os.path.dirname(os.path.abspath(__file__)) +
-                             '/keyboard_sdp_record.xml')
-KEYBOARD_SERVICE_UUID = '00001124-0000-1000-8000-00805f9b34fb'
 P_CTRL = 17
 P_INTR = 19
 
@@ -48,8 +44,8 @@ class BluezServiceException(Exception):
     self.message = message
 
 
-class BluezKeyboardProfile(dbus.service.Object):
-  """Implementation of org.bluez.Profile1 interface for a keyboard."""
+class BluezServiceProfile(dbus.service.Object):
+  """Implementation of org.bluez.Profile1 interface for a HID device."""
 
   fd = -1
   @dbus.service.method('org.bluez.Profile1',
@@ -88,24 +84,24 @@ class BluezKeyboardProfile(dbus.service.Object):
     dbus.service.Object.__init__(self, bus, path)
 
 
-class BluezKeyboardService(dbus.service.Object):
-  """Bluez Keyboard Service implementation."""
+class BluezService(dbus.service.Object):
+  """Bluez Service implementation."""
 
-  def __init__(self, adapter_address):
+  def __init__(self, device_type, adapter_address):
     self._cinterrupt = None
     self._ccontrol = None
 
     self._bus = dbus.SystemBus()
-    self._bus_name = dbus.service.BusName(BLUEZ_KEYBOARD_SERVICE_NAME,
-                                          bus=self._bus)
-    super(BluezKeyboardService, self).__init__(self._bus_name,
-                                               BLUEZ_KEYBOARD_SERVICE_PATH)
+    self._bus_name = dbus.service.BusName(BLUEZ_SERVICE_NAME, bus=self._bus)
+    super(BluezService, self).__init__(self._bus_name, BLUEZ_SERVICE_PATH)
 
     self._address = adapter_address
-    # Init keyboard profile
-    self._InitBluezProfile(KEYBOARD_PROFILE_SDP_PATH,
-                           BLUEZ_KEYBOARD_PROFILE_PATH,
-                           KEYBOARD_SERVICE_UUID)
+    self._device_type = device_type
+
+    # Init profile
+    self._InitBluezProfile(SERVICE_PROFILE_SDP_PATH[self._device_type],
+                           BLUEZ_PROFILE_PATH,
+                           HID_SERVICE_UUID)
 
     self._Listen(self._address)
 
@@ -161,7 +157,7 @@ class BluezKeyboardService(dbus.service.Object):
   def OnDisconnect(self):
     """Called when disconnection occurs"""
 
-    logging.debug('Bluez keyboard service disconnected')
+    logging.debug('Bluez service disconnected')
 
 
   def _InitBluezProfile(self, profile_sdp_path,
@@ -173,8 +169,10 @@ class BluezKeyboardService(dbus.service.Object):
     profile_uuid:     Service Class/ Profile UUID
     www.bluetooth.com/specifications/assigned-numbers/service-discovery/
     """
+
     logging.debug('Configuring Bluez Profile from %s',
-                  KEYBOARD_PROFILE_SDP_PATH)
+                  SERVICE_PROFILE_SDP_PATH[self._device_type])
+
     try:
       with open(profile_sdp_path, 'r') as prfd:
         prf_content = prfd.read()
@@ -190,7 +188,8 @@ class BluezKeyboardService(dbus.service.Object):
           'RequireAuthentication':False,
           'RequireAuthorization':False
       }
-      self._profile = BluezKeyboardProfile(dbus.SystemBus(), profile_dbus_path)
+
+      self._profile = BluezServiceProfile(dbus.SystemBus(), profile_dbus_path)
       manager = dbus.Interface(dbus.SystemBus().get_object('org.bluez',
                                                            '/org/bluez'),
                                'org.bluez.ProfileManager1')
@@ -229,7 +228,8 @@ class BluezKeyboardService(dbus.service.Object):
     elif fd == self._sich:
       self._cinterrupt, _ = self._sinterrupt.accept()
       self.Connected()
-      logging.debug('Bluez keyboard service connected')
+
+      logging.info('Bluez %s service connected', self._device_type)
 
 
   @dbus.service.method('org.chromium.autotest.btkbservice', in_signature='yay')
@@ -245,6 +245,15 @@ class BluezKeyboardService(dbus.service.Object):
         report += chr(key_code)
         count += 1
     self._cinterrupt.send(report)
+
+
+  @dbus.service.method('org.chromium.autotest.btkbservice', in_signature='ay')
+  def SendHIDReport(self, report):
+    """Sends HID report across socket"""
+
+    # Convert from dbus to native type for socket send
+    native_report = ''.join([chr(b) for b in report])
+    self._cinterrupt.send(native_report)
 
 
   @dbus.service.signal('org.chromium.autotest.btkbservice', signature='')

@@ -6,11 +6,16 @@
 
 """Constants for Bluez services on Raspberry Pi."""
 
+import os
+
 from chameleond.utils.bluetooth_peripheral_kit import PeripheralKit
 
-BLUEZ_KEYBOARD_SERVICE_NAME = 'org.chromium.autotest.btkbservice'
-BLUEZ_KEYBOARD_SERVICE_PATH = '/org/chromium/autotest/btkbservice'
-BLUEZ_KEYBOARD_PROFILE_PATH = '/org/chromium/autotest/btkbprofile'
+BLUEZ_SERVICE_NAME = 'org.chromium.autotest.btkbservice'
+BLUEZ_SERVICE_PATH = '/org/chromium/autotest/btkbservice'
+BLUEZ_PROFILE_PATH = '/org/chromium/autotest/btkbprofile'
+
+CLASS_OF_SERVICE_MASK = 0xFFE000
+CLASS_OF_DEVICE_MASK = 0x001FFF
 
 # https://www.bluetooth.com/specifications/assigned-numbers/baseband/
 PERIPHERAL_DEVICE_CLASS = {
@@ -23,6 +28,14 @@ PERIPHERAL_DEVICE_NAME = {
     PeripheralKit.MOUSE:    'MOUSE_REF',
 }
 
+SERVICE_PROFILE_SDP_PATH = {
+    PeripheralKit.KEYBOARD: (os.path.dirname(os.path.abspath(__file__)) +
+                             '/keyboard_sdp_record.xml'),
+    PeripheralKit.MOUSE:    (os.path.dirname(os.path.abspath(__file__)) +
+                             '/mouse_sdp_record.xml'),
+}
+
+HID_SERVICE_UUID = '00001124-0000-1000-8000-00805f9b34fb'
 
 keymap = {
     'KEY_RESERVED' : 0,

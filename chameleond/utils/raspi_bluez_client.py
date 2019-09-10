@@ -16,8 +16,8 @@ import dbus
 import dbus.mainloop.glib
 import dbus.service
 
-from bluez_service_consts import BLUEZ_KEYBOARD_SERVICE_NAME, \
-    BLUEZ_KEYBOARD_SERVICE_PATH, keymap, modmap
+from bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
+    keymap, modmap
 
 
 class BluezKeyboardClient(object):
@@ -55,10 +55,10 @@ class BluezKeyboardClient(object):
         '!': ('KEY_1', 'MOD_SHIFT_LEFT')
     }
     self._bus = dbus.SystemBus()
-    self._service = self._bus.get_object(BLUEZ_KEYBOARD_SERVICE_NAME,
-                                         BLUEZ_KEYBOARD_SERVICE_PATH)
-    self._iface = dbus.Interface(self._service, BLUEZ_KEYBOARD_SERVICE_NAME)
+    self._service = self._bus.get_object(BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH)
+    self._iface = dbus.Interface(self._service, BLUEZ_SERVICE_NAME)
     self._signal = None
+
 
   def keys_sent_handler(self):
     pass
