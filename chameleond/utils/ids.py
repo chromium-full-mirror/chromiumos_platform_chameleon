@@ -145,6 +145,7 @@ RN42_SET = frozenset([
     'AK05MKYP', # chromeos15-row2-rack5-host5-chameleon
     'AK05MKYJ', # chromeos15-row2-rack10-host1-chameleon
     'AK05MKYD', # chromeos15-row2-rack11-host2-chameleon
+    'AK05MKYK', # chromeos15-row4-rack9-host1-chameleon
     #Add new RN42 serial numbers and location above this line
 ])
 
@@ -183,5 +184,6 @@ RN52_SET = frozenset([
     'AK0557BG', # chromeos15-row2-rack5-host5-chameleon
     'AK055793', # chromeos15-row2-rack10-host1-chameleon
     'AK0557AX', # chromeos15-row2-rack11-host2-chameleon
+    'AK0557C1', # chromeos15-row4-rack9-host1-chameleon
     #Add new RN52 serial numbers and location above this line
 ])
