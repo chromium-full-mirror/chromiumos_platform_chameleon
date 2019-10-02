@@ -138,6 +138,8 @@ class ChameleondDriver(ChameleondInterface):
         ids.BLUETOOTH_A2DP_SINK)
     self.ble_mouse = self._device_manager.GetChameleonDevice(
         ids.BLE_MOUSE)
+    self.ble_keyboard = self._device_manager.GetChameleonDevice(
+        ids.BLE_KEYBOARD)
     self._flow_manager = flow_manager.FlowManager(self._flows)
 
     self.Reset()
@@ -192,6 +194,8 @@ class ChameleondDriver(ChameleondInterface):
     devices = {
         ids.BLUETOOTH_HID_KEYBOARD: raspi_bluetooth_flow.RaspiHIDKeyboard(),
         ids.BLUETOOTH_HID_MOUSE: raspi_bluetooth_flow.RaspiHIDMouse(),
+        ids.BLE_KEYBOARD: raspi_bluetooth_flow.RaspiHIDKeyboard(),
+        ids.BLE_MOUSE: raspi_bluetooth_flow.RaspiHIDMouse(),
     }
     return devices
 

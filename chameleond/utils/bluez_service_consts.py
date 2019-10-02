@@ -28,6 +28,11 @@ PERIPHERAL_DEVICE_NAME = {
     PeripheralKit.MOUSE:    'MOUSE_REF',
 }
 
+PERIPHERAL_DEVICE_APPEARANCE = {
+    PeripheralKit.KEYBOARD: [0xc1, 0x03],
+    PeripheralKit.MOUSE:    [0xc2, 0x03],
+}
+
 SERVICE_PROFILE_SDP_PATH = {
     PeripheralKit.KEYBOARD: (os.path.dirname(os.path.abspath(__file__)) +
                              '/keyboard_sdp_record.xml'),

@@ -31,6 +31,7 @@ from bluetooth_peripheral_kit import PeripheralKitException
 from bluez_service_consts import PERIPHERAL_DEVICE_CLASS, \
     PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
     HID_SERVICE_UUID
+from bluez_gatt_server import GATTServer
 
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
 DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'
@@ -143,9 +144,34 @@ class BluezPeripheral(PeripheralKit):
     capabilities = {PeripheralKit.CAP_TRANSPORTS:
                     [PeripheralKit.TRANSPORT_BREDR, PeripheralKit.TRANSPORT_LE],
                     PeripheralKit.CAP_HAS_PIN: True,
-                    PeripheralKit.CAP_INIT_CONNECT: True}
+                    # Connection by raspberry pi is flaky, so disable for now
+                    PeripheralKit.CAP_INIT_CONNECT: False}
 
     return capabilities
+
+
+  def EnableBLE(self, use_ble):
+    """Put device into either LE or Classic mode
+
+    The raspi is a dual device, supporting both LE and Classic BT. If we are
+    testing LE connections, I don't want the DUT to successfully be able to
+    make a classic connection, for instance, so the unwanted one is disabled
+    """
+
+    if use_ble:
+      state_change_cmds = ['sudo btmgmt power off', 'sudo btmgmt le on',
+                           'sudo btmgmt privacy on', 'sudo btmgmt bredr off',
+                           'sudo btmgmt power on']
+
+    else:
+      state_change_cmds = ['sudo btmgmt power off', 'sudo btmgmt bredr on',
+                           'sudo btmgmt le off', 'sudo btmgmt power on']
+
+    for cmd in state_change_cmds:
+      os.system(cmd)
+
+      # I add a slight delay so there is adequate time for the change to be done
+      time.sleep(.1)
 
 
   def SpecifyDeviceType(self, device_type):
@@ -168,12 +194,31 @@ class BluezPeripheral(PeripheralKit):
       logging.error(error)
       raise BluezPeripheralException(error)
 
-    # Set device type and initiate service based on it
     self._device_type = device_type
-    self._bluez_service = BluezService(self._device_type,
-                                       self.GetLocalBluetoothAddress())
-    self.Init()
-    self.SetAdvertisedName(PERIPHERAL_DEVICE_NAME[self._device_type])
+
+    if 'BLE' in device_type:
+      logging.info('Binding to BLE device!')
+
+      # Enable le only, to make sure our test device isn't connecting
+      # via BT classic
+      self.EnableBLE(True)
+
+      # Establish and run gatt server
+      server = GATTServer(device_type)
+
+    else:
+      logging.info('Binding to Classic device!')
+
+      # Enable bt classic only, to make sure our test device isn't connecting
+      # via LE
+      self.EnableBLE(False)
+
+      # Set device type and initiate service based on it
+      self._bluez_service = BluezService(self._device_type,
+                                         self.GetLocalBluetoothAddress())
+
+      self.Init()
+      self.SetAdvertisedName(PERIPHERAL_DEVICE_NAME[self._device_type])
 
     logging.info('Bluetooth peripheral now bound to %s', device_type)
 
@@ -208,7 +253,7 @@ class BluezPeripheral(PeripheralKit):
     self._set_hci_prop('org.bluez.Adapter1', 'Discoverable', dbus.Boolean(1))
 
     # Set class based on device we're emulating
-    if self._device_type:
+    if self._device_type and 'BLE' not in self._device_type:
       self.SetClassOfService(PERIPHERAL_DEVICE_CLASS[self._device_type])
 
     return True
