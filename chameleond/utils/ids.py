@@ -120,6 +120,14 @@ RN42_SET = frozenset([
     'AK05MKZ6', # chromeos1-dev-host3-chameleon
     'A600YVW9', # chromeos1-dev-host5-chameleon
     'AK05MKZ8', # chromeos1-dev-host6-chameleon
+    'AK05ML0K', # chromeos1-dev-host7-chameleon
+    'AK05MKYF', # chromeos1-dev-host8-chameleon
+    'AK05ML12', # chromeos1-dev-host9-chameleon
+    'AK05MKZD', # chromeos1-dev-host10-chameleon
+    'AK05ML11', # chromeos1-dev-host11-chameleon
+    'AK05MKZ5', # chromeos1-dev-host12-chameleon
+    'AK05MK6Z', # chromeos1-dev-host13-chameleon
+    'AK05ML2S', # chromeos1-dev-host14-chameleon
     'AK05MKYW', # chromeos15-row1-rack1-host6-chameleon
     'AK05MKYV', # chromeos15-row1-rack3-host2-chameleon
     'AK05MKYS', # chromeos15-row1-rack3-host3-chameleon
@@ -161,6 +169,14 @@ RN52_SET = frozenset([
     'AH03PZHG', # chromeos1-dev-host3-chameleon
     'AK0557D6', # chromeos1-dev-host5-chameleon
     'AK0557CV', # chromeos1-dev-host6-chameleon
+    'A5043MG6', # chromeos1-dev-host7-chameleon
+    'A5043N1U', # chromeos1-dev-host8-chameleon
+    'A5043MGO', # chromeos1-dev-host9-chameleon
+    'A5043MFK', # chromeos1-dev-host10-chameleon
+    'AH03PZEN', # chromeos1-dev-host11-chameleon
+    'A5043N2L', # chromeos1-dev-host12-chameleon
+    'A5043MGB', # chromeos1-dev-host13-chameleon
+    'A5043N25', # chromeos1-dev-host14-chameleon
     'AK0557A1', # chromeos15-row1-rack1-host6-chameleon
     'AH03PZDI', # chromeos15-row1-rack3-host2-chameleon
     'AH03PZEM', # chromeos15-row1-rack3-host3-chameleon
