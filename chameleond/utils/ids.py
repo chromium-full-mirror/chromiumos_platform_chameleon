@@ -204,6 +204,6 @@ RN52_SET = frozenset([
     'AK055793', # chromeos15-row2-rack10-host1-chameleon
     'AK0557AX', # chromeos15-row2-rack11-host2-chameleon
     'AK0557C1', # chromeos15-row4-rack9-host1-chameleon
-    'A0543N2R', # chromeos15-row4-rack9-host2-chameleon
+    'A5043N2R', # chromeos15-row4-rack9-host2-chameleon
     # Add new RN52 serial numbers and location above this line
 ])
