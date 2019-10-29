@@ -142,13 +142,25 @@ if cat /proc/device-tree/model | grep -qi 'raspberry pi'; then
     validate_package_installation "bluez"
     validate_package_installation "python-pyudev"
 
-    # Update bluetooth rules
-    OLD_EXEC="ExecStart=/usr/lib/bluetooth/bluetoothd"
-    NEW_EXEC="ExecStart=/usr/lib/bluetooth/bluetoothd -d -P input"
-    BT_LOC="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"
+    # Update bluetooth rules in service config files
+    BT_ADMIN_CONF="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"
+    BT_SRC_CONF="/lib/systemd/system/bluetooth.service"
+    EXEC_START="ExecStart"
+    EXEC_OPTS="-d -P input"
 
-    if ! cat ${BT_LOC} | grep -qi "${NEW_EXEC}"; then
-        eval "sed -i \"s#${OLD_EXEC}#${NEW_EXEC}#g\" ${BT_LOC}"
+
+    # Add bluetoothd options to admin service config
+    if ! grep -qie "${EXEC_START}.*${EXEC_OPTS}" ${BT_ADMIN_CONF}; then
+        # Find exec line, add options to end
+        eval "sed -ie 's/${EXEC_START}.*/& ${EXEC_OPTS}/g' ${BT_ADMIN_CONF}"
+    fi
+
+    # To be safe, also edit primary service config (requires service restart)
+    if ! grep -qie "${EXEC_START}.*${EXEC_OPTS}" ${BT_SRC_CONF}; then
+        # Find exec line, add options to end
+        eval "sed -ie 's/${EXEC_START}.*/& ${EXEC_OPTS}/g' ${BT_SRC_CONF}"
+        eval "systemctl daemon-reload"
+        eval "service bluetooth restart"
     fi
 
     # Create symlinks if daemons were installed in /usr/local/bin instead of
