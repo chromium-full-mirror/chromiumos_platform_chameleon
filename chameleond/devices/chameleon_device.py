@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -43,7 +44,6 @@ class ChameleonDevice(object):
     return self._device_name
 
 
-# TODO(mojahsu): Seperate Pluggable and Selectable APIs to 2 devices class.
 class Flow(ChameleonDevice):
   """An abstraction of the entire flow for a specific input.
 
@@ -81,6 +81,58 @@ class Flow(ChameleonDevice):
 
   # TODO(mojahsu): Add connector Type back. we may have 2 devices with the same
   # type. It't not suitable to use GetDeviceName to replace it.
+  def GetConnectorType(self):
+    """Returns the human readable string for the connector type."""
+    return self.GetDeviceName()
+
+
+class VirtualFlow(ChameleonDevice):
+  """An abstraction of the entire flow for a specific input.
+
+  It provides the basic interfaces of Chameleond driver for a specific input.
+  Using this abstraction, each flow can have its own behavior. No need to
+  share the same Chameleond driver code.
+  """
+  def __init__(self):
+    """Constructs a Flow object."""
+    super(VirtualFlow, self).__init__()
+
+  def InitDevice(self):
+    """Init the tty of the kit attached to the chameleon board."""
+    pass
+
+  def Reset(self):
+    """Reset chameleon device."""
+    pass
+
+  def IsPhysicalPlugged(self):
+    """Returns if the physical cable is plugged."""
+    return True
+
+  def IsPlugged(self):
+    """Returns if the flow is plugged."""
+    return True
+
+  def IsDetected(self):
+    """Returns if the device can be detected."""
+    return True
+
+  def Plug(self):
+    """Emulates plug."""
+    pass
+
+  def Unplug(self):
+    """Emulates unplug."""
+    pass
+
+  def Select(self):
+    """Selects the flow."""
+    pass
+
+  def DoFSM(self):
+    """Does the Finite-State-Machine to ensure the input flow ready."""
+    pass
+
   def GetConnectorType(self):
     """Returns the human readable string for the connector type."""
     return self.GetDeviceName()

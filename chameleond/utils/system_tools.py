@@ -19,6 +19,7 @@ class _SystemTools(object):
       'avsync': '/usr/bin/avsync',
       'chameleond': '/etc/init.d/chameleond',
       'date': '/bin/date',
+      'dut-control': '/usr/local/bin/dut-control',
       'histogram': '/usr/bin/histogram',
       'hpd_control': '/usr/bin/hpd_control',
       'i2cdump': '/usr/local/sbin/i2cdump',
@@ -33,6 +34,7 @@ class _SystemTools(object):
       'reboot': '/sbin/reboot',
       'pixeldump': '/usr/bin/pixeldump',
       'printer': '/usr/bin/printer',
+      'servod': '/usr/local/bin/servod',
       'wget': '/usr/bin/wget',
   }
 

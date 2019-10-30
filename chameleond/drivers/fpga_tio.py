@@ -16,6 +16,7 @@ from chameleond.interface import ChameleondInterface
 
 from chameleond.devices import audio_board
 from chameleond.devices import avsync_probe
+from chameleond.devices import bluetooth_base_flow
 from chameleond.devices import bluetooth_hid_flow
 from chameleond.devices import codec_flow
 from chameleond.devices import input_flow
@@ -105,6 +106,8 @@ class ChameleondDriver(ChameleondInterface):
     # See explanation for using DRIVER_MODULE in bluetooth_nrf52.py
     self._ble_hid_ctrl = lazy(usb.USBController)(
         bluetooth_hid_flow.BleHIDMouseFlow.DRIVER_MODULE)
+    # A base control comes without any driver.
+    self._base_ctrl = lazy(usb.USBController)('')
 
     if self._platform == 'CHROMEOS':
       self._devices = self.init_devices_for_chromeos()
@@ -122,6 +125,8 @@ class ChameleondDriver(ChameleondInterface):
     # An object in the following would be None if it is not instantiated
     # in self._devices above.
     self.audio_board = self._device_manager.GetChameleonDevice(ids.AUDIO_BOARD)
+    self.bluetooth_base = self._device_manager.GetChameleonDevice(
+        ids.BLUETOOTH_BASE)
     self.bluetooth_mouse = self._device_manager.GetChameleonDevice(
         ids.BLUETOOTH_HID_MOUSE)
     self.bluetooth_keyboard = self._device_manager.GetChameleonDevice(
@@ -155,6 +160,9 @@ class ChameleondDriver(ChameleondInterface):
         ids.BLE_MOUSE:
             bluetooth_hid_flow.BleHIDMouseFlow(
                 ids.BLE_MOUSE, self._ble_hid_ctrl),
+        ids.BLUETOOTH_BASE:
+            bluetooth_base_flow.BluetoothBaseFlow(
+                ids.BLUETOOTH_BASE, self._base_ctrl),
     }
     return devices
 

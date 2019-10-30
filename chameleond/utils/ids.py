@@ -33,6 +33,7 @@ USB_PRINTER = 25
 BLUETOOTH_A2DP_SINK = 26
 BLE_MOUSE = 27
 BLE_KEYBOARD = 28
+BLUETOOTH_BASE = 29
 
 # device names
 DEVICE_NAMES = {
@@ -64,6 +65,7 @@ DEVICE_NAMES = {
     BLUETOOTH_A2DP_SINK: 'bluetooth_a2dp_sink',
     BLE_MOUSE: 'ble_mouse',
     BLE_KEYBOARD: 'ble_keyboard',
+    BLUETOOTH_BASE: 'bluetooth_base',
 }
 
 

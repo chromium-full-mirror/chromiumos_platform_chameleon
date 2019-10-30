@@ -111,13 +111,13 @@ class BluetoothHIDFlow(chameleon_device.Flow):
                               self.DETECT_TIMEOUT_SECS)
       return True
     except common.TimeoutError:
-      logging.warn("Did not detect bluetooth kit for %s before timing out.",
+      logging.warn('Did not detect bluetooth kit for %s before timing out.',
                    self.__class__.__name__)
       return False
 
   def InitDevice(self):
     """Init the tty of the kit attached to the chameleon board."""
-    logging.debug("InitDevice in Bluetooth HID Flow #%d is a no-op.",
+    logging.debug('InitDevice in Bluetooth HID Flow #%d is a no-op.',
                   self._port_id)
 
   def Reset(self):
