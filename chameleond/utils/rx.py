@@ -82,7 +82,7 @@ class DpRx(i2c.I2cSlave):
     0b1010: 96000,
     0b1110: 192000,
     0b0011: 32000,
-    0b0000: 0, # Not indicated
+    0b0001: 0, # Not indicated
   }
 
   _INFOFRAME_REGS = {
@@ -431,7 +431,7 @@ class HdmiRx(i2c.I2cSlave):
     0b1010: 96000,
     0b1110: 192000,
     0b0011: 32000,
-    0b0000: 0, # Not indicated
+    0b0001: 0, # Not indicated
   }
 
   # All InfoFrame registers are in bank 2
