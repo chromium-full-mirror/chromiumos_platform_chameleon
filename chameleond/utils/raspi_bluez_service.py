@@ -16,17 +16,8 @@ import dbus
 import dbus.mainloop.glib
 import dbus.service
 
-# Libraries needed on raspberry pi. ImportError on
-# Fizz can be ignored.
-try:
-  from bluetooth import BluetoothSocket, L2CAP
-except ImportError:
-  pass
-
-try:
-  from gi.repository import GLib
-except ImportError:
-  pass
+from bluetooth import BluetoothSocket, L2CAP
+from gi.repository import GLib
 
 from bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
     BLUEZ_PROFILE_PATH, SERVICE_PROFILE_SDP_PATH, HID_SERVICE_UUID

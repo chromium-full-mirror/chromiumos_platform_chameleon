@@ -20,7 +20,6 @@ from chameleond.devices import bluetooth_hid_flow
 from chameleond.devices import codec_flow
 from chameleond.devices import input_flow
 from chameleond.devices import motor_board
-from chameleond.devices import raspi_bluetooth_flow
 from chameleond.devices import usb_audio_flow
 from chameleond.devices import usb_hid_flow
 from chameleond.devices import usb_printer_device
@@ -35,6 +34,9 @@ from chameleond.utils import usb
 from chameleond.utils import usb_printer_control
 from chameleond.utils.common import lazy
 from chameleond.utils import bluetooth_a2dp
+
+if os.environ.get('PLATFORM') == 'RASPI':
+  from chameleond.devices import raspi_bluetooth_flow
 
 class DriverError(Exception):
   """Exception raised when any error on FPGA driver."""
@@ -77,16 +79,7 @@ class ChameleondDriver(ChameleondInterface):
   def __init__(self, *args, **kwargs):
     super(ChameleondDriver, self).__init__(*args, **kwargs)
 
-    # The default platform is 'fpga', and could be 'chromeos' if specified.
-    platform = kwargs.get('platform', 'fpga')
-
-    # Auto raspi detection to prevent fpga initialization / raspi crash
-    if os.path.isfile('/proc/device-tree/model'):
-      with open('/proc/device-tree/model', 'r') as f:
-        output = f.read()
-
-        if 'raspberry' in output.lower():
-          platform = 'raspi'
+    platform = os.environ.get('PLATFORM')
 
     logging.info('platform: %s', platform)
 
@@ -110,9 +103,9 @@ class ChameleondDriver(ChameleondInterface):
     self._ble_hid_ctrl = lazy(usb.USBController)(
         bluetooth_hid_flow.BleHIDMouseFlow.DRIVER_MODULE)
 
-    if platform == 'chromeos':
+    if platform == 'CHROMEOS':
       self._devices = self.init_devices_for_chromeos()
-    elif platform == 'raspi':
+    elif platform == 'RASPI':
       self._devices = self.init_devices_for_raspi()
     else:
       self._devices = self.init_devices_for_fpga()

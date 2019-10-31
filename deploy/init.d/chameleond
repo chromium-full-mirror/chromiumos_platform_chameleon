@@ -23,6 +23,7 @@ DAEMON_ARGS="--driver ${CHAMELEON_BOARD}"
 DAEMON_USER='root'
 PIDFILE="/var/run/${DAEMON_NAME}.pid"
 LOGFILE="/var/log/${DAEMON_NAME}_init"
+PLATFORM="FPGA"
 
 RPI_INFO_FILE="/proc/device-tree/model"
 
@@ -32,6 +33,7 @@ RETRY_PERIOD=10
 if [ -f ${RPI_INFO_FILE} ] && grep -qi 'raspberry' ${RPI_INFO_FILE} ; then
     DAEMON_ARGS="${DAEMON_ARGS} platform=raspi"
     RETRY_PERIOD=1
+    PLATFORM="RASPI"
 fi
 
 is_already_running () {
@@ -52,7 +54,7 @@ do_start () {
         start-stop-daemon --start --background --pidfile "${PIDFILE}" \
             --make-pidfile --user "${DAEMON_USER}" --chuid "${DAEMON_USER}" \
             --startas /bin/bash -- \
-            -c "exec ${DAEMON} ${DAEMON_ARGS} >> ${LOGFILE} 2>&1"
+            -c "PLATFORM=\"${PLATFORM}\" exec ${DAEMON} ${DAEMON_ARGS} >> ${LOGFILE} 2>&1"
         do_status
     else
         echo "${DAEMON_NAME} is already running."
