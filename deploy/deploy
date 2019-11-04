@@ -141,6 +141,7 @@ if cat /proc/device-tree/model | grep -qi 'raspberry pi'; then
     validate_package_installation "python-bluez"
     validate_package_installation "bluez"
     validate_package_installation "python-pyudev"
+    validate_package_installation "python-dbus"
 
     # Update bluetooth rules in service config files
     BT_ADMIN_CONF="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"
