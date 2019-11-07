@@ -12,6 +12,7 @@ from chameleond.utils import fpga
 from chameleond.utils import ids
 from chameleond.utils import mem
 from chameleond.utils import memory_dumper
+from multiprocessing import Queue
 
 
 class AudioCaptureManagerError(Exception):
@@ -25,16 +26,22 @@ class AudioCaptureManager(object):
   Properties:
     _adump: An AudioDumper object in FpgaController.
     _capture_audio_start_time: Starting time of audio data capturing.
+    _queue: Since the memory dumper is run in another process, we need a queue
+            to receive messages from it.
   """
-  def __init__(self, audio_dumper):
+  def __init__(self, audio_dumper, flow=None):
     """Inits an AudioCaptureManager.
 
     Args:
       audio_dumper: An AudioDumper object.
+      flow: A chameleon_device.Flow object.
     """
     self._adump = audio_dumper
     self._mem_dumper = None
     self._file_path = None
+    self._format = None
+    self._flow = flow
+    self._queue = None
 
   @property
   def is_capturing(self):
@@ -44,6 +51,12 @@ class AudioCaptureManager(object):
       True if audio dumper is dumping data.
     """
     return self._adump.is_dumping
+
+  def update_format(self):
+    """Queries format and push it into the queue. Just do it once."""
+    if self._flow and hasattr(self._flow,
+                              'GetAudioFormat') and self._queue.empty():
+      self._queue.put(self._flow.GetAudioFormat().AsDict())
 
   def StartCapturingAudio(self, file_path):
     """Starts capturing audio.
@@ -59,8 +72,11 @@ class AudioCaptureManager(object):
     self._file_path = file_path
     self._adump.StartDumpingToMemory()
     self._mem_dumper = None
+    self._format = None
     if file_path:
-      self._mem_dumper = memory_dumper.MemoryDumper(file_path, self._adump)
+      self._queue = Queue()
+      self._mem_dumper = memory_dumper.MemoryDumper(
+                             file_path, self._adump, self.update_format)
       self._mem_dumper.start()
     logging.info('Started capturing audio.')
 
@@ -98,6 +114,8 @@ class AudioCaptureManager(object):
     if self._file_path:
       self._TruncateFile(2)
 
+    if self._queue and not self._queue.empty():
+        return self._queue.get()
     return self._adump.audio_data_format_as_dict
 
   def _TruncateFile(self, pages):

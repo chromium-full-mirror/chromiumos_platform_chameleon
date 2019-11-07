@@ -454,7 +454,7 @@ class FpgaInputFlowWithAudio(FpgaInputFlow):  # pylint: disable=W0223
     super(FpgaInputFlowWithAudio, self).__init__(input_id, main_i2c_bus,
                                                  fpga_ctrl)
     self._audio_capture_manager = audio_utils.AudioCaptureManager(
-        self._fpga.adump)
+        self._fpga.adump, self)
     self._audio_route_manager = audio_utils.AudioRouteManager(
         self._fpga.aroute)
     self._audio_recorded_file = None

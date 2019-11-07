@@ -18,13 +18,15 @@ class MemoryDumper(multiprocessing.Process):
   """Dumping memory from a ring buffer to a file in a subprocess."""
   _DUMP_PERIOD_SECS = 1.0
 
-  def __init__(self, file_path, adump):
+  def __init__(self, file_path, adump, dump_callback):
     """Initializes a MemoryDumper.
 
     Args:
       file_path: The file path to dump data to. Note that the data will be
                  appended to the end of the file.
       adump: an AudioDump object for dumper control on FPGA.
+      dump_callback: The dumper will call this callback immediately after
+                     dumping samples.
     """
     super(MemoryDumper, self).__init__()
 
@@ -37,6 +39,7 @@ class MemoryDumper(multiprocessing.Process):
     self._file_path = file_path
     self._adump = adump
     self._stop_event = multiprocessing.Event()
+    self._dump_callback = dump_callback
     self.daemon = True
 
   def Stop(self):
@@ -122,6 +125,7 @@ class MemoryDumper(multiprocessing.Process):
     self._CheckOverlap()
     self._DumpPages()
     self._UpdateOnePeriod()
+    self._dump_callback()
 
   def _CheckOverlap(self):
     """Checks the buffered data is not overlapped.
