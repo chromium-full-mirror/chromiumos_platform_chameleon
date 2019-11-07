@@ -253,7 +253,20 @@ class BluezService(dbus.service.Object):
 
     # Convert from dbus to native type for socket send
     native_report = ''.join([chr(b) for b in report])
-    self._cinterrupt.send(native_report)
+    try:
+        self._cinterrupt.send(native_report)
+    except IOError as e:
+        if str(e) == "(104, \'Connection reset by peer\')":
+            logging.info("Recreating BluetoothSocket")
+            self._cinterrupt.close()
+            self._cinterrupt, _ = self._sinterrupt.accept()
+            self._cinterrupt.send(native_report)
+        else:
+            logging.info('Unknown Error %s', e)
+            raise
+    except Exception as e:
+        logging.info('Unknown Error', e)
+        raise
 
 
   @dbus.service.signal('org.chromium.autotest.btkbservice', signature='')
