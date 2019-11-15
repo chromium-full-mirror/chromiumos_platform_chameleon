@@ -36,6 +36,29 @@ validate_package_installation() {
     fi
 }
 
+validate_socket_installation() {
+    PACKAGE_NAME="btsocket"
+
+    if ! python -c "import ${PACKAGE_NAME}"; then
+        cd /tmp
+        if [ -d "${PACKAGE_NAME}" ]; then
+            rm -rf ${PACKAGE_NAME}
+        fi
+
+        git clone https://chromium.googlesource.com/chromiumos/platform/btsocket
+
+        cd ${PACKAGE_NAME}
+
+        python setup.py build
+        sudo python setup.py install
+
+        printf "Package %s installed\n" ${PACKAGE_NAME}
+
+    else
+        printf "Package %s already installed\n" ${PACKAGE_NAME}
+    fi
+}
+
 provide_daemon_symlinks(){
     ALT_CHAMELEON_DIR='/usr/local/bin'
     SCRIPT_NAME="run_$1"
@@ -142,6 +165,12 @@ if cat /proc/device-tree/model | grep -qi 'raspberry pi'; then
     validate_package_installation "bluez"
     validate_package_installation "python-pyudev"
     validate_package_installation "python-dbus"
+
+    # Some required for bluetooth-tester
+    validate_package_installation "python-dev"
+    validate_package_installation "git"
+
+    validate_socket_installation
 
     # Update bluetooth rules in service config files
     BT_ADMIN_CONF="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"
