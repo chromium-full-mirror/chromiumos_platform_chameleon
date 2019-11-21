@@ -130,6 +130,9 @@ class GATTServer(object):
     local_name = PERIPHERAL_DEVICE_NAME[self.peripheral_type]
     local_name_data = [ord(ch) for ch in local_name]
 
+    # Assign local name
+    os.system("sudo hciconfig hci0 name \'{}\'".format(local_name))
+
     # LE only, general discoverable
     flag_data = [0x06]
 
