@@ -303,7 +303,7 @@ class BluezPeripheral(PeripheralKit):
 
 
   def SetAdvertisedName(self, name):
-    os.system('sudo hciconfig hci0 name \'{}\''.format(name))
+    self._set_hci_prop('org.bluez.Adapter1', 'Alias', dbus.String(name))
 
 
   def GetAuthenticationMode(self):
