@@ -174,6 +174,15 @@ class BluezPeripheral(PeripheralKit):
       time.sleep(.1)
 
 
+  def GetBaseDeviceType(self, device_type):
+    """Returns the base device type of a peripheral, i.e. BLE_MOUSE -> MOUSE"""
+
+    if 'BLE_' in device_type:
+      device_type = device_type.replace('BLE_', '')
+
+    return device_type
+
+
   def SpecifyDeviceType(self, device_type):
     """Instantiates one of our supported devices
 
@@ -218,7 +227,10 @@ class BluezPeripheral(PeripheralKit):
                                          self.GetLocalBluetoothAddress())
 
       self.Init()
-      self.SetAdvertisedName(PERIPHERAL_DEVICE_NAME[self._device_type])
+
+
+    self.SetAdvertisedName(PERIPHERAL_DEVICE_NAME[self.GetBaseDeviceType(\
+                                                  self._device_type)])
 
     logging.info('Bluetooth peripheral now bound to %s', device_type)
 
