@@ -39,6 +39,9 @@ class PeripheralKit(object):
   USB_PID = None # The USB PID (Product ID) of the kit, as a hexadecimal string
 
   # Timing settings
+  # We will re-attempt connection this many times before reporting failure
+  # This is due to a delayed reattach to the /dev/tty device after powercycle
+  CONNECT_RETRIES = 15
   # Serial commands will retry (RETRY + 1) times,
   RETRY = 2
   # TODO(josephsih): Improve timing values, find/describe source thereof
@@ -162,19 +165,25 @@ class PeripheralKit(object):
       logging.error(msg)
       raise PeripheralKitException(msg)
 
-    try:
-      self._serial.Connect(driver=self.DRIVER,
-                           usb_vid=self.USB_VID,
-                           usb_pid=self.USB_PID,
-                           known_device_set=self.KNOWN_DEVICE_SET,
-                           baudrate=self.BAUDRATE,
-                           bytesize=self.BYTESIZE,
-                           parity=self.PARITY,
-                           stopbits=self.STOPBITS)
-      self._tty = self._serial.port
-      logging.info('Connected to the serial port successfully: %s', self._tty)
-    except Exception as e:
-      msg = 'Failed to connect to the serial device: %s' % e
+    for _ in range(0, self.CONNECT_RETRIES):
+      try:
+        self._serial.Connect(driver=self.DRIVER,
+                             usb_vid=self.USB_VID,
+                             usb_pid=self.USB_PID,
+                             known_device_set=self.KNOWN_DEVICE_SET,
+                             baudrate=self.BAUDRATE,
+                             bytesize=self.BYTESIZE,
+                             parity=self.PARITY,
+                             stopbits=self.STOPBITS)
+        self._tty = self._serial.port
+        logging.info('Connected to the serial port successfully: %s', self._tty)
+        break
+
+      except Exception as e:
+        msg = 'Failed to connect to the serial device: %s' % e
+        time.sleep(1)
+
+    else:
       logging.error(msg)
       raise PeripheralKitException(msg)
 
