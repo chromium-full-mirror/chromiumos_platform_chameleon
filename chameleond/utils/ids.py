@@ -158,6 +158,21 @@ RN42_SET = frozenset([
     'AK05MKYD', # chromeos15-row2-rack11-host2-chameleon
     'AK05MKYK', # chromeos15-row4-rack9-host1-chameleon
     'AK05ML08', # chromeos15-row4-rack9-host2-chameleon
+    'AL05BW7Z', # chromeos15-row5-rack1-host1-chameleon
+    'AL05BWDF', # chromeos15-row5-rack1-host2-chameleon
+    'AL05BW70', # chromeos15-row5-rack1-host3-chameleon
+    'AL05BW93', # chromeos15-row5-rack1-host4-chameleon
+    'AL05BWF8', # chromeos15-row5-rack1-host5-chameleon
+    'AL05BW8E', # chromeos15-row5-rack1-host6-chameleon
+    'AL05BW88', # chromeos15-row5-rack1-host7-chameleon
+    'AK05ML16', # chromeos15-row5-rack3-host1-chameleon
+    'AK05MKYB', # chromeos15-row5-rack3-host2-chameleon
+    'AK05MKYY', # chromeos15-row5-rack3-host3-chameleon
+    'AK05MKYE', # chromeos15-row5-rack3-host4-chameleon
+    'AK05ML07', # chromeos15-row5-rack3-host5-chameleon
+    'AK05MKZ2', # chromeos15-row5-rack3-host6-chameleon
+    'AK05ML0D', # chromeos15-row5-rack3-host7-chameleon
+    'AK05ML0V', # chromeos15-row4-rack11-host3-chameleon
     # Add new RN42 serial numbers and location above this line
 ])
 
@@ -207,5 +222,20 @@ RN52_SET = frozenset([
     'AK0557AX', # chromeos15-row2-rack11-host2-chameleon
     'AK0557C1', # chromeos15-row4-rack9-host1-chameleon
     'A5043N2R', # chromeos15-row4-rack9-host2-chameleon
+    'AH03PZD9', # chromeos15-row5-rack1-host1-chameleon
+    'A5043MFR', # chromeos15-row5-rack1-host2-chameleon
+    'A5043N2B', # chromeos15-row5-rack1-host3-chameleon
+    'A5043MGA', # chromeos15-row5-rack1-host4-chameleon
+    'A5043MG8', # chromeos15-row5-rack1-host5-chameleon
+    'A5043N1N', # chromeos15-row5-rack1-host6-chameleon
+    'A5043N19', # chromeos15-row5-rack1-host7-chameleon
+    'A5043N28', # chromeos15-row5-rack3-host1-chameleon
+    'A5043MGL', # chromeos15-row5-rack3-host2-chameleon
+    'A5043N26', # chromeos15-row5-rack3-host3-chameleon
+    'A5043MGF', # chromeos15-row5-rack3-host4-chameleon
+    'A5043N1O', # chromeos15-row5-rack3-host5-chameleon
+    'A5043N1W', # chromeos15-row5-rack3-host6-chameleon
+    'AK05576B', # chromeos15-row5-rack3-host7-chameleon
+    'A5043N2Y', # chromeos15-row4-rack11-host3-chameleon
     # Add new RN52 serial numbers and location above this line
 ])
