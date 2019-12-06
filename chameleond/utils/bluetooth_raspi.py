@@ -38,6 +38,7 @@ DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'
 DBUS_BLUEZ_DEVICE_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Device1'
 
 MAX_DBUS_RETRY_ATTEMPTS = 3
+CONNECTION_WAIT_TIME = 5
 
 # Definitions of mouse button HID encodings
 RAW_HID_BUTTONS_RELEASED = 0x0
@@ -144,8 +145,7 @@ class BluezPeripheral(PeripheralKit):
     capabilities = {PeripheralKit.CAP_TRANSPORTS:
                     [PeripheralKit.TRANSPORT_BREDR, PeripheralKit.TRANSPORT_LE],
                     PeripheralKit.CAP_HAS_PIN: True,
-                    # Connection by raspberry pi is flaky, so disable for now
-                    PeripheralKit.CAP_INIT_CONNECT: False}
+                    PeripheralKit.CAP_INIT_CONNECT: True}
 
     return capabilities
 
@@ -419,19 +419,32 @@ class BluezPeripheral(PeripheralKit):
 
     logging.debug('Attempting to connect to %s', self.remote_address)
 
-    # Grab the relevant device
-    device = self._GetDeviceWithAddress(self.remote_address)
+    # Establish link to service if we don't have it already
+    if not self._service_iface:
+      self._service = self._dbus_system_bus.get_object(BLUEZ_SERVICE_NAME,
+                                                       BLUEZ_SERVICE_PATH)
+      self._service_iface = dbus.Interface(self._service, BLUEZ_SERVICE_NAME)
 
-    # TODO This allows pairing autotest to pass, but disconnects quickly and
-    # throws "Operation not available" exception
-    # b:140873438
-    try:
-      device.ConnectProfile(HID_SERVICE_UUID)
+    # Request Bluez service to connect to address
+    self._service_iface.Connect(self.remote_address,
+                                reply_handler=self.ConnectDoneHandler,
+                                error_handler=self.ConnectErrorHandler)
 
-    except Exception, e:
-      logging.warn('Catching connect exception: %s', e)
+    # Autotest currently doesn't account for the time it takes for connection
+    # to succeed, so we put a small wait here. TODO b:145628709
+    time.sleep(CONNECTION_WAIT_TIME)
 
     return True
+
+
+  def ConnectDoneHandler(self):
+    """Called when connect completes"""
+    pass
+
+
+  def ConnectErrorHandler(self, err):
+    """Called in case of error on connect"""
+    logging.error('ConnectErrorHandler: %s', err)
 
 
   def Disconnect(self):

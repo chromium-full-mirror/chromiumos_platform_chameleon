@@ -26,6 +26,7 @@ P_CTRL = 17
 P_INTR = 19
 
 MAX_DBUS_RETRY_ATTEMPTS = 3
+MAX_CONNECT_RETRY_ATTEMPTS = 3
 
 
 class BluezServiceException(Exception):
@@ -213,6 +214,31 @@ class BluezService(dbus.service.Object):
     GLib.io_add_watch(self._sich, GLib.IO_IN, self.OnConnect)
 
 
+  @dbus.service.method('org.chromium.autotest.btkbservice', in_signature='s')
+  def Connect(self, addr):
+    """Initiates connection to remote host"""
+
+    # Close sockets in case they are still open (a closed socket has fileno -1)
+    if self._ccontrol.fileno() > 0:
+      self._ccontrol.close()
+      self._cinterrupt.close()
+
+    # Connect can fail if host isn't ready yet. Try a couple times to be safe
+    for _ in range(0, MAX_CONNECT_RETRY_ATTEMPTS):
+      try:
+        self._ccontrol = BluetoothSocket(L2CAP)
+        self._cinterrupt = BluetoothSocket(L2CAP)
+
+        self._ccontrol.connect((str(addr), P_CTRL))
+        self._cinterrupt.connect((str(addr), P_INTR))
+        break
+
+      except Exception, e:
+        logging.warn('\tConnect failed, retrying: ', str(e))
+
+        time.sleep(.5)
+
+
   def OnConnect(self, fd, _):
     if fd == self._scch:
       self._ccontrol, _ = self._scontrol.accept()
@@ -245,19 +271,19 @@ class BluezService(dbus.service.Object):
     # Convert from dbus to native type for socket send
     native_report = ''.join([chr(b) for b in report])
     try:
-        self._cinterrupt.send(native_report)
+      self._cinterrupt.send(native_report)
     except IOError as e:
-        if str(e) == "(104, \'Connection reset by peer\')":
-            logging.info("Recreating BluetoothSocket")
-            self._cinterrupt.close()
-            self._cinterrupt, _ = self._sinterrupt.accept()
-            self._cinterrupt.send(native_report)
-        else:
-            logging.info('Unknown Error %s', e)
-            raise
-    except Exception as e:
-        logging.info('Unknown Error', e)
+      if str(e) == "(104, \'Connection reset by peer\')":
+        logging.info('Recreating BluetoothSocket')
+        self._cinterrupt.close()
+        self._cinterrupt, _ = self._sinterrupt.accept()
+        self._cinterrupt.send(native_report)
+      else:
+        logging.info('Unknown Error %s', e)
         raise
+    except Exception as e:
+      logging.info('Unknown Error', e)
+      raise
 
 
   @dbus.service.signal('org.chromium.autotest.btkbservice', signature='')
