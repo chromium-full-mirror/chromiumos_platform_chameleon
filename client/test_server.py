@@ -2,9 +2,9 @@
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """A simple utility to connect to Chameleond in an interactive shell."""
 
+import atexit
 import argparse
 import code
 import logging
@@ -16,6 +16,8 @@ import time
 import xmlrpclib
 
 from audio.audio_value_detector import AudioValueDetector
+
+TUNNEL_NAME = "to_chameleon_tunnel"
 
 
 def ShowMessages(proxy):
@@ -42,8 +44,8 @@ def ShowMessages(proxy):
   if linein_port:
     message += '''
       p.StartCapturingAudio(%d) to capture from LineIn.
-      p.StopCapturingAudio(%d) to stop capturing from LineIn.''' % (
-          linein_port, linein_port)
+      p.StopCapturingAudio(%d) to stop capturing from LineIn.''' % (linein_port,
+                                                                    linein_port)
 
   if hdmi_port:
     message += '''
@@ -53,8 +55,11 @@ def ShowMessages(proxy):
   logging.info(message)
 
 
-def DetectAudioValue0(channels=None, margin=0.01, continuous_samples=5,
-                      duration=3600, dump_samples=48000):
+def DetectAudioValue0(channels=None,
+                      margin=0.01,
+                      continuous_samples=5,
+                      duration=3600,
+                      dump_samples=48000):
   """Detects if Chameleon captures continuous audio data close to 0.
 
   This function will get the audio streaming data from stream server and will
@@ -85,12 +90,11 @@ def DetectAudioValue0(channels=None, margin=0.01, continuous_samples=5,
   return True
 
 
-def StartInteractiveShell(p, options):  # pylint: disable=unused-argument
+def StartInteractiveShell(p):  # pylint: disable=unused-argument
   """Starts an interactive shell.
 
   Args:
     p: The xmlrpclib.ServerProxy to chameleond.
-    options: The namespace from argparse.
   """
   vars = globals()  # pylint: disable=redefined-builtin
   vars.update(locals())
@@ -109,10 +113,29 @@ def ParseArgs():
   parser = argparse.ArgumentParser(
       description='Connect to Chameleond and use interactive shell.',
       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument('--chameleon_host', type=str, dest='host', required=True,
-                      help='host address of Chameleond')
-  parser.add_argument('--port', type=int, dest='port', default=9992,
-                      help='port number of Chameleond')
+  parser.add_argument(
+      '--chameleon_host',
+      type=str,
+      dest='host',
+      required=True,
+      help='host address of Chameleond')
+  parser.add_argument(
+      '--port',
+      type=int,
+      dest='port',
+      default=9992,
+      help='port number of Chameleond')
+  parser.add_argument(
+      '--remote',
+      action='store_true',
+      help='Connect remotely. '
+      'Adding the flag will establish ssh tunnel automatically for you.')
+  parser.add_argument(
+      '--local_port',
+      type=int,
+      default=12346,
+      help='port number of localhost. This will only be used '
+      'if you enable --remote.')
   return parser.parse_args()
 
 
@@ -138,15 +161,16 @@ def GetAndConvertRecordedFile(remote_path):
   # options is already in the namespace.
   subprocess.check_call(
       ['scp', 'root@%s:%s' % (options.host, remote_path), basename])  # pylint: disable=undefined-variable
-  subprocess.check_call(
-      ['sox', '-b', '32', '-r', '48000', '-c', '8', '-e', 'signed',
-       basename, '-c', '2', basename + '.wav'])
+  subprocess.check_call([
+      'sox', '-b', '32', '-r', '48000', '-c', '8', '-e', 'signed', basename,
+      '-c', '2', basename + '.wav'
+  ])
 
+  def ConnectCrosToLineIn():
+    """Connects a audio bus path from Cros headphone to Chameleon LineIn."""
 
-def ConnectCrosToLineIn():
-  """Connects a audio bus path from Cros headphone to Chameleon LineIn."""
-  p.AudioBoardConnect(1, 'Cros device headphone') # pylint: disable=undefined-variable
-  p.AudioBoardConnect(1, 'Chameleon FPGA line-in') # pylint: disable=undefined-variable
+  p.AudioBoardConnect(1, 'Cros device headphone')  # pylint: disable=undefined-variable
+  p.AudioBoardConnect(1, 'Chameleon FPGA line-in')  # pylint: disable=undefined-variable
 
 
 def TestMotors():
@@ -163,11 +187,22 @@ def PressOneFunc(func, time_sec=0):
           'Vol Down'.
     time_sec: Hold time in seconds after touch and before release.
   """
-  logging.info('Testing %s button, press and hold for %f seconds',
-               func, time_sec)
+  logging.info('Testing %s button, press and hold for %f seconds', func,
+               time_sec)
   p.motor_board.Touch(func)
   time.sleep(time_sec)
   p.motor_board.Release(func)
+
+
+def BuildTunnel(local_port, port, host):
+
+  def cleanup():
+    cleanup_cmd = 'ssh -S %s -O exit root@%s' % (TUNNEL_NAME, host)
+    subprocess.call(cleanup_cmd, shell=True)
+
+  cmd = ('ssh -M -S %s -fnNT -o "StrictHostKeyChecking no" '
+         '-L %d:localhost:%d root@%s') % (TUNNEL_NAME, local_port, port, host)
+  return None if subprocess.call(cmd, shell=True) else cleanup
 
 
 def Main():
@@ -177,12 +212,21 @@ def Main():
 
   options = ParseArgs()
 
-  address = 'http://%s:%s' % (options.host, options.port)
+  if options.remote:
+    cleanup = BuildTunnel(options.local_port, options.port, options.host)
+    if cleanup is None:
+      logging.info("Failed to create tunnel")
+      return
+    atexit.register(cleanup)
+    address = 'http://localhost:%d' % options.local_port
+  else:
+    address = 'http://%s:%s' % (options.host, options.port)
+
   proxy = xmlrpclib.ServerProxy(address)
-  logging.info('Connected to %s with MAC address %s',
-               address, proxy.GetMacAddress())
+  logging.info('Connected to %s with MAC address %s', address,
+               proxy.GetMacAddress())
   ShowMessages(proxy)
-  StartInteractiveShell(proxy, options)
+  StartInteractiveShell(proxy)
 
 
 if __name__ == '__main__':
