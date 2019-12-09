@@ -23,6 +23,7 @@ class _AudioBoardIOController(object):
   This class provides the interface to control output or read input on certain
   bit of certian I/O expander.
   """
+
   def __init__(self, i2c_bus):
     """Constructs an _AudioBoardIOController.
 
@@ -32,7 +33,8 @@ class _AudioBoardIOController(object):
     self._io_expanders = [
         io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[0]),
         io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[1]),
-        io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[2])]
+        io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[2])
+    ]
 
     for io_expander in self._io_expanders:
       i2c_bus.AddSlave(io_expander)
@@ -66,8 +68,8 @@ class _AudioBoardIOController(object):
       offset: The bit offset 0x0 to 0xf.
       value: 1 or 0.
     """
-    logging.info('Set I/O expander #%d, bit offset 0x%x to %d',
-                 index, offset, value)
+    logging.info('Set I/O expander #%d, bit offset 0x%x to %d', index, offset,
+                 value)
     self._io_expanders[index].SetBit(offset, value)
 
   def ReadBit(self, index, offset):
@@ -153,7 +155,8 @@ class _AudioBoardSwitchController(object):
       17: (1, 0),
       18: (2, 0),
       19: (2, 1),
-      25: (2, 5)}
+      25: (2, 5)
+  }
 
   def __init__(self, io_controller):
     """Constructs an _AudioBoardSwitchController.
@@ -231,13 +234,10 @@ class _JackPlugger(object):
   # The I/O expander index is 1.
   _INDEX = 1
   # The mapping from register name to bit offset.
-  _BIT_MAP = {
-      'cmd0':  8,
-      'cmd1':  9,
-      'stat0': 10,
-      'stat1': 11}
-
-  _SLEEP_AFTER_COMMAND_SECONDS = 2
+  _BIT_MAP = {'cmd0': 8, 'cmd1': 9, 'stat0': 10, 'stat1': 11}
+  # The mapping from plug state to string.
+  _STATE_TO_STR = {True: 'Plug', False: 'Unplug'}
+  _DELAY_AFTER_PLUG_UNPLUG = 4
 
   def __init__(self, io_controller):
     """Constructs an _JackPlugger.
@@ -252,7 +252,9 @@ class _JackPlugger(object):
 
   def Reset(self):
     """Unplugs the jack and checks status."""
-    self.SetPlugStateAndCheck(False)
+    # Set to true as we want to keep the audio cables constantly plugged, which
+    # helps to eliminate the usage of the audio plugger.
+    self.SetPlugStateAndCheck(True)
 
   def _SetPlugState(self, plug):
     """Sets plugger state.
@@ -280,13 +282,20 @@ class _JackPlugger(object):
     value0 = self._io_controller.ReadBit(self._INDEX, self._BIT_MAP['stat0'])
     value1 = self._io_controller.ReadBit(self._INDEX, self._BIT_MAP['stat1'])
 
-    logging.info('Read motor status %r, %r', value0, value1)
     if (value0, value1) == (0, 1):
       return True
     elif (value0, value1) == (1, 0):
       return False
     else:
-      raise _JackPluggerException('Can not get motor status')
+      raise _JackPluggerException(
+          'Abnormal motor status %r, %r. The plugger might stuck. Try to: \n'
+          '1. Reboot chameleon and check DUT position. \n'
+          '2. Reconnect the cable between serial port outside and '
+          'chameleon(flat cable). \n'
+          '3. Check connector between cable coming out of the plugger and the '
+          'one from the power switch. \n'
+          '4. Reboot plugger and controller from outside switch.\n', value0,
+          value1)
 
   def SetPlugStateAndCheck(self, plug):
     """Plugs/unplugs audio jack and checks motor status.
@@ -297,12 +306,17 @@ class _JackPlugger(object):
     Raises:
       _JackPluggerException if motor status does not meet the condition.
     """
-    logging.info('Set plugger state to %s', 'Plug' if plug else 'Unplug')
+    logging.info('Set plugger state to %s' % self._STATE_TO_STR[plug])
+    if self._GetPlugState() == plug:
+      logging.info('Plugger state is already %s' % self._STATE_TO_STR[plug])
+      return
+
     self._SetPlugState(plug)
-    time.sleep(self._SLEEP_AFTER_COMMAND_SECONDS)
+    time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
     if self._GetPlugState() != plug:
       raise _JackPluggerException(
-          'The motor plug status is not %s' % 'Plug' if plug else 'Unplug')
+          'Failed to set plug status to %s. Check the plugger.' %
+          self._STATE_TO_STR[plug])
 
 
 class _BluetoothController(object):
@@ -383,8 +397,8 @@ class _BluetoothController(object):
     Returns:
       True if bluetooth module is enabled. False otherwise.
     """
-    return (self._io_controller.ReadOutputBit(
-        self._INDEX, self._BIT_RESET) == 1)
+    return (self._io_controller.ReadOutputBit(self._INDEX,
+                                              self._BIT_RESET) == 1)
 
 
 class AudioBusEndpointException(Exception):
@@ -442,15 +456,16 @@ class AudioBusEndpoint(object):
   BLUETOOTH_INPUT = 'Bluetooth module input'
 
 
-AUDIO_BUS_SOURCES = [AudioBusEndpoint.CROS_HEADPHONE,
-                     AudioBusEndpoint.PERIPHERAL_MICROPHONE,
-                     AudioBusEndpoint.FPGA_LINEOUT,
-                     AudioBusEndpoint.BLUETOOTH_OUTPUT]
+AUDIO_BUS_SOURCES = [
+    AudioBusEndpoint.CROS_HEADPHONE, AudioBusEndpoint.PERIPHERAL_MICROPHONE,
+    AudioBusEndpoint.FPGA_LINEOUT, AudioBusEndpoint.BLUETOOTH_OUTPUT
+]
 
-AUDIO_BUS_SINKS = [AudioBusEndpoint.CROS_EXTERNAL_MICROPHONE,
-                   AudioBusEndpoint.PERIPHERAL_SPEAKER,
-                   AudioBusEndpoint.FPGA_LINEIN,
-                   AudioBusEndpoint.BLUETOOTH_INPUT]
+AUDIO_BUS_SINKS = [
+    AudioBusEndpoint.CROS_EXTERNAL_MICROPHONE,
+    AudioBusEndpoint.PERIPHERAL_SPEAKER, AudioBusEndpoint.FPGA_LINEIN,
+    AudioBusEndpoint.BLUETOOTH_INPUT
+]
 
 AUDIO_BUS_ENDPOINTS = AUDIO_BUS_SOURCES + AUDIO_BUS_SINKS
 
@@ -617,6 +632,7 @@ class AudioBoard(chameleon_device.ChameleonDevice):
   4. TODO (cychiang) Audio button function switching.
   5. TODO (cychiang) Audio button press control.
   """
+
   def __init__(self, i2c_bus):
     """Runs the initialization sequence for the audio board.
 
@@ -653,7 +669,8 @@ class AudioBoard(chameleon_device.ChameleonDevice):
       self._switch_controller = _AudioBoardSwitchController(self._io_controller)
       self._audio_buses = {
           1: _AudioBus(self._switch_controller, 1),
-          2: _AudioBus(self._switch_controller, 2)}
+          2: _AudioBus(self._switch_controller, 2)
+      }
     except i2c.I2cBusError:
       logging.error('Can not access I2c bus at %#x on audio board.',
                     self._i2c_bus.base_addr)
