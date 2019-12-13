@@ -38,6 +38,21 @@ validate_package_installation() {
     fi
 }
 
+validate_python_package_installation() {
+    PACKAGE_NAME=$1
+
+    if pip show "${PACKAGE_NAME}" > /dev/null; then
+        echo "Python package ${PACKAGE_NAME} already installed"
+    else
+        echo "Installing python package ${PACKAGE_NAME}..."
+        if pip install "${PACKAGE_NAME}" > /dev/null; then
+            echo "Python package ${PACKAGE_NAME} installed"
+        else
+            echo "Error: fail to install python package ${PACKAGE_NAME}"
+        fi
+    fi
+}
+
 validate_socket_installation() {
     PACKAGE_NAME="btsocket"
 
@@ -102,6 +117,41 @@ END
     mv -f "${CONFIG_TMP}" "${CONFIG_FILE}"
 }
 
+install_servo_packages() {
+    echo "Install servo packages from ${BUNDLE_PATH}".
+
+    # Install servo configs.
+    DST_SHARE="/usr/share"
+    install -d "${DST_SHARE}"
+    cp -pr "${BUNDLE_PATH}/usr/share/servo_updater" "${DST_SHARE}"
+
+    # Install servo executables.
+    BUNDLE_PYTHON_EXEC="${BUNDLE_PATH}/usr/lib64/python-exec/python2.7"
+    DST_PYTHON_EXEC="/usr/local/lib/python-exec/python2.7"
+    install -d "${DST_PYTHON_EXEC}"
+    cp -pr \
+        "${BUNDLE_PYTHON_EXEC}/servod" \
+        "${BUNDLE_PYTHON_EXEC}/dut-control" \
+        "${DST_PYTHON_EXEC}"
+
+    # Install servo and its dependent packages.
+    BUNDLE_SITE_PACKAGES="${BUNDLE_PATH}/usr/lib64/python2.7/site-packages"
+    DST_DIST_PACKAGES="/usr/local/lib/python2.7/dist-packages"
+    install -d "${DST_DIST_PACKAGES}"
+    cp -pr \
+        "${BUNDLE_SITE_PACKAGES}"/fw_update.py \
+        "${BUNDLE_SITE_PACKAGES}"/ec3po \
+        "${BUNDLE_SITE_PACKAGES}"/ec3po-*.egg-info \
+        "${BUNDLE_SITE_PACKAGES}"/servo \
+        "${BUNDLE_SITE_PACKAGES}"/servo-*.egg-info \
+        "${BUNDLE_SITE_PACKAGES}"/ecusb \
+        "${BUNDLE_SITE_PACKAGES}"/ecusb-*.egg-info \
+        "${BUNDLE_SITE_PACKAGES}"/usb \
+        "${BUNDLE_SITE_PACKAGES}"/servo_updater.py \
+        "${BUNDLE_SITE_PACKAGES}"/servo_updater-*.egg-info \
+        "${DST_DIST_PACKAGES}"
+}
+
 # For Raspberry Pi, create symlinks if daemons were installed in /usr/local/bin
 # instead of /usr/bin where chameleond expects them. This seems to be least
 # invasive way to resolve disagreement without either breaking fizz or fpga
@@ -144,6 +194,9 @@ if [ "$PLATFORM" = "raspberrypi" ]; then
     validate_package_installation "python-dev"
     validate_package_installation "git"
 
+    # Install python packages for Raspberry Pi.
+    validate_python_package_installation "pexpect"
+
     validate_socket_installation
 
     # Update bluetooth rules in service config files
@@ -174,6 +227,10 @@ if [ "$PLATFORM" = "raspberrypi" ]; then
         eval "cp ${SRC_KBD_CONF} ${DEST_KBD_CONF}"
     fi
 
+    # Install servo related packages.
+    install_servo_packages
+
+    # restart chameleond
     "${INITD_DIR}/${CHAMELEOND_NAME}" restart
 
     # Finished deploying raspberrypi.

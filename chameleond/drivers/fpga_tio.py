@@ -204,6 +204,9 @@ class ChameleondDriver(ChameleondInterface):
         ids.BLUETOOTH_HID_MOUSE: raspi_bluetooth_flow.RaspiHIDMouse(),
         ids.BLE_KEYBOARD: raspi_bluetooth_flow.RaspiHIDKeyboard(),
         ids.BLE_MOUSE: raspi_bluetooth_flow.RaspiHIDMouse(),
+        ids.BLUETOOTH_BASE:
+            bluetooth_base_flow.BluetoothBaseFlow(
+                ids.BLUETOOTH_BASE, self._base_ctrl),
     }
     return devices
 

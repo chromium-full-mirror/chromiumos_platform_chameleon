@@ -86,6 +86,7 @@ else
 endif
 
 CHAMELEON_USER ?= root
+BUNDLEROOT = /tmp
 BUNDLE = chameleond-$(VERSION).tar.gz
 BUNDLEDIR = chameleond-$(VERSION)
 
@@ -97,17 +98,19 @@ remote-install:
 ifdef CHAMELEON_HOST
 	@scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 	    -i $(IDENTITY_FILE) \
-	    $(DISTDIR)/$(BUNDLE) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
+	    $(DISTDIR)/$(BUNDLE) \
+	    $(CHAMELEON_USER)@$(CHAMELEON_HOST):$(BUNDLEROOT)
 	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 	    -i $(IDENTITY_FILE) \
 	    $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
-	    "cd /tmp && rm -rf $(BUNDLEDIR) && tar zxf $(BUNDLE) &&" \
+	    "cd $(BUNDLEROOT) && rm -rf $(BUNDLEDIR) && tar zxf $(BUNDLE) &&" \
 	    "cd $(BUNDLEDIR) && find -exec touch -c {} \; &&" \
 	    "make install " \
 	        "REMOTE_INSTALL=TRUE" \
 	        "HOST_NOW=\"$(HOST_NOW)\"" \
 	        "BUNDLE_VERSION=$(BUNDLE_VERSION) " \
-	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"
+	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)" \
+	        "BUNDLE_PATH=$(BUNDLEROOT)/$(BUNDLEDIR)"
 else
 	$(error CHAMELEON_HOST is undefined)
 endif
