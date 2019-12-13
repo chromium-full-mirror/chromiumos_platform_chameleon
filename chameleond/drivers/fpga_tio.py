@@ -79,9 +79,9 @@ class ChameleondDriver(ChameleondInterface):
   def __init__(self, *args, **kwargs):
     super(ChameleondDriver, self).__init__(*args, **kwargs)
 
-    platform = os.environ.get('PLATFORM')
+    self._platform = os.environ.get('PLATFORM')
 
-    logging.info('platform: %s', platform)
+    logging.info('platform: %s', self._platform)
 
     self._captured_params = {}
     self._process = None
@@ -103,9 +103,9 @@ class ChameleondDriver(ChameleondInterface):
     self._ble_hid_ctrl = lazy(usb.USBController)(
         bluetooth_hid_flow.BleHIDMouseFlow.DRIVER_MODULE)
 
-    if platform == 'CHROMEOS':
+    if self._platform == 'CHROMEOS':
       self._devices = self.init_devices_for_chromeos()
-    elif platform == 'RASPI':
+    elif self._platform == 'RASPI':
       self._devices = self.init_devices_for_raspi()
     else:
       self._devices = self.init_devices_for_fpga()
@@ -136,6 +136,10 @@ class ChameleondDriver(ChameleondInterface):
     self._flow_manager = flow_manager.FlowManager(self._flows)
 
     self.Reset()
+
+
+  def get_platform(self):
+      return self._platform
 
   def init_devices_for_chromeos(self):
     devices = {
