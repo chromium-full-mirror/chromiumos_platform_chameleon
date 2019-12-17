@@ -56,10 +56,11 @@ CHAMELEON_BOARD ?= 'fpga_tio'
 # Get current time from the host.
 HOST_NOW := `date "+%Y-%m-%d %H:%M:%S"`
 
-# Check if this is a Chrome OS platform.
-# The '$' symbol in awk has to be doubled in Makefile.
+# If this is a Chrome OS platform, PLATFORM would be 'Chrome OS'.
+#     The '$' symbol in awk has to be doubled in Makefile.
+# else if this is a raspberry pi, PLATFORM would be 'raspberrypi'.
 PLATFORM = $(shell awk -F= '/CHROMEOS_RELEASE_NAME/ {print $$2}' \
-	     /etc/lsb-release 2>/dev/null)
+	     /etc/lsb-release 2>/dev/null || cat /etc/hostname)
 
 .PHONY: install
 install:
@@ -80,8 +81,8 @@ ifeq ($(PLATFORM), Chrome OS)
 	@echo Please do \"\$ start chameleond\" or \"\$ restart chameleond\".
 else
 	@BUNDLE_VERSION=$(BUNDLE_VERSION) CHAMELEON_BOARD=$(CHAMELEON_BOARD) \
-	deploy/deploy
-	@echo Installing chameleon package on non-chrome os platform is completed.
+	deploy/deploy $(PLATFORM)
+	@echo Installing chameleon package on $(PLATFORM) platform is completed.
 endif
 
 CHAMELEON_USER ?= root

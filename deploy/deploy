@@ -15,6 +15,8 @@ SCHEDULER_NAME='scheduler'
 UPDATER_NAME='chameleon-updater'
 LIGHTTPD_NAME='lighttpd'
 
+PLATFORM="$1"
+
 # We do not want lighttpd and chameleon-updater to run on startup.
 update-rc.d -f ${LIGHTTPD_NAME} remove
 update-rc.d -f ${UPDATER_NAME} remove
@@ -72,12 +74,19 @@ provide_daemon_symlinks(){
     fi
 }
 
+create_daemon_symlinks() {
+    provide_daemon_symlinks "${CHAMELEOND_NAME}"
+    provide_daemon_symlinks "${DISPLAYD_NAME}"
+    provide_daemon_symlinks "${STREAM_SERVER_NAME}"
+    provide_daemon_symlinks "${SCHEDULER_NAME}"
+}
+
 install_daemon_and_config () {
     DAEMON_NAME=$1
     CONFIG_FILE="/etc/default/${DAEMON_NAME}"
     DAEMON="${CHAMELEOND_DIR}/run_${DAEMON_NAME}"
 
-    if [[ ! -x ${DAEMON} ]]; then
+    if [ ! -x "${DAEMON}" ]; then
         echo "Executable ${DAEMON} not existed. Install it first." 1>&2
         exit 1
     fi
@@ -92,6 +101,14 @@ CHAMELEON_BOARD="${CHAMELEON_BOARD}"
 END
     mv -f "${CONFIG_TMP}" "${CONFIG_FILE}"
 }
+
+# For Raspberry Pi, create symlinks if daemons were installed in /usr/local/bin
+# instead of /usr/bin where chameleond expects them. This seems to be least
+# invasive way to resolve disagreement without either breaking fizz or fpga
+# device.
+if [ "$PLATFORM" = "raspberrypi" ]; then
+    create_daemon_symlinks
+fi
 
 mkdir -p ${INITD_DIR}
 install_daemon_and_config "${CHAMELEOND_NAME}"
@@ -114,6 +131,55 @@ update-rc.d "${SCHEDULER_NAME}" defaults 98 4
 cp -f "${SCRIPT_DIR}/${UPDATER_NAME}" "${INITD_DIR}"
 update-rc.d "${UPDATER_NAME}" defaults 90 10
 
+# Some custom actions if chameleon is raspberry pi
+if [ "$PLATFORM" = "raspberrypi" ]; then
+    # Install required packages
+    validate_package_installation "bluetooth"
+    validate_package_installation "python-bluez"
+    validate_package_installation "bluez"
+    validate_package_installation "python-pyudev"
+    validate_package_installation "python-dbus"
+
+    # Some required for bluetooth-tester
+    validate_package_installation "python-dev"
+    validate_package_installation "git"
+
+    validate_socket_installation
+
+    # Update bluetooth rules in service config files
+    BT_ADMIN_CONF="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"
+    BT_SRC_CONF="/lib/systemd/system/bluetooth.service"
+    EXEC_START="ExecStart"
+    EXEC_OPTS="-d -P input"
+
+    # Add bluetoothd options to admin service config
+    if ! grep -qie "${EXEC_START}.*${EXEC_OPTS}" ${BT_ADMIN_CONF}; then
+        # Find exec line, add options to end
+        eval "sed -ie 's/${EXEC_START}.*/& ${EXEC_OPTS}/g' ${BT_ADMIN_CONF}"
+    fi
+
+    # To be safe, also edit primary service config (requires service restart)
+    if ! grep -qie "${EXEC_START}.*${EXEC_OPTS}" ${BT_SRC_CONF}; then
+        # Find exec line, add options to end
+        eval "sed -ie 's/${EXEC_START}.*/& ${EXEC_OPTS}/g' ${BT_SRC_CONF}"
+        eval "systemctl daemon-reload"
+        eval "service bluetooth restart"
+    fi
+
+    # Create new dbus service conf if it doesn't exist
+    DEST_KBD_CONF="/etc/dbus-1/system.d/org.chromium.autotest.btkbservice.conf"
+    if [ ! -e DEST_KBD_CONF ]; then
+        SRC_KBD_CONF=$(eval "find . -name *btkbservice.conf | head -n 1")
+
+        eval "cp ${SRC_KBD_CONF} ${DEST_KBD_CONF}"
+    fi
+
+    "${INITD_DIR}/${CHAMELEOND_NAME}" restart
+
+    # Finished deploying raspberrypi.
+    exit
+fi
+
 FPGA_DIR="$(dirname ${SCRIPT})/../updatable/${CHAMELEON_BOARD}"
 FPGA_BOOT_PART=$(fdisk -l /dev/mmcblk0 | grep 'Unknown' | cut -f1 -d' ')
 FPGA_FAT_PART=$(fdisk -l /dev/mmcblk0 | grep 'FAT32' | cut -f1 -d' ')
@@ -134,7 +200,7 @@ umount "${MOUNT_DIR}"
 mount "${FPGA_LINUX_PART}" "${MOUNT_DIR}"
 MODULE_DIR="${MOUNT_DIR}/lib/modules"
 file="${FPGA_DIR}/modules.tgz"
-if [[ -e "${file}" ]]; then
+if [ -e "${file}" ]; then
     new_modules_version="$(tar tf "${file}" |head -n 1)"
     new_modules_version="${new_modules_version%?}"
     echo "new_modules_version ${new_modules_version}"
@@ -157,60 +223,7 @@ if ! diff -q "${FPGA_DIR}/${file}" "${FPGA_BOOT_PART}"; then
     need_reboot=1
 fi
 
-# Some custom actions if chameleon is raspberry pi
-if cat /proc/device-tree/model | grep -qi 'raspberry pi'; then
-    # Install required packages
-    validate_package_installation "bluetooth"
-    validate_package_installation "python-bluez"
-    validate_package_installation "bluez"
-    validate_package_installation "python-pyudev"
-    validate_package_installation "python-dbus"
-
-    # Some required for bluetooth-tester
-    validate_package_installation "python-dev"
-    validate_package_installation "git"
-
-    validate_socket_installation
-
-    # Update bluetooth rules in service config files
-    BT_ADMIN_CONF="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"
-    BT_SRC_CONF="/lib/systemd/system/bluetooth.service"
-    EXEC_START="ExecStart"
-    EXEC_OPTS="-d -P input"
-
-
-    # Add bluetoothd options to admin service config
-    if ! grep -qie "${EXEC_START}.*${EXEC_OPTS}" ${BT_ADMIN_CONF}; then
-        # Find exec line, add options to end
-        eval "sed -ie 's/${EXEC_START}.*/& ${EXEC_OPTS}/g' ${BT_ADMIN_CONF}"
-    fi
-
-    # To be safe, also edit primary service config (requires service restart)
-    if ! grep -qie "${EXEC_START}.*${EXEC_OPTS}" ${BT_SRC_CONF}; then
-        # Find exec line, add options to end
-        eval "sed -ie 's/${EXEC_START}.*/& ${EXEC_OPTS}/g' ${BT_SRC_CONF}"
-        eval "systemctl daemon-reload"
-        eval "service bluetooth restart"
-    fi
-
-    # Create symlinks if daemons were installed in /usr/local/bin instead of
-    # /usr/bin where chameleond expects them. This seems to be least invasive
-    # way to resolve disagreement without either breaking fizz or fpga device
-    provide_daemon_symlinks "${CHAMELEOND_NAME}"
-    provide_daemon_symlinks "${DISPLAYD_NAME}"
-    provide_daemon_symlinks "${STREAM_SERVER_NAME}"
-    provide_daemon_symlinks "${SCHEDULER_NAME}"
-
-    # Create new dbus service conf if it doesn't exist
-    DEST_KBD_CONF="/etc/dbus-1/system.d/org.chromium.autotest.btkbservice.conf"
-    if [ ! -e DEST_KBD_CONF ]; then
-        SRC_KBD_CONF=$(eval "find . -name *btkbservice.conf | head -n 1")
-
-        eval "cp ${SRC_KBD_CONF} ${DEST_KBD_CONF}"
-    fi
-fi
-
-if [[ -n "${need_reboot}" ]]; then
+if [ -n "${need_reboot}" ]; then
     echo 'Reboot the board to validate the FPGA configuration...'
     reboot
 else
@@ -218,7 +231,7 @@ else
     "${INITD_DIR}/${DISPLAYD_NAME}" restart
     "${INITD_DIR}/${STREAM_SERVER_NAME}" restart
     "${INITD_DIR}/${SCHEDULER_NAME}" restart
-    if [[ -e "${INITD_DIR}/${LIGHTTPD_NAME}" ]]; then
+    if [ -e "${INITD_DIR}/${LIGHTTPD_NAME}" ]; then
         "${INITD_DIR}/${LIGHTTPD_NAME}" stop
     fi
 fi
