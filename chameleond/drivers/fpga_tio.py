@@ -80,8 +80,11 @@ class ChameleondDriver(ChameleondInterface):
     super(ChameleondDriver, self).__init__(*args, **kwargs)
 
     self._platform = os.environ.get('PLATFORM')
-
     logging.info('platform: %s', self._platform)
+
+    # This version control autoupdate of BT peer in the lab
+    self.bt_pkg_version = '0.0.1'
+    logging.info('bt_pkg_version: %s', self.bt_pkg_version)
 
     self._captured_params = {}
     self._process = None
@@ -139,7 +142,7 @@ class ChameleondDriver(ChameleondInterface):
 
 
   def get_platform(self):
-      return self._platform
+    return self._platform
 
   def init_devices_for_chromeos(self):
     devices = {
@@ -210,6 +213,10 @@ class ChameleondDriver(ChameleondInterface):
     """Reboots Chameleon board."""
     logging.info('The chameleon board is going to reboot.')
     system_tools.SystemTools.Call('reboot')
+
+  def get_bt_pkg_version(self):
+    """Return bt_pkg_version."""
+    return self.bt_pkg_version
 
   def GetDetectedStatus(self):
     """Returns detetcted status of all devices.
