@@ -4,15 +4,19 @@
 # found in the LICENSE file.
 """Chameleond Driver for FPGA customized platform with the TIO card."""
 
+from __future__ import print_function
+
 import functools
 import glob
-import logging
+# TODO: to port chromite.lib.cros_logging to replace legacy logging
+import logging  # pylint: disable=cros-logging-import
 import os
 import time
+# TODO: import xmlrpclib form xmlrpc in Python 3
+# pylint: disable=W1648
 import xmlrpclib
 
 import chameleon_common  # pylint: disable=W0611
-from chameleond.interface import ChameleondInterface
 
 from chameleond.devices import audio_board
 from chameleond.devices import avsync_probe
@@ -24,6 +28,7 @@ from chameleond.devices import motor_board
 from chameleond.devices import usb_audio_flow
 from chameleond.devices import usb_hid_flow
 from chameleond.devices import usb_printer_device
+from chameleond.interface import ChameleondInterface
 from chameleond.utils import caching_server
 from chameleond.utils import device_manager
 from chameleond.utils import fpga
@@ -36,8 +41,11 @@ from chameleond.utils import usb_printer_control
 from chameleond.utils.common import lazy
 from chameleond.utils import bluetooth_a2dp
 
+
 if os.environ.get('PLATFORM') == 'RASPI':
+  # pylint: disable=C0412
   from chameleond.devices import raspi_bluetooth_flow
+
 
 class DriverError(Exception):
   """Exception raised when any error on FPGA driver."""
@@ -657,13 +665,11 @@ class ChameleondDriver(ChameleondInterface):
     """
     return self._flow_manager.GetMaxFrameLimit(port_id, width, height)
 
-  def _PrepareCapturingVideo(self, port_id, x, y, width, height):
+  def _PrepareCapturingVideo(self, port_id, width, height):
     """Prepares capturing video on the given video input.
 
     Args:
       port_id: The ID of the video input port.
-      x: The X position of the top-left corner of crop.
-      y: The Y position of the top-left corner of crop.
       width: The width of the area of crop.
       height: The height of the area of crop.
     """
@@ -700,7 +706,7 @@ class ChameleondDriver(ChameleondInterface):
       height: The height of the area of crop.
     """
     x, y, width, height = self._AutoFillArea(port_id, x, y, width, height)
-    self._PrepareCapturingVideo(port_id, x, y, width, height)
+    self._PrepareCapturingVideo(port_id, width, height)
     max_frame_limit = self._captured_params['max_frame_limit']
     logging.info('Start capturing video from port #%d', port_id)
     self._flow_manager.StartDumpingFrames(
@@ -757,11 +763,11 @@ class ChameleondDriver(ChameleondInterface):
     """
     x, y, width, height = self._AutoFillArea(port_id, x, y, width, height)
     logging.info('Capture video from port #%d', port_id)
-    self._PrepareCapturingVideo(port_id, x, y, width, height)
+    self._PrepareCapturingVideo(port_id, width, height)
     max_frame_limit = self._captured_params['max_frame_limit']
     if total_frame > max_frame_limit:
-      raise DriverError('Exceed the max frame limit %d > %d',
-                        total_frame, max_frame_limit)
+      raise DriverError('Exceed the max frame limit %d > %d' %
+                        (total_frame, max_frame_limit))
 
     # TODO(waihong): Make the timeout value based on the FPS rate.
     self._flow_manager.DumpFramesToLimit(

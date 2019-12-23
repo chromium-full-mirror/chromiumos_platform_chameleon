@@ -4,6 +4,8 @@
 # found in the LICENSE file.
 """Chameleon device's basic class.."""
 
+from __future__ import print_function
+
 import chameleon_common  # pylint: disable=W0611
 
 
@@ -51,10 +53,6 @@ class Flow(ChameleonDevice):
   Using this abstraction, each flow can have its own behavior. No need to
   share the same Chameleond driver code.
   """
-  def __init__(self):
-    """Constructs a Flow object."""
-    super(Flow, self).__init__()
-
   def IsPhysicalPlugged(self):
     """Returns if the physical cable is plugged."""
     raise NotImplementedError('IsPhysicalPlugged')
@@ -93,10 +91,6 @@ class VirtualFlow(ChameleonDevice):
   Using this abstraction, each flow can have its own behavior. No need to
   share the same Chameleond driver code.
   """
-  def __init__(self):
-    """Constructs a Flow object."""
-    super(VirtualFlow, self).__init__()
-
   def InitDevice(self):
     """Init the tty of the kit attached to the chameleon board."""
     pass

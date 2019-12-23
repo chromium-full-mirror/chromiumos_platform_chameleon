@@ -4,7 +4,10 @@
 # found in the LICENSE file.
 """System tools required for Chameleond execution."""
 
-import logging
+from __future__ import print_function
+
+# TODO: to port chromite.lib.cros_logging to replace legacy logging
+import logging  # pylint: disable=cros-logging-import
 import os
 import subprocess
 import threading
@@ -48,7 +51,7 @@ class _SystemTools(object):
     Raises:
       SystemToolsError if missing a tool.
     """
-    for path in self._TOOL_PATHS.itervalues():
+    for path in self._TOOL_PATHS.values():
       if not os.path.isfile(path):
         # It is okay that some tools may not exist in a particular platform.
         logging.warning('IOError: Required tool %s not existed', path)
@@ -63,7 +66,7 @@ class _SystemTools(object):
     Returns:
       A list representing the complete command.
     """
-    return [self._TOOL_PATHS[name]] + map(str, args)
+    return [self._TOOL_PATHS[name]] + [str(arg) for arg in args]
 
   def Call(self, name, *args):
     """Calls the tool with arguments.

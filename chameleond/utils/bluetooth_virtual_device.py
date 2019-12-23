@@ -5,6 +5,8 @@
 
 """This module provides emulation of bluetooth HID devices."""
 
+from __future__ import print_function
+
 import chameleon_common  # pylint: disable=W0611
 from bluetooth_peripheral_kit import PeripheralKit
 
@@ -44,7 +46,7 @@ class BluetoothVirtualDevice(object):
   def EnterCommandMode(self):
     return True
 
-  def LeaveCommandMode(self, force=False):
+  def LeaveCommandMode(self, force=False):  # pylint: disable=W0613
     return True
 
   def Reboot(self):

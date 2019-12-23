@@ -7,13 +7,14 @@
 
 from __future__ import print_function
 
+# TODO: to port chromite.lib.cros_logging to replace legacy logging
+import logging  # pylint: disable=cros-logging-import
 import os
 
 import chameleon_common  # pylint: disable=W0611
 from chameleond.devices import chameleon_device
 from chameleond.utils import bluetooth_virtual_device
 from chameleond.utils import system_tools
-from chromite.lib import cros_logging as logging
 
 
 class Servod(object):
