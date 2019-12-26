@@ -29,8 +29,7 @@ from chameleond.utils.raspi_bluez_service import BluezService
 from bluetooth_peripheral_kit import PeripheralKit
 from bluetooth_peripheral_kit import PeripheralKitException
 from bluez_service_consts import PERIPHERAL_DEVICE_CLASS, \
-    PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
-    HID_SERVICE_UUID
+    PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH
 from bluez_gatt_server import GATTServer
 
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
@@ -159,13 +158,19 @@ class BluezPeripheral(PeripheralKit):
     """
 
     if use_ble:
-      state_change_cmds = ['sudo btmgmt power off', 'sudo btmgmt le on',
-                           'sudo btmgmt privacy on', 'sudo btmgmt bredr off',
+      state_change_cmds = ['sudo btmgmt power off',
+                           'sudo btmgmt le on',
+                           'sudo btmgmt privacy on',
+                           'sudo btmgmt bredr off',
+                           'sudo btmgmt ssp on',
                            'sudo btmgmt power on']
 
     else:
-      state_change_cmds = ['sudo btmgmt power off', 'sudo btmgmt bredr on',
-                           'sudo btmgmt le off', 'sudo btmgmt power on']
+      state_change_cmds = ['sudo btmgmt power off',
+                           'sudo btmgmt bredr on',
+                           'sudo btmgmt le off',
+                           'sudo btmgmt ssp on',
+                           'sudo btmgmt power on']
 
     for cmd in state_change_cmds:
       os.system(cmd)
