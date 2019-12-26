@@ -62,6 +62,7 @@ class PeripheralKit(object):
   JOYSTICK = 'JOYSTICK'
   A2DP_SINK = 'A2DP_SINK'
   PHONE = 'PHONE'
+  BLUETOOTH_AUDIO = 'BLUETOOTH_AUDIO'
 
   # Authentication modes (currently references SSP, which is BR/EDR only)
   OPEN_MODE = 'OPEN'

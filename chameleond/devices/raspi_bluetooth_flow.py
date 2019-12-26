@@ -9,6 +9,7 @@ import logging
 import time
 
 from chameleond.devices import chameleon_device
+from chameleond.utils.bluetooth_audio import BluetoothAudio
 from chameleond.utils.bluetooth_raspi import BluezPeripheral
 from chameleond.utils.bluetooth_peripheral_kit import PeripheralKit
 from chameleond.utils.raspi_bluez_client import BluezKeyboardClient
@@ -377,3 +378,17 @@ class RaspiBLEPhone(RaspiFlow, BluezPeripheral):
 
     return PERIPHERAL_DEVICE_CLASS[PeripheralKit.PHONE] \
            & CLASS_OF_SERVICE_MASK
+
+
+class RaspiBluetoothAudioFlow(RaspiFlow, BluetoothAudio):
+  """This is the class loaded from fpga_tio.
+
+  It inherits from both Flow and BluetoothAudio, as fpga_tio's interface needs
+  access to methods in both of them.
+  """
+
+  def __init__(self):
+    # Instantiate bluez and raspi flow
+    BluetoothAudio.__init__(self)
+    RaspiFlow.__init__(self, self.address)
+    self._client = None

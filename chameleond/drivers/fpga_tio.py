@@ -134,6 +134,8 @@ class ChameleondDriver(ChameleondInterface):
     # An object in the following would be None if it is not instantiated
     # in self._devices above.
     self.audio_board = self._device_manager.GetChameleonDevice(ids.AUDIO_BOARD)
+    self.bluetooth_audio = self._device_manager.GetChameleonDevice(
+        ids.BLUETOOTH_AUDIO)
     self.bluetooth_base = self._device_manager.GetChameleonDevice(
         ids.BLUETOOTH_BASE)
     self.bluetooth_mouse = self._device_manager.GetChameleonDevice(
@@ -222,6 +224,7 @@ class ChameleondDriver(ChameleondInterface):
                 ids.BLUETOOTH_BASE, self._base_ctrl),
         ids.BLUETOOTH_TESTER: bluetooth_tester.BluetoothTester(),
         ids.BLE_PHONE: raspi_bluetooth_flow.RaspiBLEPhone(),
+        ids.BLUETOOTH_AUDIO: raspi_bluetooth_flow.RaspiBluetoothAudioFlow(),
     }
     return devices
 

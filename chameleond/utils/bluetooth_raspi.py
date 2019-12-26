@@ -94,6 +94,8 @@ class BluezPeripheral(PeripheralKit):
     # Occasionally the resource isn't up in time, so we retry
     self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(1))
 
+    self.address = self.GetLocalBluetoothAddress()
+
     logging.debug('Bluetooth peripheral powered and waiting for bind to device')
 
   def __del__(self):
@@ -243,7 +245,7 @@ class BluezPeripheral(PeripheralKit):
 
       # Set device type and initiate service based on it
       self._bluez_service = BluezService(self._device_type,
-                                         self.GetLocalBluetoothAddress())
+                                         self.address)
 
       self.Init()
 
@@ -753,7 +755,7 @@ class BluezPeripheral(PeripheralKit):
   def GetKitInfo(self):
     """A simple demo of getting kit information."""
     logging.info('advertised name: %s', self.GetAdvertisedName())
-    logging.info('local bluetooth address: %s', self.GetLocalBluetoothAddress())
+    logging.info('local bluetooth address: %s', self.address)
     class_of_service = self.GetClassOfService()
     try:
       class_of_service = hex(class_of_service)

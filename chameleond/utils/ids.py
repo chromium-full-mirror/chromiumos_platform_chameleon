@@ -36,6 +36,7 @@ BLE_KEYBOARD = 28
 BLUETOOTH_BASE = 29
 BLUETOOTH_TESTER = 30
 BLE_PHONE = 31
+BLUETOOTH_AUDIO = 32
 
 # device names
 DEVICE_NAMES = {
@@ -72,7 +73,8 @@ DEVICE_NAMES = {
     # chameleon peer
     BLUETOOTH_TESTER: 'bluetooth_tester',
     # A phone device that supports Bluetooth
-    BLE_PHONE: 'ble_phone'
+    BLE_PHONE: 'ble_phone',
+    BLUETOOTH_AUDIO: 'bluetooth_audio',
 }
 
 

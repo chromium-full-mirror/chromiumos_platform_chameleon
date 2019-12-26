@@ -22,18 +22,27 @@ PERIPHERAL_DEVICE_CLASS = {
     PeripheralKit.KEYBOARD: 0x002540,
     PeripheralKit.MOUSE:    0x002580,
     PeripheralKit.PHONE:    0x7A020C,
+
+    # Service Class: Limited Discoverable Mode,
+    #                Audio (Speaker, Microphone, Headset service)
+    # Major Device Class: Audio / Video
+    # Minor Device Class: Headphones
+    PeripheralKit.BLUETOOTH_AUDIO:    0x202418,
 }
 
 PERIPHERAL_DEVICE_NAME = {
     PeripheralKit.KEYBOARD: 'KEYBD_REF',
     PeripheralKit.MOUSE:    'MOUSE_REF',
     PeripheralKit.PHONE:    'PHONE_REF',
+    PeripheralKit.BLUETOOTH_AUDIO:    'RASPI_AUDIO',
 }
 
+# https://www.bluetooth.com/wp-content/uploads/Sitecore-Media-Library/Gatt/Xml/Characteristics/org.bluetooth.characteristic.gap.appearance.xml
 PERIPHERAL_DEVICE_APPEARANCE = {
     PeripheralKit.KEYBOARD: [0xc1, 0x03],
     PeripheralKit.MOUSE:    [0xc2, 0x03],
     PeripheralKit.PHONE:    [0x40, 0x00],
+    PeripheralKit.BLUETOOTH_AUDIO:    [0x80, 0x02],   # Generic Media Player
 }
 
 SERVICE_PROFILE_SDP_PATH = {
@@ -41,6 +50,10 @@ SERVICE_PROFILE_SDP_PATH = {
                              '/keyboard_sdp_record.xml'),
     PeripheralKit.MOUSE:    (os.path.dirname(os.path.abspath(__file__)) +
                              '/mouse_sdp_record.xml'),
+
+    # TODO: find a suitable xml for Bluetooth audio device.
+    PeripheralKit.BLUETOOTH_AUDIO: (os.path.dirname(os.path.abspath(__file__)) +
+                                    '/keyboard_sdp_record.xml'),
 }
 
 HID_SERVICE_UUID = '00001124-0000-1000-8000-00805f9b34fb'

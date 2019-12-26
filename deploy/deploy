@@ -204,6 +204,13 @@ if [ "${PLATFORM}" = "raspberrypi" ]; then
     validate_package_installation "python-dev"
     validate_package_installation "git"
 
+    # Some required for bluetooth audio tests
+    validate_package_installation "pulseaudio"
+    validate_package_installation "pulseaudio-module-bluetooth"
+    validate_package_installation "pavucontrol"
+    validate_package_installation "bluez-firmware"
+    validate_package_installation "ofono"
+
     # Install python packages for Raspberry Pi.
     validate_python_package_installation "pexpect"
 
@@ -248,6 +255,23 @@ if [ "${PLATFORM}" = "raspberrypi" ]; then
 
     # restart chameleond
     "${INITD_DIR}/${CHAMELEOND_NAME}" restart
+
+    # Restart pulseaudio as user pi.
+    pgrep pulseaudio > /dev/null && killall pulseaudio
+    if runuser -l pi -c "pulseaudio --start"; then
+        echo "pulseaudio is running"
+    else
+        echo "Failed to start pulseaudio"
+        exit
+    fi
+
+    # Restart ofono.
+    if service ofono restart > /dev/null; then
+        echo "ofono is running"
+    else
+        echo "Failed to start ofono"
+        exit
+    fi
 
     # Finished deploying raspberrypi.
     exit
