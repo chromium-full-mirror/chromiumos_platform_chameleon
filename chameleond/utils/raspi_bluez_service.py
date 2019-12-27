@@ -219,7 +219,7 @@ class BluezService(dbus.service.Object):
     """Initiates connection to remote host"""
 
     # Close sockets in case they are still open (a closed socket has fileno -1)
-    if self._ccontrol.fileno() > 0:
+    if self._ccontrol is not None and self._ccontrol.fileno() > 0:
       self._ccontrol.close()
       self._cinterrupt.close()
 
