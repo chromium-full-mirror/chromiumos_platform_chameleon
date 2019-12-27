@@ -218,6 +218,14 @@ class ChameleondDriver(ChameleondInterface):
     """Return bt_pkg_version."""
     return self.bt_pkg_version
 
+  def log_message(self, msg):
+    """Write the msg to the chamelond log and system log."""
+    try:
+      logging.info(msg)
+      system_tools.SystemTools.Call('logger', msg)
+    except Exception as e:
+      logging.error("Exception '%s' in log_message msg '%s'", str(e), msg)
+
   def GetDetectedStatus(self):
     """Returns detetcted status of all devices.
 

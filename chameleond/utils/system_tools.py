@@ -24,6 +24,7 @@ class _SystemTools(object):
       'i2cdump': '/usr/local/sbin/i2cdump',
       'i2cget': '/usr/local/sbin/i2cget',
       'i2cset': '/usr/local/sbin/i2cset',
+      'logger': '/usr/bin/logger',
       'lsmod': '/sbin/lsmod',
       'lspci': 'lspci',
       'memtool': '/usr/bin/memtool',
