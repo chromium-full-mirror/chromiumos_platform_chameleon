@@ -115,19 +115,21 @@ class BluezPeripheral(PeripheralKit):
 
     for _ in range(MAX_DBUS_RETRY_ATTEMPTS):
       try:
-        self._dbus_hci_props.Set(iface_name, prop_name, prop_val)
+        initial_value = self._dbus_hci_props.Get(iface_name, prop_name)
 
-        # Ensure property was successfully set
-        if self._dbus_hci_props.Get(iface_name, prop_name) == prop_val:
+        # Return if property has value we want already
+        if initial_value == prop_val:
           return True
 
-        else:
-          error_msg = 'Prop set but stale... try again'
-          logging.error(error_msg)
-          time.sleep(.1)
+        # Set property to the value we want
+        logging.info('{}: {} -> {}'.format(prop_name, initial_value, prop_val))
+        self._dbus_hci_props.Set(iface_name, prop_name, prop_val)
 
-      except dbus.exceptions.DBusException:
-        error_msg = 'Setting {} to {} again'.format(prop_name, prop_val)
+        time.sleep(.1)
+
+      except dbus.exceptions.DBusException, e:
+        error_msg = 'Setting {} to {} again: {}'.format(prop_name, prop_val,
+                                                        str(e))
         logging.error(error_msg)
         time.sleep(.1)
 
