@@ -16,7 +16,7 @@ import dbus
 import dbus.mainloop.glib
 import dbus.service
 
-from bluetooth import BluetoothSocket, L2CAP
+from bluetooth import BluetoothSocket, L2CAP, discover_devices
 from gi.repository import GLib
 
 from bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
@@ -237,6 +237,17 @@ class BluezService(dbus.service.Object):
         logging.warn('\tConnect failed, retrying: ', str(e))
 
         time.sleep(.5)
+
+  def Discover(self, addr):
+    """Enables discovery and attempts to find the given address"""
+    devices = discover_devices(duration=5)
+    if addr in devices:
+      logging.info('Discover: found %s in list of devices' % addr)
+      return True
+    else:
+      logging.warn('Discover: did not find %s in list of devices' % addr)
+
+    return False
 
 
   def OnConnect(self, fd, _):

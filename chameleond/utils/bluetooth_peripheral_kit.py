@@ -674,6 +674,19 @@ class PeripheralKit(object):
     """
     raise NotImplementedError("Not implemented")
 
+  def Discover(self, remote_address):
+    """Discover the remote address.
+
+    Args:
+      remote_address: the remote Bluetooth address, which must be given as 12
+                      hex digits with colons between each pair.
+                      For reference: '00:29:95:1A:D4:6F'
+
+    Returns:
+      True if discovering the remote address succeeded
+    """
+    raise NotImplementedError("Not implemented")
+
   # Helper methods for implementing a system that remembers button state
   def _MouseButtonStateUnion(self, buttons_to_press):
     """Add to the current set of pressed buttons.

@@ -95,6 +95,13 @@ class BluezPeripheral(PeripheralKit):
 
     logging.debug('Bluetooth peripheral powered and waiting for bind to device')
 
+  def get_service_iface(self):
+    if not self._service_iface:
+      self._service = self._dbus_system_bus.get_object(BLUEZ_SERVICE_NAME,
+                                                       BLUEZ_SERVICE_PATH)
+      self._service_iface = dbus.Interface(self._service, BLUEZ_SERVICE_NAME)
+
+    return self._service_iface
 
   def _setup_dbus_loop(self):
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -416,7 +423,6 @@ class BluezPeripheral(PeripheralKit):
     self.remote_address = remote_address
     return True
 
-
   def Connect(self):
     """Attempts to connect to the address specified with SetRemoteAddress()"""
 
@@ -426,16 +432,11 @@ class BluezPeripheral(PeripheralKit):
 
     logging.debug('Attempting to connect to %s', self.remote_address)
 
-    # Establish link to service if we don't have it already
-    if not self._service_iface:
-      self._service = self._dbus_system_bus.get_object(BLUEZ_SERVICE_NAME,
-                                                       BLUEZ_SERVICE_PATH)
-      self._service_iface = dbus.Interface(self._service, BLUEZ_SERVICE_NAME)
-
     # Request Bluez service to connect to address
-    self._service_iface.Connect(self.remote_address,
-                                reply_handler=self.ConnectDoneHandler,
-                                error_handler=self.ConnectErrorHandler)
+    self.get_service_iface().Connect(
+        self.remote_address,
+        reply_handler=self.ConnectDoneHandler,
+        error_handler=self.ConnectErrorHandler)
 
     # Autotest currently doesn't account for the time it takes for connection
     # to succeed, so we put a small wait here. TODO b:145628709
@@ -453,6 +454,13 @@ class BluezPeripheral(PeripheralKit):
     """Called in case of error on connect"""
     logging.error('ConnectErrorHandler: %s', err)
 
+  def Discover(self, remote_address):
+    """Try to discover the remote device
+
+    Returns:
+      True if remote address is discovered.
+    """
+    return self._bluez_service.Discover(remote_address)
 
   def Disconnect(self):
     """Requests a disconnect from the remote device
@@ -479,14 +487,8 @@ class BluezPeripheral(PeripheralKit):
     Args:
       report: scan code representing state of HID device
     """
-
-    if not self._service_iface:
-      self._service = self._dbus_system_bus.get_object(BLUEZ_SERVICE_NAME,
-                                                       BLUEZ_SERVICE_PATH)
-      self._service_iface = dbus.Interface(self._service, BLUEZ_SERVICE_NAME)
-
     # Passing with empty handlers allows operation to run async
-    self._service_iface.SendHIDReport(report,
+    self.get_service_iface().SendHIDReport(report,
                                       reply_handler=self.KeysSentHandler,
                                       error_handler=self.KeysErrorHandler)
 
