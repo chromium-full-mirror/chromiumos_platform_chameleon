@@ -67,7 +67,8 @@ class GATTServer(object):
                                         reply_handler=self._RegisterAppCB,
                                         error_handler=self._RegisterAppErrCB)
 
-    # With application running, call for advertisements to start
+    # Start with discoverable enabled
+    self._discoverable = True
     self._ConfigureAdvertisements()
 
     # Add a handler for changes in state, specifically requesting caller's
@@ -167,11 +168,28 @@ class GATTServer(object):
     rapid_adv = ('sudo hcitool -i hci0 cmd 0x08 0x0006 A0 00'
                  ' A0 00 00 00 00 00 00 00 00 00 00 07 00')
 
+    cmds = [stop_adv, adv_cmd, rapid_adv, start_adv
+           ] if self._discoverable else [stop_adv]
+
     # Run commands sequentially
-    for cmd in [stop_adv, adv_cmd, rapid_adv, start_adv]:
+    for cmd in cmds:
       call(cmd, shell=True, stdout=open(os.devnull, 'w'))
       time.sleep(.1)
 
+
+  def SetDiscoverable(self, discoverable):
+    """ Change whether device is discoverable and configure advertisements.
+
+    Only configures advertisements if the discoverable value has changed.
+
+    Args:
+      discoverable: Whether the device should advertise.
+    """
+    prev_discoverable = self._discoverable
+    self._discoverable = discoverable
+
+    if discoverable != prev_discoverable:
+      self._ConfigureAdvertisements()
 
   def _PropertyChanged(self, *args, **kwargs):
     """Called when a property changes on the bluez d-bus interface

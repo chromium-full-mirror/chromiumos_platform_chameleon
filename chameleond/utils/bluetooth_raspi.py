@@ -79,6 +79,7 @@ class BluezPeripheral(PeripheralKit):
     self._bluez_service = None
     self._service = None
     self._device_type = None
+    self._gatt_server = None
 
     # Bluez DBus constants - npnext
     self._service_iface = None
@@ -227,7 +228,7 @@ class BluezPeripheral(PeripheralKit):
       self.EnableBLE(True)
 
       # Establish and run gatt server
-      server = GATTServer(device_type)
+      self._gatt_server = GATTServer(device_type)
 
     else:
       logging.info('Binding to Classic device!')
@@ -330,6 +331,14 @@ class BluezPeripheral(PeripheralKit):
 
   def SetAdvertisedName(self, name):
     self._set_hci_prop('org.bluez.Adapter1', 'Alias', dbus.String(name))
+
+  def SetDiscoverable(self, discoverable):
+    self._set_hci_prop('org.bluez.Adapter1', 'Discoverable',
+                       dbus.Boolean(discoverable))
+
+    # Also set discoverable in gatt server if relevant
+    if self._gatt_server:
+      self._gatt_server.SetDiscoverable(discoverable)
 
 
   def GetAuthenticationMode(self):

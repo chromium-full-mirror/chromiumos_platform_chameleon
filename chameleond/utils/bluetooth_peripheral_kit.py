@@ -756,3 +756,11 @@ class PeripheralKit(object):
   def MouseReleaseAllButtons(self):
     """Release all mouse buttons."""
     raise NotImplementedError("Not implemented")
+
+  def SetDiscoverable(self, discoverable):
+    """Sets the discoverability of the device.
+
+    Args:
+      discoverable: Whether device is discoverable/advertising.
+    """
+    raise NotImplementedError("Not implemented")
