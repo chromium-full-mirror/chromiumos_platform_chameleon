@@ -688,14 +688,14 @@ class RN42(PeripheralKit):
       logging.error('remote bluetooth address is invalid: %s', result)
       return None
 
-  def GetHIDDeviceType(self):
-    """Get the HID device type.
+  def GetDeviceType(self):
+    """Get the device type.
 
     Returns:
-      A string representing the HID device type (from PeripheralKit)
+      A string representing the device type (from PeripheralKit)
     """
     result = self.SerialSendReceive(self.CMD_GET_HID,
-                                    msg='getting HID device type')
+                                    msg='getting the device type')
     return self.HID_DEVICE_TYPE.get(result)
 
   def SetHIDType(self, device_type):
@@ -1153,7 +1153,7 @@ class RN42(PeripheralKit):
     print('connection status:', self.GetConnectionStatus())
     remote_addr = self.GetRemoteConnectedBluetoothAddress()
     print('remote bluetooth address:', remote_addr)
-    print('HID device type:', self.GetHIDDeviceType())
+    print('device type:', self.GetDeviceType())
     # The class of service/device is None for LE kits (it is BR/EDR-only)
     class_of_service = self.GetClassOfService()
     try:

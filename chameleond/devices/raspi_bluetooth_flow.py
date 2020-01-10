@@ -79,7 +79,7 @@ class RaspiHIDKeyboard(RaspiFlow, BluezPeripheral):
     self._client = None
 
 
-  def GetHIDDeviceType(self):
+  def GetDeviceType(self):
     """Get the peer device type
 
     Returns:
@@ -167,7 +167,7 @@ class RaspiHIDMouse(RaspiFlow, BluezPeripheral):
     self.send_delay = send_delay
 
 
-  def GetHIDDeviceType(self):
+  def GetDeviceType(self):
     """Get the peer device type
 
     Returns:

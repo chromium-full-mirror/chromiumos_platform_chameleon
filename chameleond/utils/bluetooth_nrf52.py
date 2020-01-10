@@ -402,14 +402,14 @@ class nRF52(PeripheralKit):
     logging.debug('DisableConnectionStatusMessage is a NOP on nRF52')
     return True
 
-  def GetHIDDeviceType(self):
-    """Get the HID device type.
+  def GetDeviceType(self):
+    """Get the device type.
 
     Returns:
-      A string representing the HID device type
+      A string representing the device type
     """
     return self.SerialSendReceive(self.CMD_GET_DEVICE_TYPE,
-                                  msg='getting HID device type')
+                                  msg='getting the device type')
 
   def SetHIDType(self, device_type):
     """Set HID type to the specified device type.

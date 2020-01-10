@@ -70,7 +70,7 @@ class BluetoothVirtualDevice(object):
   def GetClassOfDevice(self):
     return self._class_of_device
 
-  def GetHIDDeviceType(self):
+  def GetDeviceType(self):
     return self._hid_type
 
   def GetAuthenticationMode(self):

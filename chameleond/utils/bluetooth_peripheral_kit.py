@@ -512,9 +512,8 @@ class PeripheralKit(object):
     """
     raise NotImplementedError("Not Implemented")
 
-  # TODO(alent): Rename to GetHIDType to be less redundant/
-  def GetHIDDeviceType(self):
-    """Get the HID type.
+  def GetDeviceType(self):
+    """Get the device type.
 
     Returns:
       A string representing the HID type (from PeripheralKit)
