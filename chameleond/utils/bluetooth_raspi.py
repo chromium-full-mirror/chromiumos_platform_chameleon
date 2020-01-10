@@ -96,6 +96,10 @@ class BluezPeripheral(PeripheralKit):
 
     logging.debug('Bluetooth peripheral powered and waiting for bind to device')
 
+  def __del__(self):
+    """Quit the mainloop when done."""
+    self._loop.quit()
+
   def get_service_iface(self):
     if not self._service_iface:
       self._service = self._dbus_system_bus.get_object(BLUEZ_SERVICE_NAME,
