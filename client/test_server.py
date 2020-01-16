@@ -1,23 +1,28 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """A simple utility to connect to Chameleond in an interactive shell."""
 
+from __future__ import print_function
+
 import atexit
 import argparse
 import code
-import logging
+import logging # pylint: disable=cros-logging-import
 import os
 import readline
 import rlcompleter
 import subprocess
 import time
+# TODO: import xmlrpclib form xmlrpc in Python 3
+# pylint: disable=W1648
 import xmlrpclib
 
 from audio.audio_value_detector import AudioValueDetector
 
-TUNNEL_NAME = "to_chameleon_tunnel"
+TUNNEL_NAME = 'to_chameleon_tunnel'
 
 
 def ShowMessages(proxy):
@@ -38,19 +43,19 @@ def ShowMessages(proxy):
     if port_type == 'HDMI':
       hdmi_port = port
     port_messages.append('Port %d is %s.' % (port, port_type))
-  message = '''
+  message = """
       %s
-      E.g.''' % '\n      '.join(port_messages)
+      E.g.""" % '\n      '.join(port_messages)
   if linein_port:
-    message += '''
+    message += """
       p.StartCapturingAudio(%d) to capture from LineIn.
-      p.StopCapturingAudio(%d) to stop capturing from LineIn.''' % (linein_port,
+      p.StopCapturingAudio(%d) to stop capturing from LineIn.""" % (linein_port,
                                                                     linein_port)
 
   if hdmi_port:
-    message += '''
+    message += """
       p.Plug(%d) to plug HDMI.
-      p.Unplug(%d) to unplug HDMI.''' % (hdmi_port, hdmi_port)
+      p.Unplug(%d) to unplug HDMI.""" % (hdmi_port, hdmi_port)
 
   logging.info(message)
 
@@ -99,7 +104,7 @@ def StartInteractiveShell(p):  # pylint: disable=unused-argument
   vars = globals()  # pylint: disable=redefined-builtin
   vars.update(locals())
   readline.set_completer(rlcompleter.Completer(vars).complete)
-  readline.parse_and_bind("tab: complete")
+  readline.parse_and_bind('tab: complete')
   shell = code.InteractiveConsole(vars)
   shell.interact()
 
@@ -166,9 +171,9 @@ def GetAndConvertRecordedFile(remote_path):
       '-c', '2', basename + '.wav'
   ])
 
-  def ConnectCrosToLineIn():
-    """Connects a audio bus path from Cros headphone to Chameleon LineIn."""
 
+def ConnectCrosToLineIn():
+  """Connects a audio bus path from Cros headphone to Chameleon LineIn."""
   p.AudioBoardConnect(1, 'Cros device headphone')  # pylint: disable=undefined-variable
   p.AudioBoardConnect(1, 'Chameleon FPGA line-in')  # pylint: disable=undefined-variable
 
@@ -189,9 +194,9 @@ def PressOneFunc(func, time_sec=0):
   """
   logging.info('Testing %s button, press and hold for %f seconds', func,
                time_sec)
-  p.motor_board.Touch(func)
+  p.motor_board.Touch(func) # pylint: disable=undefined-variable
   time.sleep(time_sec)
-  p.motor_board.Release(func)
+  p.motor_board.Release(func) # pylint: disable=undefined-variable
 
 
 def BuildTunnel(local_port, port, host):
@@ -215,7 +220,7 @@ def Main():
   if options.remote:
     cleanup = BuildTunnel(options.local_port, options.port, options.host)
     if cleanup is None:
-      logging.info("Failed to create tunnel")
+      logging.info('Failed to create tunnel')
       return
     atexit.register(cleanup)
     address = 'http://localhost:%d' % options.local_port
