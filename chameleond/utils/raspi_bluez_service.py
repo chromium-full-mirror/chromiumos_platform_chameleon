@@ -234,7 +234,7 @@ class BluezService(dbus.service.Object):
         break
 
       except Exception as e:
-        logging.warn('\tConnect failed, retrying: ', str(e))
+        logging.warn('\tConnect failed, retrying: %s', str(e))
 
         time.sleep(.5)
 
