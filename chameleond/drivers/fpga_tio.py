@@ -40,6 +40,7 @@ from chameleond.utils import usb
 from chameleond.utils import usb_printer_control
 from chameleond.utils.common import lazy
 from chameleond.utils import bluetooth_a2dp
+from chameleond.utils import bluetooth_tester
 
 
 if os.environ.get('PLATFORM') == 'RASPI':
@@ -139,6 +140,8 @@ class ChameleondDriver(ChameleondInterface):
         ids.BLUETOOTH_HID_MOUSE)
     self.bluetooth_keyboard = self._device_manager.GetChameleonDevice(
         ids.BLUETOOTH_HID_KEYBOARD)
+    self.bluetooth_tester = self._device_manager.GetChameleonDevice(
+        ids.BLUETOOTH_TESTER)
     self.avsync_probe = self._device_manager.GetChameleonDevice(
         ids.AVSYNC_PROBE)
     self.motor_board = self._device_manager.GetChameleonDevice(ids.MOTOR_BOARD)
@@ -215,6 +218,7 @@ class ChameleondDriver(ChameleondInterface):
         ids.BLUETOOTH_BASE:
             bluetooth_base_flow.BluetoothBaseFlow(
                 ids.BLUETOOTH_BASE, self._base_ctrl),
+        ids.BLUETOOTH_TESTER: bluetooth_tester.BluetoothTester(),
     }
     return devices
 

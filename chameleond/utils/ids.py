@@ -34,6 +34,7 @@ BLUETOOTH_A2DP_SINK = 26
 BLE_MOUSE = 27
 BLE_KEYBOARD = 28
 BLUETOOTH_BASE = 29
+BLUETOOTH_TESTER = 30
 
 # device names
 DEVICE_NAMES = {
@@ -66,6 +67,9 @@ DEVICE_NAMES = {
     BLE_MOUSE: 'ble_mouse',
     BLE_KEYBOARD: 'ble_keyboard',
     BLUETOOTH_BASE: 'bluetooth_base',
+    # Bluetooth tester allows us to query DUT state from the
+    # chameleon peer
+    BLUETOOTH_TESTER: 'bluetooth_tester',
 }
 
 
