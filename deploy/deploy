@@ -25,7 +25,8 @@ update-rc.d -f "${UPDATER_NAME}" remove
 validate_package_installation() {
     PACKAGE_NAME=$1
 
-    if ! dpkg-query -l "${PACKAGE_NAME}" > /dev/null; then
+    # dpkg shows installation by showing "ii" next to the entry
+    if ! dpkg -l ${PACKAGE_NAME} 2>&1 | grep -qE '^ii'; then
         printf "Installing package %s...\n" "${PACKAGE_NAME}"
 
         eval "apt-get update > /dev/null 2>&1"
