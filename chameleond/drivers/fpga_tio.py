@@ -93,7 +93,7 @@ class ChameleondDriver(ChameleondInterface):
     logging.info('platform: %s', self._platform)
 
     # This version control autoupdate of BT peer in the lab
-    self.bt_pkg_version = '0.0.1'
+    self.bt_pkg_version = '0.0.2'
     logging.info('bt_pkg_version: %s', self.bt_pkg_version)
 
     self._captured_params = {}
