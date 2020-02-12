@@ -61,7 +61,7 @@ def lazy(original_class):
 
   - However, the following statement would instantiate the object.
 
-    print o
+    print(o)
 
     since it invokes o.__str__()
 

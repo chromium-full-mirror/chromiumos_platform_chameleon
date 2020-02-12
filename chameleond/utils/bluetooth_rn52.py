@@ -446,7 +446,7 @@ class RN52(PeripheralKit):
       class_of_device = hex(class_of_device)
     except TypeError:
       pass
-    print ('Class of device: %s' % class_of_device)
+    print('Class of device: %s' % class_of_device)
 
 if __name__ == '__main__':
   kit_instance = RN52()

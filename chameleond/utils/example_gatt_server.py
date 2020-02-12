@@ -244,7 +244,7 @@ class Descriptor(dbus.service.Object):
                         in_signature='a{sv}',
                         out_signature='ay')
     def ReadValue(self, options):
-        print ('Default ReadValue called, returning error')
+        print('Default ReadValue called, returning error')
         raise NotSupportedException()
 
     @dbus.service.method(GATT_DESC_IFACE, in_signature='aya{sv}')

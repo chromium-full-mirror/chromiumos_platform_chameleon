@@ -103,4 +103,4 @@ class ServerTime(object):
 
 if __name__ == '__main__':
   # Print the chameleon mirror server time when running as a script.
-  print ServerTime().get()
+  print(ServerTime().get())

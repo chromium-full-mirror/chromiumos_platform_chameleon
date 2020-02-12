@@ -314,47 +314,47 @@ def DemoBluetoothHIDKeyboard(remote_address, chars):
     remote_address: the bluetooth address of the target remote device
     chars: the characters to send
   """
-  print 'Creating an emulated bluetooth keyboard...'
+  print('Creating an emulated bluetooth keyboard...')
   # TODO(josephsih): Refactor test code to remove need for RN42 import
   keyboard = BluetoothHIDKeyboard(PeripheralKit.PIN_CODE_MODE, RN42)
   keyboard.Init()
 
-  print 'Connecting to the remote address %s...' % remote_address
+  print('Connecting to the remote address %s...' % remote_address)
   try:
     if keyboard.ConnectToRemoteAddress(remote_address):
       # Send printable ASCII strings a few times.
       for i in range(1, 4):
-        print 'Sending "%s" for the %dth time...' % (chars, i)
+        print('Sending "%s" for the %dth time...' % (chars, i))
         keyboard.Send(chars + ' ' + str(i))
 
       # Demo special key combinations below.
-      print 'Create a new chrome tab.'
+      print('Create a new chrome tab.')
       keyboard.SendKeyCombination(modifiers=[RN42.LEFT_CTRL],
                                   keys=[RN42.SCAN_T])
 
-      print 'Navigate to Google page.'
+      print('Navigate to Google page.')
       keyboard.Send('www.google.com')
       time.sleep(1)
 
-      print 'Search hello world.'
+      print('Search hello world.')
       keyboard.Send('hello world')
       time.sleep(1)
 
-      print 'Navigate back to the previous page.'
+      print('Navigate back to the previous page.')
       keyboard.SendKeyCombination(keys=[RN42.SCAN_F1])
       time.sleep(1)
 
-      print 'Switch to the previous tab.'
+      print('Switch to the previous tab.')
       keyboard.SendKeyCombination(modifiers=[RN42.LEFT_CTRL, RN42.LEFT_SHIFT],
                                   keys=[RN42.SCAN_TAB])
     else:
-      print 'Something is wrong. Not able to connect to the remote address.'
-      print 'Have you already paired RN-42 with the remote host?'
+      print('Something is wrong. Not able to connect to the remote address.')
+      print('Have you already paired RN-42 with the remote host?')
   finally:
-    print 'Disconnecting...'
+    print('Disconnecting...')
     keyboard.Disconnect()
 
-  print 'Closing the keyboard...'
+  print('Closing the keyboard...')
   keyboard.Close()
 
 
@@ -364,56 +364,56 @@ def DemoBluetoothHIDMouse(remote_address):
   Args:
     remote_address: the bluetooth address of the target remote device
   """
-  print 'Creating an emulated bluetooth mouse...'
+  print('Creating an emulated bluetooth mouse...')
   # TODO(josephsih): Refactor test code to remove need for RN42 import
   mouse = BluetoothHIDMouse(PeripheralKit.PIN_CODE_MODE, RN42)
   mouse.Init()
 
   connected = False
-  print 'Connecting to the remote address %s...' % remote_address
+  print('Connecting to the remote address %s...' % remote_address)
   try:
     if mouse.ConnectToRemoteAddress(remote_address):
       connected = True
 
-      print 'Click and drag horizontally.'
+      print('Click and drag horizontally.')
       mouse.ClickAndDrag(delta_x=100)
       time.sleep(1)
 
-      print 'Make a right click.'
+      print('Make a right click.')
       mouse.RightClick()
       time.sleep(1)
 
-      print 'Move the cursor upper left.'
+      print('Move the cursor upper left.')
       mouse.Move(delta_x=-30, delta_y=-40)
       time.sleep(1)
 
-      print 'Make a left click.'
+      print('Make a left click.')
       mouse.LeftClick()
       time.sleep(1)
 
-      print 'Move the cursor left.'
+      print('Move the cursor left.')
       mouse.Move(delta_x=-100)
       time.sleep(1)
 
-      print 'Move the cursor up.'
+      print('Move the cursor up.')
       mouse.Move(delta_y=-90)
       time.sleep(1)
 
-      print 'Move the cursor down right.'
+      print('Move the cursor down right.')
       mouse.Move(delta_x=100, delta_y=90)
       time.sleep(1)
 
-      print 'Scroll in one direction.'
+      print('Scroll in one direction.')
       mouse.Scroll(-80)
       time.sleep(1)
 
-      print 'Scroll in the opposite direction.'
+      print('Scroll in the opposite direction.')
       mouse.Scroll(100)
     else:
-      print 'Something is wrong. Not able to connect to the remote address.'
+      print('Something is wrong. Not able to connect to the remote address.')
   finally:
     if connected:
-      print 'Disconnecting...'
+      print('Disconnecting...')
       try:
         mouse.Disconnect()
       # TODO(josephsih): Refactor test code to remove need for RN42 import
@@ -421,7 +421,7 @@ def DemoBluetoothHIDMouse(remote_address):
         # RN-42 may have already disconnected.
         pass
 
-  print 'Closing the mouse...'
+  print('Closing the mouse...')
   mouse.Close()
 
 
@@ -445,11 +445,11 @@ def _Parse():
   args = parser.parse_args()
 
   if len(args.remote_host_address.replace(':', '')) != 12:
-    print '"%s" is not a valid bluetooth address.' % args.remote_host_address
+    print('"%s" is not a valid bluetooth address.' % args.remote_host_address)
     exit(1)
 
-  print ('Emulate a %s and connect to remote host at %s' %
-         (args.device, args.remote_host_address))
+  print('Emulate a %s and connect to remote host at %s' %
+        (args.device, args.remote_host_address))
   return args
 
 

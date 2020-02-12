@@ -276,7 +276,7 @@ def PowerCycleUSBPort(usb_vid, usb_pid):
 if __name__ == '__main__':
   import sys
   if len(sys.argv) != 3:
-    print 'invoke with python powertest.py <vid> <pid>'
+    print('invoke with python powertest.py <vid> <pid>')
   else:
     VID = sys.argv[1]
     PID = sys.argv[2]
