@@ -95,7 +95,7 @@ def PowerCycleUSBPort(usb_vid, usb_pid):
     Args gpio_idx The index of the gpio to set the power for.
     Args power_on If True, powers on the GPIO. If False, powers it off.
     """
-    if gpio_idx not in range(1, 6):
+    if gpio_idx not in list(range(1, 6)):
       logging.error('Invalid GPIO %s', gpio_idx)
       return False
 

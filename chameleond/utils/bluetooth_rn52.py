@@ -102,7 +102,7 @@ class RN52(PeripheralKit):
   }
 
   # Map abstract authentication mode to decimal number
-  REV_AUTHENTICATION_MODE = {v: k for k, v in AUTHENTICATION_MODE.iteritems()}
+  REV_AUTHENTICATION_MODE = {v: k for k, v in list(AUTHENTICATION_MODE.items())}
 
 
   def __init__(self):

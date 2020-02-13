@@ -169,7 +169,7 @@ class FlowManager(object):
     Returns:
       A tuple of port_id, for all supported ports on the board.
     """
-    return self.flows.keys()
+    return list(self.flows.keys())
 
   def GetSupportedInputs(self):
     """Returns all supported input ports on the board.

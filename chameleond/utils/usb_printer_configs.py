@@ -35,7 +35,7 @@ class USBPrinterDriverConfigs(object):
         'product'. Keys with None as corresponding value will be ignored, and
         its original value saved self._device_info will be unchanged.
     """
-    for key, value in device_info.iteritems():
+    for key, value in list(device_info.items()):
       if value is not None:
         self._device_info[key] = value
 

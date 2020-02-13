@@ -626,8 +626,8 @@ def find_adapter(bus):
                                DBUS_OM_IFACE)
     objects = remote_om.GetManagedObjects()
 
-    for o, props in objects.items():
-        if GATT_MANAGER_IFACE in props.keys():
+    for o, props in list(objects.items()):
+        if GATT_MANAGER_IFACE in list(props.keys()):
             return o
 
     return None

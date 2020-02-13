@@ -257,7 +257,7 @@ def GetUnderlineFont(char):
     A list of bytes for font bitmap.
   """
   bitmap = copy.deepcopy(GetFont(char))
-  for byte in xrange(8, 16):
+  for byte in range(8, 16):
     bitmap[byte] |= 0x40
   return bitmap
 
@@ -272,6 +272,6 @@ def GetHighlightFont(char):
     A list of bytes for font bitmap.
   """
   bitmap = copy.deepcopy(GetFont(char))
-  for byte in xrange(16):
+  for byte in range(16):
     bitmap[byte] ^= 0xff
   return bitmap

@@ -100,7 +100,7 @@ class FrameManager(object):
       odd_field = self._field_manager.ReadDumpedField(frame_index * 2 + 1)
       return ''.join([''.join([even_field[i:i+line_len],
                                odd_field[i:i+line_len]])
-                      for i in xrange(0, len(even_field), line_len)])
+                      for i in range(0, len(even_field), line_len)])
     else:
       return self._field_manager.ReadDumpedField(frame_index)
 

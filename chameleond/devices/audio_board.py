@@ -171,7 +171,7 @@ class _AudioBoardSwitchController(object):
 
   def _ResetSwitches(self):
     """Turns off all switches."""
-    for number in self._SWITCH_EXPANDER_BIT_MAP.iterkeys():
+    for number in list(self._SWITCH_EXPANDER_BIT_MAP.keys()):
       self.EnableSwitch(number, False)
 
   def EnableSwitch(self, number, enabled):
@@ -687,7 +687,7 @@ class AudioBoard(chameleon_device.ChameleonDevice):
 
   def Reset(self):
     """Resets audio buses."""
-    for bus in self._audio_buses.values():
+    for bus in list(self._audio_buses.values()):
       bus.Reset()
     if self.HasJackPlugger():
       self._jack_plugger.Reset()

@@ -38,7 +38,7 @@ class DeviceManager(object):
     """Detect and initialize all chameleon devices."""
     self._detected_devices = {}
     self._detected_flows = {}
-    for device_id, device in self._devices_table.iteritems():
+    for device_id, device in list(self._devices_table.items()):
       name = ids.DEVICE_NAMES[device_id]
       if not device.IsDetected():
         logging.info('Device %s is not detected', name)
@@ -50,12 +50,12 @@ class DeviceManager(object):
         logging.info('Add device %s, port #%d to detected flow',
                      name, device_id)
 
-    for device in self._detected_devices.values():
+    for device in list(self._detected_devices.values()):
       device.InitDevice()
 
   def Reset(self):
     """Reset all detected chameleon devices."""
-    for device in self._detected_devices.values():
+    for device in list(self._detected_devices.values()):
       device.Reset()
 
   def GetChameleonDevice(self, device_id):

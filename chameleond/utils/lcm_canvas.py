@@ -54,7 +54,7 @@ class LcmCanvas(object):
 
     # Create an 2-D byte array of bitmap.
     self.bitmap = []
-    for _ in xrange(self.pages):
+    for _ in range(self.pages):
       self.bitmap.append(array.array('c', [chr(0x00)] * self.columns))
     if boot_screen:
       self.DrawFromFile(boot_screen)
@@ -65,8 +65,8 @@ class LcmCanvas(object):
     Args:
       byte: The defaulkt byte.
     """
-    for page in xrange(self.pages):
-      for column in xrange(self.columns):
+    for page in range(self.pages):
+      for column in range(self.columns):
         self.SetByte(byte, page, column)
 
   def DrawChar(self, char, line, column, highlight, underline):
@@ -86,8 +86,8 @@ class LcmCanvas(object):
       font = lcm_font.GetUnderlineFont(char)
     else:
       font = lcm_font.GetFont(char)
-    for y in xrange(lcm_font.FONT_HEIGHT / self._PAGE_HEIGHT):
-      for x in xrange(lcm_font.FONT_WIDTH):
+    for y in range(lcm_font.FONT_HEIGHT / self._PAGE_HEIGHT):
+      for x in range(lcm_font.FONT_WIDTH):
         font_index = y * lcm_font.FONT_WIDTH + x
         self.SetByte(font[font_index], page + y, column + x)
 
@@ -99,8 +99,8 @@ class LcmCanvas(object):
     """
     with open(bitmap_file) as f:
       bitmap_in = f.read()
-    for page in xrange(self.pages):
-      for column in xrange(self.columns):
+    for page in range(self.pages):
+      for column in range(self.columns):
         self.SetByte(ord(bitmap_in[page * self.columns + column]), page, column)
 
   def SetByte(self, byte, page, column):

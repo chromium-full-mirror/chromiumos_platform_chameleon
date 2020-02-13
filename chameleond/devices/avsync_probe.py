@@ -117,7 +117,7 @@ class AVSyncProbeSerial(object):
 
     # The device logs one millisecond of data per line.
     num_samples = int(sample_duration_seconds * self._SECONDS_TO_MILLISECONDS)
-    for _ in xrange(num_samples):
+    for _ in range(num_samples):
       packet = self.serial.Receive(self._PACKET_SIZE)
       values = self._Decode(packet)
       responses.append(values)
@@ -154,7 +154,7 @@ class AVSyncProbe(chameleon_device.ChameleonDevice):
   def IsDetected(self):
     """Returns if the device can be detected."""
     # We need some time for system to detect the device.
-    for i in xrange(self._DETECT_RETRY, 0, -1):
+    for i in range(self._DETECT_RETRY, 0, -1):
       try:
         self._av_sync_probe = AVSyncProbeSerial()
       except IOError:

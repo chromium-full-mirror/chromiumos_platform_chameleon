@@ -57,7 +57,7 @@ class BluezServiceProfile(dbus.service.Object):
   def NewConnection(self, path, fd, properties):
     self.fd = fd.take()
     print('NewConnection(%s, %d)' % (path, self.fd))
-    for key in properties.keys():
+    for key in list(properties.keys()):
       if key == 'Version' or key == 'Features':
         print('  %s = 0x%04x' % (key, properties[key]))
       else:

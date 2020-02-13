@@ -187,7 +187,7 @@ class MotorBoard(object):
 
   def Reset(self):
     """Resets motor boards by releasing button and resetting port directions."""
-    for func, motor in self._motors.iteritems():
+    for func, motor in list(self._motors.items()):
       logging.info('Reset motor for %s function', func)
       motor.Reset()
 
@@ -228,7 +228,7 @@ class MotorBoard(object):
 
     model_map = self._MODEL_PARAMS_MAP[model_name]
 
-    for func, params in model_map.iteritems():
+    for func, params in list(model_map.items()):
       ports = self._MOTOR_PORT_MAP[func]
       self._motors[func] = Motor(self._motor_io, ports, params)
 
@@ -386,7 +386,7 @@ class Motor(object):
     offset = self._ports.step
     half_period_sec = self._params.period_ms / 2 * 0.001
 
-    for _ in xrange(num_pulse):
+    for _ in range(num_pulse):
       self._motor_io.SetBit(offset, self._MOTOR_PULSE_LOW)
       time.sleep(half_period_sec)
       self._motor_io.SetBit(offset, self._MOTOR_PULSE_HIGH)

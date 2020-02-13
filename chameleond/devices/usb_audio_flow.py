@@ -373,7 +373,7 @@ class OutputUSBAudioFlow(USBAudioFlow):
         and file_type is valid. False otherwise.
     """
     supported_format_dict = self._supported_data_format.AsDict()
-    for key, value in data_format_dict.iteritems():
+    for key, value in list(data_format_dict.items()):
       if key == 'file_type':
         if value not in self._VALID_AUDIO_FILE_TYPES:
           return False

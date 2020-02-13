@@ -51,7 +51,7 @@ class _SystemTools(object):
     Raises:
       SystemToolsError if missing a tool.
     """
-    for path in self._TOOL_PATHS.values():
+    for path in list(self._TOOL_PATHS.values()):
       if not os.path.isfile(path):
         # It is okay that some tools may not exist in a particular platform.
         logging.warning('IOError: Required tool %s not existed', path)

@@ -161,7 +161,7 @@ class FieldManager(object):
     """
     # Convert to a list, in which each element is a field hash.
     return [self._saved_hashes[i : i + self._HASH_SIZE]
-            for i in xrange(start * self._HASH_SIZE,
+            for i in range(start * self._HASH_SIZE,
                             stop * self._HASH_SIZE,
                             self._HASH_SIZE)]
 
@@ -201,7 +201,7 @@ class FieldManager(object):
     offset_addr = fpga.VideoDumper.GetPixelDumpArgs(self._input_id, False)[1]
 
     max_limit = fpga.VideoDumper.GetMaxFieldLimit(width, height)
-    for i in xrange(start, stop):
+    for i in range(start, stop):
       offset_args += ['-a', offset_addr + field_size * (i % max_limit)]
 
     result = system_tools.SystemTools.Output(
@@ -222,7 +222,7 @@ class FieldManager(object):
       A list of histograms.
     """
     return [self._saved_histograms[i : i + self._HISTOGRAM_SIZE]
-            for i in xrange(start * self._HISTOGRAM_SIZE,
+            for i in range(start * self._HISTOGRAM_SIZE,
                             stop * self._HISTOGRAM_SIZE,
                             self._HISTOGRAM_SIZE)]
 
@@ -314,9 +314,9 @@ class FieldManager(object):
     if current_field > self._last_field.value:
       start = self._last_field.value
       stop = current_field
-      for i in xrange(start, stop):
+      for i in range(start, stop):
         hash64 = self._ComputeFieldHash(i)
-        for j in xrange(self._HASH_SIZE):
+        for j in range(self._HASH_SIZE):
           self._saved_hashes[i * self._HASH_SIZE + j] = hash64[j]
         logging.debug(
             'Saved field hash #%d: %r', i,

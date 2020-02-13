@@ -384,7 +384,7 @@ class BluezPeripheral(PeripheralKit):
 
     # Go through each object in org.bluez.Device1 until
     # we find the one that matches our desired address
-    for path, ifaces in objects.items():
+    for path, ifaces in list(objects.items()):
       device = ifaces.get(DBUS_BLUEZ_DEVICE_IFACE)
 
       if device is not None and device['Address'] == addr:
@@ -407,7 +407,7 @@ class BluezPeripheral(PeripheralKit):
     objects = manager.GetManagedObjects()
 
     # Go through each obj in org.bluez.Device1 and check "Connected" attribute
-    for _, ifaces in objects.items():
+    for _, ifaces in list(objects.items()):
       device = ifaces.get(DBUS_BLUEZ_DEVICE_IFACE)
       if device is None:
         continue

@@ -103,7 +103,7 @@ class USBHIDFlow(chameleon_device.Flow):
   @property
   def supported_events(self):
     """Gets the list of supported event types."""
-    return self._SUPPORTED_EVENTS.keys()
+    return list(self._SUPPORTED_EVENTS.keys())
 
   def Send(self, event_type, *args, **kwargs):
     """A general function to send events with event_type and arguments.
@@ -120,7 +120,7 @@ class USBHIDFlow(chameleon_device.Flow):
     args_string = ''
     for value in args:
       args_string += '{0}, '.format(value)
-    for name, value in kwargs.items():
+    for name, value in list(kwargs.items()):
       args_string += '{0}={1}, '.format(name, value)
     logging.info('HID flow #%d Event: Type=%s, Args=(%s)',
                  self._port_id, event_type, args_string)
@@ -300,9 +300,9 @@ class KeyboardUSBHIDFlow(USBHIDFlow):
     try:
       if not key:
         key_byte = 0x00
-      elif key in self._KEYBOARD_SPECIAL_KEYS.keys():
+      elif key in list(self._KEYBOARD_SPECIAL_KEYS.keys()):
         key_byte = self._KEYBOARD_SPECIAL_KEYS[key]
-      elif key in self._KEYBOARD_SYMBOLS.keys():
+      elif key in list(self._KEYBOARD_SYMBOLS.keys()):
         key_byte = self._KEYBOARD_SYMBOLS[key][0]
         is_shift_pressed = self._KEYBOARD_SYMBOLS[key][1]
       elif 'a' <= key <= 'z':

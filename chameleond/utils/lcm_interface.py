@@ -142,10 +142,10 @@ class LcmInterface(object):
 
   def _InitiatePeripherals(self):
     """Initiate key and LED drivers."""
-    for key in self._KEY_PARAMS.keys():
+    for key in list(self._KEY_PARAMS.keys()):
       self._keys[key] = gpio.Key(
           self._KEY_PARAMS[key][1], key, self._KEY_PARAMS[key][0], self._queue)
-    for led in self._LED_PARAMS.keys():
+    for led in list(self._LED_PARAMS.keys()):
       self._leds[led] = gpio.Led(self._LED_PARAMS[led])
 
   def Run(self):
@@ -208,7 +208,7 @@ class LcmInterface(object):
       self._EnterPage()
       self._state = self._STATE_PAGE
     else:
-      self._menu = self._menu.values()[self._cursor[-1]]
+      self._menu = list(self._menu.values())[self._cursor[-1]]
       self._cursor.append(0)
       self._MenuRender()
 
@@ -223,8 +223,8 @@ class LcmInterface(object):
   def _MenuGetNode(self):
     """Gets current sub-tree of menu tree."""
     menu_walk = _MENU
-    for depth in xrange(len(self._cursor) - 1):
-      menu_walk = menu_walk.values()[self._cursor[depth]]
+    for depth in range(len(self._cursor) - 1):
+      menu_walk = list(menu_walk.values())[self._cursor[depth]]
     self._menu = menu_walk
 
   def _MenuIsLeafNode(self, item=None):
@@ -239,7 +239,7 @@ class LcmInterface(object):
     """
     if item is None:
       item = self._cursor[-1]
-    return not isinstance(self._menu.values()[item], OrderedDict)
+    return not isinstance(list(self._menu.values())[item], OrderedDict)
 
   def _MenuRender(self):
     """Renders the display image of LCM UI in menu state.
@@ -252,12 +252,12 @@ class LcmInterface(object):
     menu_display_lines = self._display_lines - 1
     window_head = self._cursor[-1] / menu_display_lines * menu_display_lines
     # Prints the menu items inside the window.
-    for line in xrange(menu_display_lines):
+    for line in range(menu_display_lines):
       menu_line = window_head + line
       if menu_line >= len(self._menu):
         break
       self._display.CanvasPrintMenuItem(
-          self._menu.keys()[menu_line], self._MenuIsLeafNode(menu_line), line)
+          list(self._menu.keys())[menu_line], self._MenuIsLeafNode(menu_line), line)
     # Prints the moving cursor.
     self._display.CanvasPrintCursor(self._cursor[-1] - window_head, 0)
     # Prints the last line (IP address and key instruction).
@@ -341,7 +341,7 @@ class LcmInterface(object):
     """
     self._display.CanvasClear()
     # Print the content lines.
-    for line in xrange(self._display_lines - 1):
+    for line in range(self._display_lines - 1):
       current_line = self._page_index + line
       if current_line < len(self._page_contents):
         self._display.CanvasPrintLine(self._page_contents[current_line], line)
@@ -380,7 +380,7 @@ class LcmInterface(object):
 
     All functions are defined in lcm_funcpool.py.
     """
-    func_caller = self._menu.values()[self._cursor[-1]]
+    func_caller = list(self._menu.values())[self._cursor[-1]]
     output = func_caller(self._chameleond)
     logging.info('Display output: %s', output)
 
@@ -399,7 +399,7 @@ class LcmInterface(object):
       pieces = []
       for c in contents:
         total_pieces = int(math.ceil(float(len(c)) / piece_length))
-        pieces += [c[i * piece_length:(i + 1) * piece_length] for i in xrange(
+        pieces += [c[i * piece_length:(i + 1) * piece_length] for i in range(
             total_pieces - 1)]
         pieces.append(c[(total_pieces - 1) * piece_length:])
       return pieces

@@ -99,8 +99,8 @@ class GATTServer(object):
     # TODO b:142131418 occasionally this stalls and times out, causing 25s delay
     objects = remote_om.GetManagedObjects()
 
-    for o, props in objects.items():
-      if GATT_MANAGER_IFACE in props.keys():
+    for o, props in list(objects.items()):
+      if GATT_MANAGER_IFACE in list(props.keys()):
         return o
 
     return None

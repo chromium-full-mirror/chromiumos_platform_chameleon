@@ -66,7 +66,7 @@ class USBPrinterController(usb.USBController):
     params_dict = self.\
                   _FormatDriverConfigsForModprobe(self._driver_configs_to_set)
     args_list = self._modprobe_verbose_args
-    for key, value in params_dict.iteritems():
+    for key, value in list(params_dict.items()):
       if value is not None:
         item = key + '=' + str(value)
         args_list.append(item)

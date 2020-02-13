@@ -272,7 +272,7 @@ class PlistWriter(DumbXMLWriter):
 
     def writeDict(self, d):
         self.beginElement("dict")
-        items = d.items()
+        items = list(d.items())
         items.sort()
         for key, value in items:
             if not isinstance(key, (str, unicode)):

@@ -89,7 +89,7 @@ class DpRx(i2c.I2cSlave):
     'avi': {
       'version_length_hi': 0x43,
       'length_lo': 0x42,
-      'payload': range(0x44, 0x44 + 13),
+      'payload': list(range(0x44, 0x44 + 13)),
     },
     'spd': {
       'version_length_hi': 0x53,
@@ -99,12 +99,12 @@ class DpRx(i2c.I2cSlave):
     'audio': {
       'version_length_hi': 0x57,
       'length_lo': 0x56,
-      'payload': range(0x58, 0x58 + 5),
+      'payload': list(range(0x58, 0x58 + 5)),
     },
     'mpeg': {
       'version_length_hi': 0x5F,
       'length_lo': 0x5E,
-      'payload': range(0x60, 0x60 + 5),
+      'payload': list(range(0x60, 0x60 + 5)),
     },
   }
 
@@ -444,22 +444,22 @@ class HdmiRx(i2c.I2cSlave):
     'avi': {
       'version': 0x13,
       'length': 0x12,
-      'payload': range(0x15, 0x15 + 15),
+      'payload': list(range(0x15, 0x15 + 15)),
     },
     'audio': {
       'version': 0x43,
       'length': 0x4A,
-      'payload': range(0x45, 0x45 + 5),
+      'payload': list(range(0x45, 0x45 + 5)),
     },
     'mpeg': {
       'version': 0x4B,
       'length': 0x4C,
-      'payload': range(0x4E, 0x4E + 5),
+      'payload': list(range(0x4E, 0x4E + 5)),
     },
     'vendor': {
       'version': 0x91,
       'length': 0x92,
-      'payload': range(0x94, 0x94 + 6),
+      'payload': list(range(0x94, 0x94 + 6)),
     },
   }
 

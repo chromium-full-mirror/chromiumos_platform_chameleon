@@ -131,7 +131,7 @@ class LcmDisplay(object):
       highlight: Whether line is shown with highlight.
       underline: Whether line is shown with underline.
     """
-    for i in xrange(self._canvas.max_char_length):
+    for i in range(self._canvas.max_char_length):
       if i < len(string):
         self._canvas.DrawChar(
             string[i], line, i * lcm_font.FONT_WIDTH, highlight, underline)
@@ -163,7 +163,7 @@ class LcmDisplay(object):
       line: The line index.
       column: The column index.
     """
-    for i in xrange(len(lcm_font.CURSOR)):
+    for i in range(len(lcm_font.CURSOR)):
       char = lcm_font.CURSOR[i]
       self._canvas.DrawChar(
           char, line, column + i * lcm_font.FONT_WIDTH, False, False)
@@ -188,7 +188,7 @@ class LcmDisplay(object):
     self._SetCommonOutputModeSelect(is_normal=True)
 
     bitmap = self._canvas.bitmap
-    for page in xrange(self._canvas.pages):
+    for page in range(self._canvas.pages):
       self._SetPageAddress(page)
       self._SetColumnAddress(0)
       for data in iter(bitmap[page]):

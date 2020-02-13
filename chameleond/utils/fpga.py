@@ -748,7 +748,7 @@ class AudioRouteController(object):
     source_value = ((reg_value & self._MASKS_INPUT_SELECT[destination]) >>
                     self._SHIFTS_INPUT_SELECT[destination])
     source = None
-    for k, v in self._VALUES_INPUT_SELECT.iteritems():
+    for k, v in list(self._VALUES_INPUT_SELECT.items()):
       if source_value == v:
         source = k
     if source is None:
