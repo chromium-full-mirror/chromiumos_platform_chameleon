@@ -16,7 +16,7 @@ import time
 # pylint: disable=W1648
 import xmlrpclib
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 
 from chameleond.devices import audio_board
 from chameleond.devices import avsync_probe

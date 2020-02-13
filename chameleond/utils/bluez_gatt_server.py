@@ -20,11 +20,11 @@ try:
 except ImportError:
   import gobject as GObject
 
-from bluez_le_hid_service import HIDApplication
-from bluetooth_peripheral_kit import PeripheralKit
-from example_gatt_server import Application, BLUEZ_SERVICE_NAME, \
+from .bluez_le_hid_service import HIDApplication
+from .bluetooth_peripheral_kit import PeripheralKit
+from .example_gatt_server import Application, BLUEZ_SERVICE_NAME, \
     DBUS_OM_IFACE, GATT_MANAGER_IFACE
-from bluez_service_consts import PERIPHERAL_DEVICE_APPEARANCE, \
+from .bluez_service_consts import PERIPHERAL_DEVICE_APPEARANCE, \
     PERIPHERAL_DEVICE_NAME
 
 mainloop = None

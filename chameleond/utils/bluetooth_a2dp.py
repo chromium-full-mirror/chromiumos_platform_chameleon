@@ -7,8 +7,8 @@
 
 from __future__ import print_function
 
-from bluetooth_peripheral_kit import PeripheralKit
-from bluetooth_rn52 import RN52
+from .bluetooth_peripheral_kit import PeripheralKit
+from .bluetooth_rn52 import RN52
 from chameleond.utils import bluetooth_hid
 from chameleond.devices import bluetooth_hid_flow
 

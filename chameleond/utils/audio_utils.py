@@ -7,7 +7,7 @@ import logging
 import os
 import struct
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import fpga
 from chameleond.utils import ids
 from chameleond.utils import mem

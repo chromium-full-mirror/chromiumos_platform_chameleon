@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 """Frame manager module which manages the fields and frames."""
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import field_manager
 
 

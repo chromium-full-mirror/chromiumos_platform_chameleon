@@ -11,7 +11,7 @@ import logging
 import struct
 import time
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import mem
 
 

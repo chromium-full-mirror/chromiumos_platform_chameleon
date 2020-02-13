@@ -16,7 +16,7 @@ Usage:
 import ctypes
 import time
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils.common import lazy
 
 

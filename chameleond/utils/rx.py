@@ -6,7 +6,7 @@
 import logging
 import time
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import common
 from chameleond.utils import i2c
 

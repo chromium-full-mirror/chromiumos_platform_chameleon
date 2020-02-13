@@ -9,9 +9,9 @@ import logging
 import sys
 import time
 
-from bluetooth_peripheral_kit import PeripheralKit
-from bluetooth_rn42 import RN42
-from bluetooth_rn42 import RN42Exception
+from .bluetooth_peripheral_kit import PeripheralKit
+from .bluetooth_rn42 import RN42
+from .bluetooth_rn42 import RN42Exception
 from chameleond.utils.bluetooth_nrf52 import nRF52
 
 class BluetoothHIDException(Exception):

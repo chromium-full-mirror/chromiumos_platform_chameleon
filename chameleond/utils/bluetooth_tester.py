@@ -7,9 +7,9 @@ import json
 import logging
 import os
 
-import bluetooth_sdp_socket
-import bluetooth_socket
-from bluetooth_virtual_device import BluetoothVirtualDevice
+from . import bluetooth_sdp_socket
+from . import bluetooth_socket
+from .bluetooth_virtual_device import BluetoothVirtualDevice
 from chameleond.devices.chameleon_device import VirtualFlow
 
 

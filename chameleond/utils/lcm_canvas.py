@@ -17,7 +17,7 @@ canvas, the whole bitmap will be stored in byte[8][128] array.
 
 import array
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import lcm_font
 
 

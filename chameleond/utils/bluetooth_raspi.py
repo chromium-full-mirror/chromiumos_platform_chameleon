@@ -26,11 +26,11 @@ except ImportError:
   pass
 
 from chameleond.utils.raspi_bluez_service import BluezService
-from bluetooth_peripheral_kit import PeripheralKit
-from bluetooth_peripheral_kit import PeripheralKitException
-from bluez_service_consts import PERIPHERAL_DEVICE_CLASS, \
+from .bluetooth_peripheral_kit import PeripheralKit
+from .bluetooth_peripheral_kit import PeripheralKitException
+from .bluez_service_consts import PERIPHERAL_DEVICE_CLASS, \
     PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH
-from bluez_gatt_server import GATTServer
+from .bluez_gatt_server import GATTServer
 
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
 DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'

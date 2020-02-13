@@ -16,7 +16,7 @@ import dbus
 import dbus.mainloop.glib
 import dbus.service
 
-from bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
+from .bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
     keymap, modmap
 
 

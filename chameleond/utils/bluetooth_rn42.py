@@ -8,11 +8,11 @@
 import logging
 import time
 
-import common
+from . import common
 import sys
-from bluetooth_peripheral_kit import PeripheralKit
-from bluetooth_peripheral_kit import PeripheralKitException
-from ids import RN42_SET
+from .bluetooth_peripheral_kit import PeripheralKit
+from .bluetooth_peripheral_kit import PeripheralKitException
+from .ids import RN42_SET
 
 class RN42Exception(PeripheralKitException):
   """A dummpy exception class for RN42 class."""

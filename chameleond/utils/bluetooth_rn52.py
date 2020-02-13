@@ -9,11 +9,11 @@ from __future__ import print_function
 import logging
 import time
 
-import common
+from . import common
 import sys
-from bluetooth_peripheral_kit import PeripheralKit
-from bluetooth_peripheral_kit import PeripheralKitException
-from ids import RN52_SET
+from .bluetooth_peripheral_kit import PeripheralKit
+from .bluetooth_peripheral_kit import PeripheralKitException
+from .ids import RN52_SET
 
 class RN52Exception(PeripheralKitException):
   """A dummpy exception class for RN52 class."""

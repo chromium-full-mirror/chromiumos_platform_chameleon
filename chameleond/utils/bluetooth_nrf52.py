@@ -12,10 +12,10 @@ from __future__ import print_function
 import logging
 import time
 
-import common
-import serial_utils
-from bluetooth_peripheral_kit import PeripheralKit
-from bluetooth_peripheral_kit import PeripheralKitException
+from . import common
+from . import serial_utils
+from .bluetooth_peripheral_kit import PeripheralKit
+from .bluetooth_peripheral_kit import PeripheralKitException
 
 
 class nRF52Exception(PeripheralKitException):

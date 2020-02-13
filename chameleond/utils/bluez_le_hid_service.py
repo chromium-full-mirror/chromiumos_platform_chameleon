@@ -16,8 +16,8 @@ try:
 except ImportError:
   import gobject as GObject
 
-from bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH
-from example_gatt_server import Characteristic, DBUS_OM_IFACE, Descriptor, \
+from .bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH
+from .example_gatt_server import Characteristic, DBUS_OM_IFACE, Descriptor, \
     GATT_CHRC_IFACE, Service
 
 

@@ -9,8 +9,8 @@ import logging
 import serial
 import time
 
-import serial_utils
-import usb_powercycle_util
+from . import serial_utils
+from . import usb_powercycle_util
 
 class PeripheralKitException(Exception):
   """A dummpy exception class for the PeripheralKit class."""

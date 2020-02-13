@@ -19,7 +19,7 @@ import dbus.service
 from bluetooth import BluetoothSocket, L2CAP, discover_devices
 from gi.repository import GLib
 
-from bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
+from .bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
     BLUEZ_PROFILE_PATH, SERVICE_PROFILE_SDP_PATH, HID_SERVICE_UUID
 
 P_CTRL = 17

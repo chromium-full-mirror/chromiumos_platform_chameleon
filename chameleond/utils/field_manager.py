@@ -8,7 +8,7 @@ import os
 import tempfile
 from multiprocessing import Process, Value, Array
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import caching_server
 from chameleond.utils import common
 from chameleond.utils import fpga

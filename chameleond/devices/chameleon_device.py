@@ -6,7 +6,7 @@
 
 from __future__ import print_function
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 
 
 class ChameleonDevice(object):

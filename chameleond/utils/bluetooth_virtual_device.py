@@ -7,8 +7,8 @@
 
 from __future__ import print_function
 
-import chameleon_common  # pylint: disable=W0611
-from bluetooth_peripheral_kit import PeripheralKit
+from . import chameleon_common  # pylint: disable=W0611
+from .bluetooth_peripheral_kit import PeripheralKit
 
 
 class BluetoothVirtualDeviceException(Exception):
