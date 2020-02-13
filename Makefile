@@ -68,10 +68,10 @@ install:
 	@cp -f $(BINARIES) "$(DESTDIR)"
 ifeq ($(REMOTE_INSTALL), TRUE)
 	@echo sync time with host...
-	@NOW="$(HOST_NOW)" deploy/deploy_pip
+	@NOW="$(HOST_NOW)" sh deploy/deploy_pip
 else
 	@echo sync time with the chameleon mirror server...
-	@NOW="`chameleond/utils/server_time`" deploy/deploy_pip
+	@NOW="`chameleond/utils/server_time`" sh deploy/deploy_pip
 endif
 	@python setup.py install -f
 
