@@ -40,8 +40,10 @@ from chameleond.utils import usb
 from chameleond.utils import usb_printer_control
 from chameleond.utils.common import lazy
 from chameleond.utils import bluetooth_a2dp
-from chameleond.utils import bluetooth_tester
 
+if os.environ.get('PLATFORM') != 'FPGA':
+  # pylint: disable=C0412
+  from chameleond.utils import bluetooth_tester
 
 if os.environ.get('PLATFORM') == 'RASPI':
   # pylint: disable=C0412
