@@ -223,7 +223,8 @@ class MemoryDumper(multiprocessing.Process):
     logging.info('Dump: %s', command)
     p = system_tools.SystemTools.RunInSubprocess(*command)
 
-    (return_code, out, err) = system_tools.SystemTools.GetSubprocessOutput(p)
+    (return_code, out, err) = system_tools.SystemTools.GetSubprocessOutput(
+        p, decode=False)
     if return_code:
       logging.error('Dump return %d, error: %s', return_code, err)
       raise MemoryDumperError(err)

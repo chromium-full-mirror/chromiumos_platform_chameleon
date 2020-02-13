@@ -43,11 +43,11 @@ class USBController(object):
     # So check for builtins with "cat /lib/modules/`uname -r`/modules.builtin"
     linux_ver = subprocess.check_output('uname -r',
                                         stderr=subprocess.STDOUT,
-                                        shell=True).strip('\n')
+                                        shell=True).decode().strip('\n')
     checkforbuiltins_cmd = 'cat /lib/modules/' + linux_ver + '/modules.builtin'
     self._builtins = subprocess.check_output(checkforbuiltins_cmd,
                                              stderr=subprocess.STDOUT,
-                                             shell=True)
+                                             shell=True).decode()
     if self._module not in self._builtins:
       system_tools.SystemTools.Call('modprobe', '-r', self._module)
 

@@ -306,7 +306,7 @@ class FlowManager(object):
     """
     driver_dir = os.path.dirname(os.path.realpath(__file__))
     edid_path = os.path.join(driver_dir, '..', 'data', 'default_edid.bin')
-    return open(edid_path).read()
+    return open(edid_path, 'rb').read()
 
   def CreateEdid(self, edid):
     """Creates an internal record of EDID using the given byte array.

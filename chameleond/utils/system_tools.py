@@ -89,7 +89,7 @@ class _SystemTools(object):
       The output message of the call, including stderr message.
     """
     command = self._MakeCommand(name, args)
-    return subprocess.check_output(command, stderr=subprocess.STDOUT)
+    return subprocess.check_output(command, stderr=subprocess.STDOUT).decode()
 
   def DelayedCall(self, time, name, *args):
     """Calls the tool with arguments after a given delay.
@@ -137,11 +137,12 @@ class _SystemTools(object):
                                stderr=handle)
     return process
 
-  def GetSubprocessOutput(self, process):
+  def GetSubprocessOutput(self, process, decode=True):
     """Returns the output of the command called in the process spawned.
 
     Args:
       process: The subprocess in which a command is called.
+      decode: If true, decode output from byte strings to strings.
 
     Returns:
       A tuple (return_code, out, err).
@@ -151,7 +152,9 @@ class _SystemTools(object):
     """
     out, err = process.communicate()
     return_code = process.returncode
-    return (return_code, out, err)
+    if decode:
+        return (return_code, out.decode(), err.decode())
+    return (return_code, out, err.decode())
 
 # Singleton
 SystemTools = _SystemTools()
