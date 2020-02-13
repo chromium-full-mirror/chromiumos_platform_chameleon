@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 """Standalone user interface (LCM display module) server."""
 
-import xmlrpclib
+import xmlrpc.client
 
 from chameleond.utils.lcm_interface import LcmInterface
 from chameleond.utils.lcm_queue import LcmEventQueue
@@ -20,7 +20,7 @@ class DisplayServer(object):
       chameleon_port: port number of chameleon server to link.
     """
     address = 'http://%s:%s' % (chameleon_host, chameleon_port)
-    self._chameleon_client = xmlrpclib.ServerProxy(address, allow_none=True)
+    self._chameleon_client = xmlrpc.client.ServerProxy(address, allow_none=True)
 
   def RunServer(self):
     """Runs display server for standalone user interface."""

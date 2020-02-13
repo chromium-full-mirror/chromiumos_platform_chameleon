@@ -135,7 +135,7 @@ class BluezPeripheral(PeripheralKit):
 
         time.sleep(.1)
 
-      except dbus.exceptions.DBusException, e:
+      except dbus.exceptions.DBusException as e:
         error_msg = 'Setting {} to {} again: {}'.format(prop_name, prop_val,
                                                         str(e))
         logging.error(error_msg)

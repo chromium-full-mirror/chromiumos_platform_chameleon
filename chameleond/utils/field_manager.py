@@ -6,6 +6,7 @@
 import logging
 import os
 import tempfile
+from builtins import int
 from multiprocessing import Process, Value, Array
 
 from . import chameleon_common  # pylint: disable=W0611
@@ -240,7 +241,7 @@ class FieldManager(object):
     offset = field_size * field_index
     offset_args = []
     for arg in fpga.VideoDumper.GetPixelDumpArgs(self._input_id, self._is_dual):
-      if isinstance(arg, (int, long)):
+      if isinstance(arg, int):
         offset_args.append(arg + offset)
       else:
         offset_args.append(arg)

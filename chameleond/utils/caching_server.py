@@ -7,8 +7,8 @@ import logging
 import multiprocessing
 import os
 
-import SimpleHTTPServer
-import SocketServer
+import http.server
+import socketserver
 
 
 # Directory for storing the cached images.
@@ -26,12 +26,12 @@ def ClearCachedDir():
     os.makedirs(CACHED_DIR)
 
 
-class RemoveFileOnceGetHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+class RemoveFileOnceGetHandler(http.server.SimpleHTTPRequestHandler):
   """A HTTP request handler which removes the file once get."""
 
   def do_GET(self):
     """Responses the GET request."""
-    SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
+    http.server.SimpleHTTPRequestHandler.do_GET(self)
     os.remove(self.path[1:])
 
 
@@ -43,7 +43,7 @@ class CachingServer(multiprocessing.Process):
     ClearCachedDir()
     os.chdir(CACHED_DIR)
     logging.info('Creating caching server on port %d...', port)
-    self.httpd = SocketServer.TCPServer(('', port), RemoveFileOnceGetHandler)
+    self.httpd = socketserver.TCPServer(('', port), RemoveFileOnceGetHandler)
 
   def run(self):
     try:

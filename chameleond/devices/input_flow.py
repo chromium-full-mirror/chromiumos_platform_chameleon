@@ -9,6 +9,7 @@ import tempfile
 import threading
 import time
 from abc import ABCMeta
+from six import with_metaclass
 
 from . import chameleon_common  # pylint: disable=W0611
 from chameleond.devices import chameleon_device
@@ -30,9 +31,8 @@ class InputFlowError(Exception):
 
 
 # TODO(mojahsu): Rename the XxxxFlow to XxxxDevice
-class FpgaInputFlow(chameleon_device.Flow):
+class FpgaInputFlow(with_metaclass(ABCMeta, chameleon_device.Flow)):
   """An abstraction of the entire flow for InputFlow on FPGA."""
-  __metaclass__ = ABCMeta
 
   __PULSE_RETRY_COUNT = 3
 
@@ -305,7 +305,7 @@ class FpgaInputFlow(chameleon_device.Flow):
     # Append a plug/unplug after the last pulse
     sleep_times = [w / 1000.0 for w in widths_msec] + [0.0]
     ops = [self.Unplug, self.Plug] * ((len(sleep_times) + 1) / 2)
-    pulses = itertools.izip(ops, sleep_times)
+    pulses = list(zip(ops, sleep_times))
 
     for op, sleep_time in pulses:
       count = 0

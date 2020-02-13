@@ -7,7 +7,7 @@
 import functools
 import logging
 import os
-import xmlrpclib
+import xmlrpc.client
 
 from chameleond.utils import ids
 
@@ -375,7 +375,7 @@ class FlowManager(object):
       or None if the EDID is disabled.
     """
     if self.flows[port_id].IsEdidEnabled():
-      return xmlrpclib.Binary(self.flows[port_id].ReadEdid())
+      return xmlrpc.client.Binary(self.flows[port_id].ReadEdid())
     else:
       logging.debug('Read EDID on port #%d which is disabled.', port_id)
       return None

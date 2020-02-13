@@ -7,8 +7,12 @@ import logging
 import signal
 import sys
 
-from SimpleXMLRPCServer import SimpleXMLRPCServer
-from SimpleXMLRPCServer import SimpleXMLRPCRequestHandler
+try:
+  from xmlrpc.server import SimpleXMLRPCServer  # Python 3.x
+  from xmlrpc.server import SimpleXMLRPCRequestHandler
+except ImportError:
+  from SimpleXMLRPCServer import SimpleXMLRPCServer  # Python 2.x
+  from SimpleXMLRPCServer import SimpleXMLRPCRequestHandler
 
 from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils.caching_server import CachingServer

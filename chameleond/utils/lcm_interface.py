@@ -26,7 +26,7 @@ PAGE state:
 from collections import OrderedDict
 import logging
 import math
-import Queue
+import queue
 
 from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import gpio
@@ -159,7 +159,7 @@ class LcmInterface(object):
       try:
         # Queue is keyboard interruptible only if timeout is set.
         lcm_event = self._queue.get(timeout=1000)
-      except Queue.Empty:
+      except queue.Empty:
         continue
       logging.info('LcmInterface gets event: %s', lcm_event.notice)
       key_index = lcm_event.GetKeyIndex()

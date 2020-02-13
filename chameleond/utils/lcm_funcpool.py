@@ -8,7 +8,7 @@ import functools
 import logging
 import socket
 import struct
-import xmlrpclib
+import xmlrpc.client
 
 from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import system_tools
@@ -28,10 +28,10 @@ def _LcmMethod(func):
       if output is None:
         return 'Success!!'
       return output
-    except xmlrpclib.Fault as e:
+    except xmlrpc.client.Fault as e:
       # Print message when XML-RPC fault occurs.
       return 'Func failed!!\n%s' % e.faultString
-    except xmlrpclib.ProtocolError as e:
+    except xmlrpc.client.ProtocolError as e:
       # Print message when protocol error occurs.
       return 'Not responded!!\n%s' % e.errmsg
     except Exception as e:

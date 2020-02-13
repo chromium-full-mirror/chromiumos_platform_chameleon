@@ -192,7 +192,7 @@ class BluezService(dbus.service.Object):
         try:
           manager.RegisterProfile(profile_dbus_path, profile_uuid, opts)
           break
-        except dbus.DBusException, e:
+        except dbus.DBusException as e:
           logging.info('Registering profile again... %s', str(e))
           time.sleep(.1)
 
@@ -233,7 +233,7 @@ class BluezService(dbus.service.Object):
         self._cinterrupt.connect((str(addr), P_INTR))
         break
 
-      except Exception, e:
+      except Exception as e:
         logging.warn('\tConnect failed, retrying: ', str(e))
 
         time.sleep(.5)

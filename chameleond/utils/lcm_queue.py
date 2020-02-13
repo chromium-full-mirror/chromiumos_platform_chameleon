@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 """The Queue object of key-press events and chameleon events to display UI."""
 
-from Queue import Queue
+from queue import Queue
 import threading
 
 # Global queue object for LCM UI finite state machine.

@@ -12,9 +12,7 @@ import glob
 import logging  # pylint: disable=cros-logging-import
 import os
 import time
-# TODO: import xmlrpclib form xmlrpc in Python 3
-# pylint: disable=W1648
-import xmlrpclib
+import xmlrpc.client
 
 from . import chameleon_common  # pylint: disable=W0611
 
@@ -823,7 +821,7 @@ class ChameleondDriver(ChameleondInterface):
     # Use the projected index.
     frame_index = frame_index % max_frame_limit
     screen = self._flow_manager.ReadCapturedFrame(port_id, frame_index)
-    return xmlrpclib.Binary(screen)
+    return xmlrpc.client.Binary(screen)
 
   def CacheFrameThumbnail(self, frame_index, ratio=2):
     """Caches the thumbnail of the dumped field to a temp file.
@@ -946,7 +944,7 @@ class ChameleondDriver(ChameleondInterface):
     infoframe = self._flow_manager.GetLastInfoFrame(port_id, infoframe_type)
     # Wrap the binary blob in an xmlrpclib object so that it can be serialized
     # in the XML-RPC reply.
-    infoframe['payload'] = xmlrpclib.Binary(infoframe['payload'])
+    infoframe['payload'] = xmlrpc.client.Binary(infoframe['payload'])
     return infoframe
 
   def HasAudioBoard(self):

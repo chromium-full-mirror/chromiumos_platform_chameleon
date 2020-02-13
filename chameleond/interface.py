@@ -4,11 +4,10 @@
 """This module defines Chameleond APIs."""
 
 from abc import ABCMeta
+from six import with_metaclass
 
-
-class ChameleondInterface(object):
+class ChameleondInterface(with_metaclass(ABCMeta, object)):
   """Abstract class of Chameleond interface."""
-  __metaclass__ = ABCMeta
 
   def __init__(self, *args, **kwargs):
     pass

@@ -965,7 +965,7 @@ class RN42(PeripheralKit):
             self._CheckValidScanCodes(keys)):
       return None
 
-    real_scan_codes = map(chr, keys)
+    real_scan_codes = list(map(chr, keys))
     padding_0s = (chr(0) * (self.RAW_REPORT_FORMAT_KEYBOARD_LEN_SCAN_CODES -
                             len(real_scan_codes)))
 
