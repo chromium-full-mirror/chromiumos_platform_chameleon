@@ -35,6 +35,7 @@ BLE_MOUSE = 27
 BLE_KEYBOARD = 28
 BLUETOOTH_BASE = 29
 BLUETOOTH_TESTER = 30
+BLE_PHONE = 31
 
 # device names
 DEVICE_NAMES = {
@@ -70,6 +71,8 @@ DEVICE_NAMES = {
     # Bluetooth tester allows us to query DUT state from the
     # chameleon peer
     BLUETOOTH_TESTER: 'bluetooth_tester',
+    # A phone device that supports Bluetooth
+    BLE_PHONE: 'ble_phone'
 }
 
 

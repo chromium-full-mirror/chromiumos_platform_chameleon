@@ -152,6 +152,8 @@ class ChameleondDriver(ChameleondInterface):
         ids.BLE_MOUSE)
     self.ble_keyboard = self._device_manager.GetChameleonDevice(
         ids.BLE_KEYBOARD)
+    self.ble_phone = self._device_manager.GetChameleonDevice(
+        ids.BLE_PHONE)
     self._flow_manager = flow_manager.FlowManager(self._flows)
 
     self.Reset()
@@ -219,6 +221,7 @@ class ChameleondDriver(ChameleondInterface):
             bluetooth_base_flow.BluetoothBaseFlow(
                 ids.BLUETOOTH_BASE, self._base_ctrl),
         ids.BLUETOOTH_TESTER: bluetooth_tester.BluetoothTester(),
+        ids.BLE_PHONE: raspi_bluetooth_flow.RaspiBLEPhone(),
     }
     return devices
 

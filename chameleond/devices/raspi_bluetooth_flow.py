@@ -320,3 +320,60 @@ class RaspiHIDMouse(RaspiFlow, BluezPeripheral):
     self._EnsureHIDValueInRange(steps)
     self.MouseScroll(steps)
     time.sleep(self.send_delay)
+
+
+class RaspiBLEPhone(RaspiFlow, BluezPeripheral):
+  """This is the class loaded from fpga_tio.
+
+  We inherit from both Flow and PeripheralKit, as fpga_tio's interface needs
+  access to methods in both of them
+  """
+
+  def __init__(self):
+    # Instantiate bluez and raspi flow
+    BluezPeripheral.__init__(self)
+    RaspiFlow.__init__(self, self.GetLocalBluetoothAddress())
+
+    self._client = None
+
+
+  def GetHIDDeviceType(self):
+    """Get the peer device type
+
+    Returns:
+      The type of device emulated
+    """
+
+    return PeripheralKit.PHONE
+
+
+  def GetAdvertisedName(self):
+    """Get the name advertised by the kit.
+
+    Returns:
+      The name that the kit advertises to other Bluetooth devices.
+    """
+
+    return PERIPHERAL_DEVICE_NAME[PeripheralKit.PHONE]
+
+
+  def GetClassOfDevice(self):
+    """Get the class of device
+
+    Returns:
+      Class of device that is emulated by this peripheral
+    """
+
+    return PERIPHERAL_DEVICE_CLASS[PeripheralKit.PHONE] \
+           & CLASS_OF_DEVICE_MASK
+
+
+  def GetClassOfService(self):
+    """Get the class of service
+
+    Returns:
+      Class of service that is emulated by this peripheral
+    """
+
+    return PERIPHERAL_DEVICE_CLASS[PeripheralKit.PHONE] \
+           & CLASS_OF_SERVICE_MASK

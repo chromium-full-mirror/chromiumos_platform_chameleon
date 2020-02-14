@@ -21,6 +21,7 @@ except ImportError:
   import gobject as GObject
 
 from .bluez_le_hid_service import HIDApplication
+from .bluez_le_better_together_service import PhoneLEBetterTogetherApplication
 from .bluetooth_peripheral_kit import PeripheralKit
 from .example_gatt_server import Application, BLUEZ_SERVICE_NAME, \
     DBUS_OM_IFACE, GATT_MANAGER_IFACE
@@ -49,13 +50,18 @@ class GATTServer(object):
     self.peripheral_type = None
     if 'MOUSE' in self.device_type:
       self.peripheral_type = PeripheralKit.MOUSE
-    if 'KEYBOARD' in self.device_type:
+    elif 'KEYBOARD' in self.device_type:
       self.peripheral_type = PeripheralKit.KEYBOARD
+    elif 'PHONE' in self.device_type:
+      self.peripheral_type = PeripheralKit.PHONE
 
     # Choose application using args
     if 'MOUSE' in self.device_type or 'KEYBOARD' in self.device_type:
       self.app = HIDApplication(bus, self.device_type)
       logging.info('HID %s application starting...', self.device_type)
+    elif 'PHONE' in self.device_type:
+      self.app = PhoneLEBetterTogetherApplication(bus, self.device_type)
+      logging.info('%s LE application starting...', self.device_type)
 
     else:
       # Default to generic application provided in example

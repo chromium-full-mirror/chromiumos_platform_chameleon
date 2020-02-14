@@ -21,16 +21,19 @@ CLASS_OF_DEVICE_MASK = 0x001FFF
 PERIPHERAL_DEVICE_CLASS = {
     PeripheralKit.KEYBOARD: 0x002540,
     PeripheralKit.MOUSE:    0x002580,
+    PeripheralKit.PHONE:    0x7A020C,
 }
 
 PERIPHERAL_DEVICE_NAME = {
     PeripheralKit.KEYBOARD: 'KEYBD_REF',
     PeripheralKit.MOUSE:    'MOUSE_REF',
+    PeripheralKit.PHONE:    'PHONE_REF',
 }
 
 PERIPHERAL_DEVICE_APPEARANCE = {
     PeripheralKit.KEYBOARD: [0xc1, 0x03],
     PeripheralKit.MOUSE:    [0xc2, 0x03],
+    PeripheralKit.PHONE:    [0x40, 0x00],
 }
 
 SERVICE_PROFILE_SDP_PATH = {
