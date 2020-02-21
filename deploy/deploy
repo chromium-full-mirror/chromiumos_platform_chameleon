@@ -56,21 +56,29 @@ validate_python_package_installation() {
 }
 
 validate_socket_installation() {
+    INSTALL_LOCATION="/tmp"
     PACKAGE_NAME="btsocket"
+    SOURCE_REPO="https://chromium.googlesource.com/chromiumos/platform/btsocket"
 
     if ! python -c "import ${PACKAGE_NAME}"; then
-        cd /tmp || { echo "Failed to cd /tmp"; exit; }
-        if [ -d "${PACKAGE_NAME}" ]; then
-            rm -rf "${PACKAGE_NAME}"
+        if [ -d "${INSTALL_LOCATION}/${PACKAGE_NAME}" ]; then
+            rm -rf "${INSTALL_LOCATION}/${PACKAGE_NAME}"
         fi
 
-        git clone https://chromium.googlesource.com/chromiumos/platform/btsocket
+        # Clone the repo into desired location
+        git clone ${SOURCE_REPO} ${INSTALL_LOCATION}/${PACKAGE_NAME}
 
-        cd "${PACKAGE_NAME}" || { echo "Failed to cd ${PACKAGE_NAME}"; exit; }
+        cwd=$(pwd)
+        if ! cd ${INSTALL_LOCATION}/${PACKAGE_NAME}; then
+            echo "Failed to cd into ${INSTALL_LOCATION}/${PACKAGE_NAME}"
+            exit
+        fi
 
         python setup.py build
         sudo python setup.py install
 
+        # Return to directory we started at
+        cd ${cwd}
         printf "Package %s installed\n" "${PACKAGE_NAME}"
 
     else
@@ -225,6 +233,12 @@ if [ "${PLATFORM}" = "raspberrypi" ]; then
     DEST_KBD_CONF="/etc/dbus-1/system.d/org.chromium.autotest.btkbservice.conf"
     if [ ! -e DEST_KBD_CONF ]; then
         SRC_KBD_CONF=$(eval "find . -name *btkbservice.conf | head -n 1")
+
+        # Fail early if we couldn't find source conf file
+        if [ -z ${SRC_KBD_CONF} ]; then
+            echo "Failed to install btkbservice conf file, quitting early"
+            exit
+        fi
 
         eval "cp ${SRC_KBD_CONF} ${DEST_KBD_CONF}"
     fi
