@@ -1,11 +1,9 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """A simple utility to connect to Chameleond in an interactive shell."""
-
-from __future__ import print_function
 
 import atexit
 import argparse
@@ -16,9 +14,7 @@ import readline
 import rlcompleter
 import subprocess
 import time
-# TODO: import xmlrpclib form xmlrpc in Python 3
-# pylint: disable=W1648
-import xmlrpclib
+import xmlrpc.client
 
 from audio.audio_value_detector import AudioValueDetector
 
@@ -227,7 +223,7 @@ def Main():
   else:
     address = 'http://%s:%s' % (options.host, options.port)
 
-  proxy = xmlrpclib.ServerProxy(address)
+  proxy = xmlrpc.client.ServerProxy(address)
   logging.info('Connected to %s with MAC address %s', address,
                proxy.GetMacAddress())
   ShowMessages(proxy)
