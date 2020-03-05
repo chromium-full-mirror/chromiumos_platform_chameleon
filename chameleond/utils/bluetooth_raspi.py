@@ -269,6 +269,13 @@ class BluezPeripheral(PeripheralKit):
     # Disable power
     self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(0))
 
+    # Stop Bluetooth audio related daemons which may interfere
+    # with HID tests.
+    # Since these commands may return non zero value if they are not
+    # running, we should not put them in the reset_cmds below.
+    os.system('sudo killall pulseaudio')
+    os.system('sudo service ofono stop')
+
     # Restart chameleon and bluetooth service
     os.system(' && '.join(reset_cmds))
 
