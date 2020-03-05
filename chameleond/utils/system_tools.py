@@ -10,6 +10,7 @@ from __future__ import print_function
 import logging  # pylint: disable=cros-logging-import
 import os
 import subprocess
+import sys
 import threading
 
 
@@ -89,7 +90,11 @@ class _SystemTools(object):
       The output message of the call, including stderr message.
     """
     command = self._MakeCommand(name, args)
-    return subprocess.check_output(command, stderr=subprocess.STDOUT).decode()
+    output = subprocess.check_output(command, stderr=subprocess.STDOUT)
+    if sys.version_info >= (3, 0):
+      return output.decode()
+    else:
+      return output
 
   def DelayedCall(self, time, name, *args):
     """Calls the tool with arguments after a given delay.
@@ -153,7 +158,7 @@ class _SystemTools(object):
     out, err = process.communicate()
     return_code = process.returncode
     if decode:
-        return (return_code, out.decode(), err.decode())
+      return (return_code, out.decode(), err.decode())
     return (return_code, out, err.decode())
 
 # Singleton

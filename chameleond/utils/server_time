@@ -7,8 +7,7 @@
 
 import datetime
 
-import system_tools
-
+from . import system_tools
 
 class ServerTimeException(Exception):
   """A dummpy exception class for the server_time module."""
