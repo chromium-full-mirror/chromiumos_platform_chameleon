@@ -35,6 +35,7 @@ from .bluez_gatt_server import GATTServer
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
 DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'
 DBUS_BLUEZ_DEVICE_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Device1'
+DBUS_BLUEZ_PROP_IFACE = 'org.freedesktop.DBus.Properties'
 
 MAX_DBUS_RETRY_ATTEMPTS = 3
 CONNECTION_WAIT_TIME = 5
@@ -147,6 +148,20 @@ class BluezPeripheral(PeripheralKit):
         logging.error(error_msg)
         time.sleep(.1)
 
+    return False
+
+
+  def SetTrustedByRemoteAddress(self, remote_address, trusted=True):
+    device = self._GetDeviceWithAddress(remote_address)
+    try:
+      properties = dbus.Interface(device, DBUS_BLUEZ_PROP_IFACE)
+      properties.Set(DBUS_BLUEZ_DEVICE_IFACE, 'Trusted',
+                     dbus.Boolean(trusted, variant_level=1))
+      return True
+    except Exception as e:
+      logging.error('SetTrustedByRemoteAddress: %s', e)
+    except:
+      logging.error('SetTrustedByRemoteAddress: unexpected error')
     return False
 
 
