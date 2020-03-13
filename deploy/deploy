@@ -253,7 +253,8 @@ if [ "${PLATFORM}" = "raspberrypi" ]; then
     # Install servo related packages.
     install_servo_packages
 
-    # restart chameleond
+    # restart chameleond and bluetoothd to ensure fresh state
+    service bluetooth restart
     "${INITD_DIR}/${CHAMELEOND_NAME}" restart
 
     # Restart pulseaudio as user pi.
