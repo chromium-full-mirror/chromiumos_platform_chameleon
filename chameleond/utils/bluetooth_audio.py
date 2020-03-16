@@ -64,7 +64,7 @@ class BluetoothAudio(BluezPeripheral):
   """An object that performs Bluetooth audio device related operations."""
 
   PULSEAUDIO = 'pulseaudio'
-  SSH_OPTIONS = (' -i /root/.ssh/.test_rsa '
+  SSH_OPTIONS = (' -i /root/.ssh/testing_rsa '
                  '-o UserKnownHostsFile=/dev/null '
                  '-o StrictHostKeyChecking=no ')
 
