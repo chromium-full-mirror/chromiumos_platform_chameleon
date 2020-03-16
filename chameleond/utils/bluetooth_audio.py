@@ -67,6 +67,9 @@ class BluetoothAudio(BluezPeripheral):
   SSH_OPTIONS = (' -i /root/.ssh/testing_rsa '
                  '-o UserKnownHostsFile=/dev/null '
                  '-o StrictHostKeyChecking=no ')
+  START_PULSEAUDIO_TIMES = 5
+  INTERVAL_BETWEEN_START_PULSEAUDIO_SECS = 0.2
+  WAIT_PULSEAUDIO_READY_SECS = 1
 
   def __init__(self):
     """Initializes a Bluetooth audio object."""
@@ -124,12 +127,12 @@ class BluetoothAudio(BluezPeripheral):
     return (PERIPHERAL_DEVICE_CLASS[PeripheralKit.BLUETOOTH_AUDIO] &
             CLASS_OF_SERVICE_MASK)
 
-  def StartPulseaudio(self):
+  def _StartPulseaudio(self):
     """Start Pulseaudio process or restart it if runnning."""
     try:
       SystemTools.Call('killall', self.PULSEAUDIO)
     except Exception as e:
-      logging.warn('Failed to kill %s: %s. Ignored.', self.PULSEAUDIO, e)
+      logging.debug('%s may not be running: %s. Ignored.', self.PULSEAUDIO, e)
 
     try:
       self._pulseaudio = SystemTools.RunInSubprocessAsPi(
@@ -140,6 +143,18 @@ class BluetoothAudio(BluezPeripheral):
 
     logging.info('%s is started.', self.PULSEAUDIO)
     return True
+
+  def StartPulseaudio(self):
+    for i in range(self.START_PULSEAUDIO_TIMES):
+      logging.info('try to start pulseaudio ... %d', i)
+      if self._StartPulseaudio():
+        time.sleep(self.WAIT_PULSEAUDIO_READY_SECS)
+        output = self.ListSources()
+        logging.info('ListSources: %s', output)
+        if bool(output):
+          return True
+      time.sleep(self.INTERVAL_BETWEEN_START_PULSEAUDIO_SECS)
+    return False
 
   def StopPulseaudio(self):
     """Stop Pulseaudio process."""
