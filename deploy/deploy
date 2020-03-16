@@ -253,25 +253,40 @@ if [ "${PLATFORM}" = "raspberrypi" ]; then
     # Install servo related packages.
     install_servo_packages
 
-    # restart chameleond and bluetoothd to ensure fresh state
-    service bluetooth restart
-    "${INITD_DIR}/${CHAMELEOND_NAME}" restart
-
-    # Restart pulseaudio as user pi.
-    pgrep pulseaudio > /dev/null && killall pulseaudio
-    if runuser -l pi -c "pulseaudio --start"; then
-        echo "pulseaudio is running"
-    else
-        echo "Failed to start pulseaudio"
-        exit
+    # Add pi to the bluetooth group so that pulseaudio started by pi has
+    # the permission to interact with bluetooth daemon.
+    # The Raspberry Pi has to reboot to make usermod take effect.
+    # Reboot is needed only when pulseaudio is installed for the first time.
+    if ! groups pi | grep bluetooth > /dev/null; then
+      usermod -a -G bluetooth pi
+      need_reboot=1
     fi
 
-    # Restart ofono.
-    if service ofono restart > /dev/null; then
-        echo "ofono is running"
+    if [ -n "${need_reboot}" ]; then
+        sleep 3 && reboot &
+        echo '*** Raspberry Pi will reboot itself in 3 seconds! ***'
+        echo 'Reboot is needed only when it is first time to intall pulseaudio.'
     else
-        echo "Failed to start ofono"
-        exit
+        # Restart chameleond and bluetoothd to ensure fresh state.
+        service bluetooth restart
+        "${INITD_DIR}/${CHAMELEOND_NAME}" restart
+
+        # Restart pulseaudio as user pi.
+        pgrep pulseaudio > /dev/null && killall pulseaudio
+        if runuser -l pi -c "pulseaudio --start"; then
+            echo "pulseaudio is running"
+        else
+            echo "Failed to start pulseaudio"
+            exit
+        fi
+
+        # Restart ofono.
+        if service ofono restart > /dev/null; then
+            echo "ofono is running"
+        else
+            echo "Failed to start ofono"
+            exit
+        fi
     fi
 
     # Finished deploying raspberrypi.
