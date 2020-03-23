@@ -338,7 +338,7 @@ class RaspiBLEPhone(RaspiFlow, BluezPeripheral):
     self._client = None
 
 
-  def GetHIDDeviceType(self):
+  def GetDeviceType(self):
     """Get the peer device type
 
     Returns:
