@@ -37,6 +37,7 @@ class _SystemTools(object):
       'modinfo': '/sbin/modinfo',
       'modprobe': '/sbin/modprobe',
       'reboot': '/sbin/reboot',
+      'ofono': '/usr/sbin/ofonod',
       'pactl': '/usr/bin/pactl',
       'pactl.local': '/usr/local/bin/pactl',
       'pacat': '/usr/bin/pacat',
@@ -47,6 +48,7 @@ class _SystemTools(object):
       'pulseaudio': '/usr/bin/pulseaudio',
       'pulseaudio.local': '/usr/local/bin/pulseaudio',
       'scp': '/usr/bin/scp',
+      'service': '/usr/sbin/service',
       'servod': '/usr/local/lib/python-exec/python2.7/servod',
       'ssh': '/usr/bin/ssh',
       'su': '/bin/su',
@@ -65,7 +67,7 @@ class _SystemTools(object):
     We need to set XDG_RUNTIME_DIR for pi for pulseaudio tools to run correctly.
     """
     self._pi_env = os.environ.copy()
-    self._pi_env["XDG_RUNTIME_DIR"] = '/run/user/1000'
+    self._pi_env['XDG_RUNTIME_DIR'] = '/run/user/1000'
 
   def GetToolPath(self, name):
     """Get the path of the tool.
@@ -101,8 +103,18 @@ class _SystemTools(object):
     """
     return [self._TOOL_PATHS[name]] + [str(arg) for arg in args]
 
+  def OrigCall(self, name, *args):
+    """Calls the tool with arguments using subprocess.call().
+
+    Args:
+      name: The name of the tool.
+      *args: The arguments of the tool.
+    """
+    command = self._MakeCommand(name, args)
+    return subprocess.call(command)
+
   def Call(self, name, *args):
-    """Calls the tool with arguments.
+    """Calls the tool with arguments using subprocess.check_call().
 
     Args:
       name: The name of the tool.
@@ -125,8 +137,8 @@ class _SystemTools(object):
     try:
       output = subprocess.check_output(command, stderr=subprocess.STDOUT)
     except Exception as e:
-        logging.error('Output error: %s', e)
-        return ''
+      logging.error('Output error: %s', e)
+      return ''
     if sys.version_info >= (3, 0):
       return output.decode()
     else:
@@ -166,11 +178,11 @@ class _SystemTools(object):
     preferred_path = self._FindPreferredExecutablePath(name)
     args = self._pi_args + [preferred_path + ' ' + args_str]
     try:
-        output = subprocess.check_output(args, env=self._pi_env).decode()
-        return output
+      output = subprocess.check_output(args, env=self._pi_env).decode()
+      return output
     except Exception as e:
-        logging.error('Output error: %s', e)
-        return ''
+      logging.error('Output error: %s', e)
+      return ''
 
   def DelayedCall(self, time, name, *args):
     """Calls the tool with arguments after a given delay.

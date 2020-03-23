@@ -5,17 +5,19 @@
 
 """This module provides an abstraction of bluetooth audio device."""
 
-import logging
+from __future__ import print_function
+
+# TODO: to port chromite.lib.cros_logging to replace legacy logging
+import logging  # pylint: disable=cros-logging-import
 import os
 import re
-import subprocess
 import time
 
-import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611
 
-import common
-from bluetooth_raspi import BluezPeripheral
-from bluetooth_raspi import BluezPeripheralException
+from . import common
+from .bluetooth_raspi import BluezPeripheral
+from .bluetooth_raspi import BluezPeripheralException
 from chameleond.utils.system_tools import SystemTools
 from chameleond.utils.bluetooth_peripheral_kit import PeripheralKit
 from chameleond.utils.bluez_service_consts import (
@@ -24,34 +26,39 @@ from chameleond.utils.bluez_service_consts import (
 
 
 # The audio test data for various profiles.
+audio_test_dir = os.path.join(os.path.dirname(__file__), 'data/audio')
 audio_record_dir = '/tmp'
 audio_test_data = {
-  # hfp nbs test data
-  'hfp_nbs': {
-    'format': 's16le',
-    'rate': 8000,
-    'channels': 1,
-    'recorded_file': os.path.join(audio_record_dir,
-                                  'hfp_nbs_recorded_by_chameleon.wav'),
-  },
+    # hfp nbs test data
+    'hfp_nbs': {
+        'format': 's16le',
+        'rate': 8000,
+        'channels': 1,
+        'file': os.path.join(audio_test_dir,
+                             'sine_3500hz_rate8000_ch1_5secs.wav'),
+        'recorded_file': os.path.join(audio_record_dir,
+                                      'hfp_nbs_recorded_by_peer.wav'),
+    },
 
-  # hfp wbs test data
-  'hfp_wbs': {
-    'format': 's16le',
-    'rate': 16000,
-    'channels': 1,
-    'recorded_file': os.path.join(audio_record_dir,
-                                  'hfp_wbs_recorded_by_chameleon.wav'),
-  },
+    # hfp wbs test data
+    'hfp_wbs': {
+        'format': 's16le',
+        'rate': 16000,
+        'channels': 1,
+        'file': os.path.join(audio_test_dir,
+                             'sine_7000hz_rate16000_ch1_5secs.wav'),
+        'recorded_file': os.path.join(audio_record_dir,
+                                      'hfp_wbs_recorded_by_peer.wav'),
+    },
 
-  # a2dp est data
-  'a2dp': {
-    'format': 's16le',
-    'rate': 48000,
-    'channels': 2,
-    'recorded_file': os.path.join(audio_record_dir,
-                                  'a2dp_recorded_by_chameleon.wav'),
-  },
+    # a2dp est data
+    'a2dp': {
+        'format': 's16le',
+        'rate': 48000,
+        'channels': 2,
+        'recorded_file': os.path.join(audio_record_dir,
+                                      'a2dp_recorded_by_peer.wav'),
+    },
 }
 
 
@@ -64,6 +71,7 @@ class BluetoothAudio(BluezPeripheral):
   """An object that performs Bluetooth audio device related operations."""
 
   PULSEAUDIO = 'pulseaudio'
+  OFONO = 'ofono'
   SSH_OPTIONS = (' -i /root/.ssh/testing_rsa '
                  '-o UserKnownHostsFile=/dev/null '
                  '-o StrictHostKeyChecking=no ')
@@ -77,12 +85,19 @@ class BluetoothAudio(BluezPeripheral):
     self._record = None
     self._pulseaudio = None
     self._play = None
+    self._profile = None
 
     # A hfp bluez source device looks like:
     #   5 bluez_source.DC_71_96_68_E0_9C.headset_audio_gateway \
     #           module-bluez5-device.c  s16le 1ch 8000Hz RUNNING
     self._hfp_source_pattern = re.compile(
         r'(\d+)\s+bluez_source.*headset_audio_gateway')
+
+    # A target bluez_source HFP device looks like:
+    #   1 bluez_sink.34_13_E8_DB_47_5E.headset_audio_gateway
+    #           module-bluez5-device.c  s16le 1ch 16000Hz
+    self._hfp_sink_pattern = re.compile(
+        r'(\d+)\s+bluez_sink.*headset_audio_gateway')
 
     # An a2dp source device looks like
     #   1 bluez_source.DC_71_96_68_E0_9C.a2dp_source module-bluez5-device.c \
@@ -92,6 +107,20 @@ class BluetoothAudio(BluezPeripheral):
 
     self._start_pulseaudio_cmd = ('%s --start' %
                                   SystemTools.GetToolPath(self.PULSEAUDIO))
+
+  def ConnectToRemoteAddress(self, remote_address):
+    """Connect to a remote device with a specified address.
+
+    Args:
+      remote_address: the address of the remote device to connect
+
+    Returns:
+      True if it could connect to the remote address successfully.
+    """
+    remote_device = self.GetDeviceWithAddress(remote_address)
+    if remote_device and remote_device.Connect():
+      return True
+    return False
 
   def GetAdvertisedName(self):
     """Get the name advertised by the kit.
@@ -127,12 +156,18 @@ class BluetoothAudio(BluezPeripheral):
     return (PERIPHERAL_DEVICE_CLASS[PeripheralKit.BLUETOOTH_AUDIO] &
             CLASS_OF_SERVICE_MASK)
 
+  def _KillPulseAudio(self):
+    """Send a SIGKILL to all pulseaudio process."""
+    SystemTools.OrigCall('killall', '-9', self.PULSEAUDIO)
+    logging.info('SIGKILL was sent to %s.', self.PULSEAUDIO)
+
   def _StartPulseaudio(self):
-    """Start Pulseaudio process or restart it if runnning."""
-    try:
-      SystemTools.Call('killall', self.PULSEAUDIO)
-    except Exception as e:
-      logging.debug('%s may not be running: %s. Ignored.', self.PULSEAUDIO, e)
+    """Start Pulseaudio process or restart it if runnning.
+
+    Returns:
+      True if it starts successfully.
+    """
+    self._KillPulseAudio()
 
     try:
       self._pulseaudio = SystemTools.RunInSubprocessAsPi(
@@ -145,6 +180,13 @@ class BluetoothAudio(BluezPeripheral):
     return True
 
   def StartPulseaudio(self):
+    """Start pulseaudio process.
+
+    Retry a few times as sometimes it may not start correctly.
+
+    Returns:
+      True if it starts successfully.
+    """
     for i in range(self.START_PULSEAUDIO_TIMES):
       logging.info('try to start pulseaudio ... %d', i)
       if self._StartPulseaudio():
@@ -157,15 +199,52 @@ class BluetoothAudio(BluezPeripheral):
     return False
 
   def StopPulseaudio(self):
-    """Stop Pulseaudio process."""
+    """Stop Pulseaudio process.
+
+    In addition to terminating the pulseaudio process started by chameleond, it
+    is required to kill the pulseaudio processes that may start as root.
+
+    Returns:
+      True if it stops successfully.
+    """
     if self._pulseaudio is None:
       logging.error('Stop %s before starting it.', self.PULSEAUDIO)
       return False
 
     self._pulseaudio.terminate()
-    logging.info('%s is terminated.', self.PULSEAUDIO)
+    self._KillPulseAudio()
     self._pulseaudio = None
     return True
+
+  def StartOfono(self):
+    """Start/restart Ofono process.
+
+    Returns:
+      True if it starts successfully.
+    """
+    self.StopOfono()
+
+    try:
+      SystemTools.Call('service', self.OFONO, 'start')
+      logging.info('%s is started.', self.OFONO)
+      return True
+    except Exception as e:
+      logging.error('Failed to start %s: %s.', self.OFONO, e)
+      return False
+
+  def StopOfono(self):
+    """Stop Ofono process.
+
+    Returns:
+      True if it stops successfully.
+    """
+    stop_cmd_args = ['service', self.OFONO, 'stop']
+    if SystemTools.OrigCall(*stop_cmd_args) == 0:
+      logging.info('%s is stopped.', self.OFONO)
+      return True
+    else:
+      logging.warn('Failed to stop %s. Ignored.', self.ofono)
+      return False
 
   def PlayAudio(self, audio_file):
     """Play the audio file.
@@ -184,21 +263,39 @@ class BluetoothAudio(BluezPeripheral):
       return False
     return True
 
-  def StartPlayingAudioSubprocess(self, audio_file):
+  def StartPlayingAudioSubprocess(self, audio_profile, wait_secs=1):
     """Start playing the audio file in a subprocess.
 
     Args:
-      audio_file: the audio file to play
+      audio_profile: the audio file to play
+      wait_secs: the time interval to wait for ofono to complete starting.
 
     Returns:
       True if successful.
     """
-    try:
-      self._play = SystemTools.RunInSubprocess('aplay', audio_file)
-    except Exception as e:
-      logging.error('Failed to start playing audio %s: %s.', audio_file, e)
+    if self._play:
+      logging.error(
+          'Trying to start audio playing process when it is still running.')
       return False
+
+    device_number = self.GetBluezSinkHFPDevice()
+    if device_number is None:
+      logging.error('Failed to get the device number of bluez_sink for HFP')
+      return False
+
+    self._profile = profile = audio_test_data.get(audio_profile)
+    if profile is None:
+      logging.error('%s is not a supported audio profile', audio_profile)
+      return False
+
+    args = (('--playback --device=%s --format=%s --rate=%d --channels=%d %s') %
+            (device_number, profile['format'], profile['rate'],
+             profile['channels'], profile['file']))
+    self._play = SystemTools.RunInSubprocessAsPi('pacat', args)
+    # The process needs some time to start.
+    time.sleep(wait_secs)
     return True
+
 
   def StopPlayingAudioSubprocess(self):
     """Stop playing the audio file in the subprocess.
@@ -276,6 +373,26 @@ class BluetoothAudio(BluezPeripheral):
         return hfp_id
     return None
 
+  def GetBluezSinkHFPDevice(self):
+    """Get the number of the bluez_sink device.
+
+    A target bluez_source HFP device looks like:
+    1       bluez_sink.34_13_E8_DB_47_5E.headset_audio_gateway
+    module-bluez5-device.c  s16le 1ch 16000Hz
+
+    Returns:
+      the device number of the first hfp bluez sink if found; None otherwise
+    """
+    sinks = self.ListSinks()
+    for line in sinks.splitlines():
+      logging.info('sinks: %s', line)
+      result = self._hfp_sink_pattern.search(line)
+      if result is not None:
+        hfp_id = result.group(1)
+        logging.info('hfp sink id: %s', hfp_id)
+        return hfp_id
+    return None
+
   def GetBluezSourceA2DPDevice(self):
     """Get the number of the bluez_source device.
 
@@ -335,6 +452,8 @@ class BluetoothAudio(BluezPeripheral):
     Returns:
       True if successful
     """
+    logging.info('Audio recording is being terminated.')
+
     if self._record is None:
       logging.error('Stop audio recording before starting it.')
       return False
@@ -360,18 +479,13 @@ class BluetoothAudio(BluezPeripheral):
             (self.SSH_OPTIONS, src_file, dut_ip, dst_file)).split()
     SystemTools.Call('scp', *args)
 
-  def GetKitInfo(self, connect_separately=False, test_reset=False):
-    """A simple demo of getting Bluetooth audio device information.
-
-    Args:
-      connect_separately: whether to create a serial device
-      test_reset: whether a factory reset is required
-    """
-    print 'advertised name:', self.GetAdvertisedName()
-    print 'local bluetooth address:', self.GetLocalBluetoothAddress()
-    print 'device type:', self.GetDeviceType()
-    print 'Class of service:', hex(self.GetClassOfService())
-    print 'Class of device:', hex(self.GetClassOfDevice())
+  def GetKitInfo(self):
+    """A simple demo of getting Bluetooth audio device information."""
+    print('advertised name:', self.GetAdvertisedName())
+    print('local bluetooth address:', self.GetLocalBluetoothAddress())
+    print('device type:', self.GetDeviceType())
+    print('Class of service:', hex(self.GetClassOfService()))
+    print('Class of device:', hex(self.GetClassOfDevice()))
 
 
 if __name__ == '__main__':

@@ -13,7 +13,7 @@ setup(
     packages=['chameleond', 'chameleond.devices', 'chameleond.drivers',
               'chameleond.utils'],
     package_data={'chameleond': ['data/*.bin', 'data/*.bitmap', 'utils/*.xml',
-                                 'utils/*.conf']},
+                                 'utils/*.conf', 'utils/data/*/*']},
     url='http://www.chromium.org',
     maintainer='chromium os',
     maintainer_email='chromium-os-dev@chromium.org',
