@@ -35,7 +35,8 @@ from .bluez_gatt_server import GATTServer
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
 DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'
 DBUS_BLUEZ_DEVICE_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Device1'
-DBUS_BLUEZ_PROP_IFACE = 'org.freedesktop.DBus.Properties'
+DBUS_PROP_IFACE = 'org.freedesktop.DBus.Properties'
+DBUS_OBJECT_MANAGER_INTERFACE = 'org.freedesktop.DBus.ObjectManager'
 
 BLUETOOTHD_WAIT_TIME = 30
 MAX_DBUS_RETRY_ATTEMPTS = 3
@@ -193,9 +194,13 @@ class BluezPeripheral(PeripheralKit):
 
 
   def SetTrustedByRemoteAddress(self, remote_address, trusted=True):
-    device = self._GetDeviceWithAddress(remote_address)
+    device = self.GetDeviceWithAddress(remote_address)
+    if device is None:
+      logging.error('Failed to get device with the address %s', remote_address)
+      return False
+
     try:
-      properties = dbus.Interface(device, DBUS_BLUEZ_PROP_IFACE)
+      properties = dbus.Interface(device, DBUS_PROP_IFACE)
       properties.Set(DBUS_BLUEZ_DEVICE_IFACE, 'Trusted',
                      dbus.Boolean(trusted, variant_level=1))
       return True
@@ -445,9 +450,10 @@ class BluezPeripheral(PeripheralKit):
     return False
 
 
-  def _GetDeviceWithAddress(self, addr):
-    manager = dbus.Interface(self._dbus_system_bus.get_object('org.bluez', '/'),
-                             'org.freedesktop.DBus.ObjectManager')
+  def GetDeviceWithAddress(self, addr):
+    manager = dbus.Interface(
+        self._dbus_system_bus.get_object(DBUS_BLUEZ_SERVICE_IFACE, '/'),
+        DBUS_OBJECT_MANAGER_INTERFACE)
 
     objects = manager.GetManagedObjects()
 
@@ -457,8 +463,9 @@ class BluezPeripheral(PeripheralKit):
       device = ifaces.get(DBUS_BLUEZ_DEVICE_IFACE)
 
       if device is not None and device['Address'] == addr:
-        obj = self._dbus_system_bus.get_object('org.bluez', path)
+        obj = self._dbus_system_bus.get_object(DBUS_BLUEZ_SERVICE_IFACE, path)
         return dbus.Interface(obj, DBUS_BLUEZ_DEVICE_IFACE)
+    return None
 
 
   def GetRemoteConnectedBluetoothAddress(self):
@@ -471,7 +478,7 @@ class BluezPeripheral(PeripheralKit):
 
     # Grab ObjectManager and its objects
     manager = dbus.Interface(self._dbus_system_bus.get_object('org.bluez', '/'),
-                             'org.freedesktop.DBus.ObjectManager')
+                             DBUS_OBJECT_MANAGER_INTERFACE)
 
     objects = manager.GetManagedObjects()
 
@@ -553,7 +560,12 @@ class BluezPeripheral(PeripheralKit):
     if not self.GetConnectionStatus():
       return False
 
-    device = self._GetDeviceWithAddress(self.remote_address)
+    device = self.GetDeviceWithAddress(self.remote_address)
+    if device is None:
+      logging.error('Failed to get device with the address %s',
+                    self.remote_address)
+      return False
+
     device.Disconnect()
 
     return True
