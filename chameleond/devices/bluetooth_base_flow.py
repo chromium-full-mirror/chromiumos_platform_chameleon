@@ -12,6 +12,7 @@ import logging  # pylint: disable=cros-logging-import
 import os
 
 from . import chameleon_common  # pylint: disable=W0611
+# pylint: disable=C0411
 from chameleond.devices import chameleon_device
 from chameleond.utils import bluetooth_virtual_device
 from chameleond.utils import system_tools
@@ -135,10 +136,39 @@ class BluetoothBaseFlow(chameleon_device.VirtualFlow,
     self._port_id = port_id
     self._usb_ctrl = usb_ctrl
     self.servod = None
+    self._device_type = None
 
     chameleon_device.VirtualFlow.__init__(self)
     bluetooth_virtual_device.BluetoothVirtualDevice.__init__(
         self, self.DEVICE_TYPE)
+
+  def SpecifyDeviceType(self, device_type):
+    """Instantiates one of our supported devices
+
+    To be compatible with the SpecifyDeviceType() in
+    bluetooth_raspi.BluezPeripheral.
+
+    Args:
+      device_type: String device type, e.g. "BLUETOOTH_BASE"
+    """
+    # Do nothing if we were already bound to this device
+    if self._device_type == device_type:
+      return True
+
+    if self._device_type is not None:
+      logging.error('Peripheral already bound to device: %s', self._device_type)
+      return False
+
+    if device_type == 'BLUETOOTH_BASE':
+      # This base device type does not need any bluez service. It can be used
+      # for any generic services other than bluez.
+      self._device_type = device_type
+      logging.info('The peer device is now bound to %s', device_type)
+      return True
+    else:
+      logging.error('The device type %s is not allowed in BluetoothBaseFlow',
+                    device_type)
+      return False
 
   def EnableServod(self, board):
     servod = Servod()
