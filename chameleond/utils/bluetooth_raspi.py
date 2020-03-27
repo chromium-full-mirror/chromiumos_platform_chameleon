@@ -37,6 +37,7 @@ DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'
 DBUS_BLUEZ_DEVICE_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Device1'
 DBUS_BLUEZ_PROP_IFACE = 'org.freedesktop.DBus.Properties'
 
+BLUETOOTHD_WAIT_TIME = 30
 MAX_DBUS_RETRY_ATTEMPTS = 3
 CONNECTION_WAIT_TIME = 5
 
@@ -82,16 +83,32 @@ class BluezPeripheral(PeripheralKit):
     self._device_type = None
     self._gatt_server = None
 
-    # Bluez DBus constants - npnext
+    # Bluez DBus constants
     self._service_iface = None
     self._dbus_system_bus = dbus.SystemBus()
     self._dbus_hci_adapter_path = '/org/bluez/hci0'
-    self._dbus_hci_props = dbus.Interface(self._dbus_system_bus.get_object(\
-                                                            'org.bluez',\
-                                                            '/org/bluez/hci0'),\
-                                          'org.freedesktop.DBus.Properties')
 
-    # Power on the device - this should only need to happen once
+    # Call for bluetoothd to start, if it's not running already
+    self._start_bluetoothd()
+
+    # Since bluetoothd can be delayed by system conditions outside our control,
+    # we wait and refresh our link to its dbus properties until it is ready
+    for _ in range(0, BLUETOOTHD_WAIT_TIME):
+      self._dbus_hci_props = dbus.Interface(self._dbus_system_bus.get_object(\
+                                            'org.bluez',\
+                                            '/org/bluez/hci0'),\
+                                            'org.freedesktop.DBus.Properties')
+
+      if self._is_bluetoothd_ready():
+        break
+
+      logging.info('Waiting for bluetoothd to be ready...')
+      time.sleep(1)
+
+    else:
+      logging.error('bluetoothd is not ready in time')
+
+    # Power on the adapter - this should only need to happen once
     # Occasionally the resource isn't up in time, so we retry
     self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(1))
 
@@ -99,9 +116,11 @@ class BluezPeripheral(PeripheralKit):
 
     logging.debug('Bluetooth peripheral powered and waiting for bind to device')
 
+
   def __del__(self):
     """Quit the mainloop when done."""
     self._loop.quit()
+
 
   def get_service_iface(self):
     if not self._service_iface:
@@ -111,11 +130,33 @@ class BluezPeripheral(PeripheralKit):
 
     return self._service_iface
 
+
   def _setup_dbus_loop(self):
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     self._loop = GLib.MainLoop()
     self._thread = threading.Thread(target=self._loop.run)
     self._thread.start()
+
+
+  def _start_bluetoothd(self):
+    """Calls for bluetoothd to be started, if not started already"""
+
+    try:
+      os.system('sudo service bluetooth start')
+    except Exception, e:
+      logging.error('Failed to start bluetoothd: %s', str(e))
+
+
+  def _is_bluetoothd_ready(self):
+    """Checks if bluetoothd is running by accessing an adapter object"""
+
+    try:
+      self._dbus_hci_props.Get('org.bluez.Adapter1', 'Powered')
+      return True
+
+    except Exception, e:
+      logging.info('Bluetoothd not running: %s', str(e))
+      return False
 
 
   def _set_hci_prop(self, iface_name, prop_name, prop_val):
