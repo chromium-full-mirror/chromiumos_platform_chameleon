@@ -38,6 +38,8 @@ DBUS_BLUEZ_DEVICE_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Device1'
 DBUS_PROP_IFACE = 'org.freedesktop.DBus.Properties'
 DBUS_OBJECT_MANAGER_INTERFACE = 'org.freedesktop.DBus.ObjectManager'
 
+# Time to wait for bluetoothd to start
+BLUETOOTHD_WAIT_TIME = 30
 MAX_DBUS_RETRY_ATTEMPTS = 3
 CONNECTION_WAIT_TIME = 5
 
@@ -78,6 +80,7 @@ class BluezPeripheral(PeripheralKit):
     self._setup_dbus_loop()
 
     self.remote_address = None
+    self._address = None
     self._bluez_service = None
     self._service = None
     self._device_type = None
@@ -87,22 +90,19 @@ class BluezPeripheral(PeripheralKit):
     self._service_iface = None
     self._dbus_system_bus = dbus.SystemBus()
     self._dbus_hci_adapter_path = '/org/bluez/hci0'
-    self._dbus_hci_props = dbus.Interface(self._dbus_system_bus.get_object(\
-                                                            'org.bluez',\
-                                                            '/org/bluez/hci0'),\
-                                          'org.freedesktop.DBus.Properties')
+    self._dbus_hci_props = None
 
-    # Power on the device - this should only need to happen once
-    # Occasionally the resource isn't up in time, so we retry
+    # Make sure adapter is powered for tests. _set_hci_prop will connect
+    # self._dbus_hci_props, and even start bluetoothd if necessary
     self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(1))
 
-    self.address = self.GetLocalBluetoothAddress()
-
     logging.debug('Bluetooth peripheral powered and waiting for bind to device')
+
 
   def __del__(self):
     """Quit the mainloop when done."""
     self._loop.quit()
+
 
   def get_service_iface(self):
     if not self._service_iface:
@@ -112,11 +112,83 @@ class BluezPeripheral(PeripheralKit):
 
     return self._service_iface
 
+
   def _setup_dbus_loop(self):
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     self._loop = GLib.MainLoop()
     self._thread = threading.Thread(target=self._loop.run)
     self._thread.start()
+
+
+  def _kill_bluetoothd(self):
+    """Calls for bluetoothd to be killed, in case it is in a bad state"""
+
+    os.system('killall -9 bluetoothd')
+
+
+  def _start_bluetoothd(self):
+    """Calls for bluetoothd to be started, if not started already"""
+
+    os.system('sudo service bluetooth start')
+
+
+  def _check_prop_handle(self, handle):
+    """Checks if bluetoothd is running by accessing an adapter object"""
+
+    try:
+      handle.Get('org.bluez.Adapter1', 'Powered')
+      return True
+
+    except Exception, e:
+      logging.info('Failed to retrieve bluez adapter property: %s', str(e))
+      return False
+
+
+  def _create_prop_handle(self):
+    """Establish dbus link to bluetoothd for hci properties
+
+    Returns: dbus interface to bluetoothd properties
+    """
+
+    return dbus.Interface(self._dbus_system_bus.get_object(\
+                          'org.bluez',\
+                          '/org/bluez/hci0'),\
+                          'org.freedesktop.DBus.Properties')
+
+
+  def _refresh_hci_prop_handle(self):
+    """Initializes a dbus handle to hci properties"""
+
+    # If we already have a link to bluetoothd, just return it
+    if self._dbus_hci_props is not None:
+      return
+
+    # Next step, try to link to already-running bluetoothd
+    handle = self._create_prop_handle()
+
+    if self._check_prop_handle(handle):
+      self._dbus_hci_props = handle
+      return
+
+    # A pgrep return of 0 indicates that a process was found. If bluetoothd is
+    # running and we can't reach it, kill and restart to get it out of bad state
+    if os.system('pgrep bluetoothd') == 0:
+      logging.error('Could not reach bluetoothd, killing')
+      self._kill_bluetoothd()
+
+    logging.info('Starting bluetooth service')
+    self._start_bluetoothd()
+
+    # Since bluetoothd can be delayed by system conditions outside our control,
+    # we wait and refresh our link to its dbus properties until it is ready
+    for _ in range(0, BLUETOOTHD_WAIT_TIME):
+      handle = self._create_prop_handle()
+      if self._check_prop_handle(handle):
+        logging.info('Bluetooth ready, returning link')
+        self._dbus_hci_props = handle
+        return
+
+      time.sleep(1)
 
 
   def _set_hci_prop(self, iface_name, prop_name, prop_val):
@@ -128,6 +200,9 @@ class BluezPeripheral(PeripheralKit):
     Returns:
       True if set succeeds, False otherwise
     """
+
+    # Make sure we have a working handle to bluetoothd
+    self._refresh_hci_prop_handle()
 
     for _ in range(MAX_DBUS_RETRY_ATTEMPTS):
       try:
@@ -150,6 +225,30 @@ class BluezPeripheral(PeripheralKit):
         time.sleep(.1)
 
     return False
+
+
+  def _get_hci_prop(self, iface_name, prop_name):
+    """Handles HCI property get
+
+      Args: iface_name: Dbus interface to be queried
+      Args: prop_name: Property name to be queried
+
+      Returns: property value, or None on error
+    """
+
+    # Make sure we have a working handle to bluetoothd
+    self._refresh_hci_prop_handle()
+
+    for _ in range(MAX_DBUS_RETRY_ATTEMPTS):
+      try:
+        return self._dbus_hci_props.Get(iface_name, prop_name)
+
+      except dbus.exceptions.DBusException as e:
+        error_msg = 'Will try to get {} again: {}'.format(prop_name, str(e))
+        logging.error(error_msg)
+        time.sleep(.1)
+
+    return None
 
 
   def SetTrustedByRemoteAddress(self, remote_address, trusted=True):
@@ -265,7 +364,7 @@ class BluezPeripheral(PeripheralKit):
 
       # Set device type and initiate service based on it
       self._bluez_service = BluezService(self._device_type,
-                                         self.address)
+                                         self.GetLocalBluetoothAddress())
 
       self.Init()
 
@@ -388,9 +487,16 @@ class BluezPeripheral(PeripheralKit):
     If the HCI device doesn't exist, Get() will throw an exception
     (dbus.exceptions.DBus.Error.UnknownObject)
     """
+
+    # Return stored value if we have one
+    if self._address is not None:
+      return self._address
+
     try:
-      addr = str(self._dbus_hci_props.Get('org.bluez.Adapter1', 'Address'))
-    except dbus.exceptions.DBusException:
+      addr = str(self._get_hci_prop('org.bluez.Adapter1', 'Address'))
+      self._address = addr
+    except Exception, e:
+      logging.error('Failed to get local addr: {}'.format(e))
       addr = None
     return addr
 
@@ -789,7 +895,7 @@ class BluezPeripheral(PeripheralKit):
   def GetKitInfo(self):
     """A simple demo of getting kit information."""
     logging.info('advertised name: %s', self.GetAdvertisedName())
-    logging.info('local bluetooth address: %s', self.address)
+    logging.info('local bluetooth address: %s', self.GetLocalBluetoothAddress())
     class_of_service = self.GetClassOfService()
     try:
       class_of_service = hex(class_of_service)

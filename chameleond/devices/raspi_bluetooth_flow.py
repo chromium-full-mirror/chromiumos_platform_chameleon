@@ -390,5 +390,5 @@ class RaspiBluetoothAudioFlow(RaspiFlow, BluetoothAudio):
   def __init__(self):
     # Instantiate bluez and raspi flow
     BluetoothAudio.__init__(self)
-    RaspiFlow.__init__(self, self.address)
+    RaspiFlow.__init__(self, self.GetLocalBluetoothAddress())
     self._client = None
