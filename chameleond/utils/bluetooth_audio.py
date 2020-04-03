@@ -72,6 +72,11 @@ class BluetoothAudio(BluezPeripheral):
 
   PULSEAUDIO = 'pulseaudio'
   OFONO = 'ofono'
+  MPRISPROXY = 'mpris-proxy'
+  PLAYERCTL = 'playerctl'
+  NO_PLAYER_FOUND = 'No players were found\n'
+  DBUS_SESSION_ENV_VAR_NAME = 'DBUS_SESSION_BUS_ADDRESS'
+  DBUS_SESSION_ENV_VAR_VALUE = 'unix:path=/run/user/0/bus'
   SSH_OPTIONS = (' -i /root/.ssh/testing_rsa '
                  '-o UserKnownHostsFile=/dev/null '
                  '-o StrictHostKeyChecking=no ')
@@ -86,6 +91,7 @@ class BluetoothAudio(BluezPeripheral):
     self._pulseaudio = None
     self._play = None
     self._profile = None
+    self._media_player = None
 
     # A hfp bluez source device looks like:
     #   5 bluez_source.DC_71_96_68_E0_9C.headset_audio_gateway \
@@ -494,6 +500,61 @@ class BluetoothAudio(BluezPeripheral):
     args = ('%s %s root@%s:%s' %
             (self.SSH_OPTIONS, src_file, dut_ip, dst_file)).split()
     SystemTools.Call('scp', *args)
+
+
+  def ExportMediaPlayer(self):
+    """Export the Bluetooth media player.
+
+    Start the mpris-proxy process to export the active media player to the
+    system. Always terminate previous processes and start a new one.
+
+    When mpris-proxy starting, it will try to auto-launch a dbus session.
+    Auto-launch a dbus session means trying to connect to an existing dbus
+    session if the environment variable DBUS_SESSION_BUS_ADDRESS is set or
+    create a new session otherwise. To prevent playerctl to start a new dbus
+    session, check and fill the DBUS_SESSION_BUS_ADDRESS variable before
+    calling the mpris-proxy.
+
+    Returns:
+      Return True if one and only one mpris-proxy is running
+    """
+    SystemTools.OrigCall('killall', '-9', self.MPRISPROXY)
+
+    if not os.environ.has_key(self.DBUS_SESSION_ENV_VAR_NAME):
+      os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
+          self.DBUS_SESSION_ENV_VAR_VALUE)
+
+    return bool(SystemTools.RunInSubprocess(self.MPRISPROXY))
+
+
+  def UnexportMediaPlayer(self):
+    """Stop all mpris-proxy processes."""
+    SystemTools.OrigCall('killall', '-9', self.MPRISPROXY)
+    self._media_player = None
+
+
+  def GetExportedMediaPlayer(self):
+    """Get the exported media player's name with playerctl.
+
+    Function include a check of environmental variable
+    DBUS_SESSION_BUS_ADDRESS as same as ExportMediaPlayer() to prevent
+    playerctl start a new dbus session before try to connect to an existing
+    session.
+
+    Returns:
+      Return player name if only one player found, empty string otherwise.
+    """
+    if not os.environ.has_key(self.DBUS_SESSION_ENV_VAR_NAME):
+      os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
+          self.DBUS_SESSION_ENV_VAR_VALUE)
+
+    output = SystemTools.Output(self.PLAYERCTL, '--list-all')
+    if len(output.splitlines()) != 1 or output == self.NO_PLAYER_FOUND:
+      return ''
+
+    self._media_player = output
+    return self._media_player
+
 
   def GetKitInfo(self):
     """A simple demo of getting Bluetooth audio device information."""
