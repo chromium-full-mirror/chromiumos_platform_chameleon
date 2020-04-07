@@ -556,6 +556,59 @@ class BluetoothAudio(BluezPeripheral):
     return self._media_player
 
 
+  def _PlayerCommandOutput(self, command):
+    """Execute command towards the given player, and return its output.
+
+    Args:
+      command: playerctl command to be executed.
+
+    Returns:
+      Requested media information on success, empty string otherwise.
+    """
+    if self._media_player is None:
+      logging.error('No Bluetooth media player was exported.')
+      return ''
+
+    return SystemTools.Output(self.PLAYERCTL, '-p', self._media_player,
+                              command)
+
+
+  def SendMediaPlayerCommand(self, command):
+    """Execute command towards the given player.
+
+    Args:
+      command: playerctl command to be executed.
+
+    Returns:
+      Return True if success, False otherwise.
+    """
+    if self._media_player is None:
+      logging.error('No Bluetooth media player was exported.')
+      return False
+
+    return SystemTools.OrigCall(self.PLAYERCTL, '-p', self._media_player,
+                                command) == 0
+
+
+  def GetMediaPlayerMediaInfo(self):
+    """Retrieve media information through playerctl calls.
+
+    Returns:
+      A dictionary of all supported media information
+    """
+    media_info = dict()
+
+    media_info['status'] = self._PlayerCommandOutput('status')
+    media_info['position'] = self._PlayerCommandOutput('position')
+    media_info['volume'] = self._PlayerCommandOutput('volume')
+    media_info['title'] = self._PlayerCommandOutput('metadata title')
+    media_info['album'] = self._PlayerCommandOutput('metadata album')
+    media_info['artist'] = self._PlayerCommandOutput('metadata artist')
+    media_info['duration'] = self._PlayerCommandOutput('metadata duration')
+
+    return media_info
+
+
   def GetKitInfo(self):
     """A simple demo of getting Bluetooth audio device information."""
     print('advertised name:', self.GetAdvertisedName())
