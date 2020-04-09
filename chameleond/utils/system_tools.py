@@ -64,10 +64,14 @@ class _SystemTools(object):
   def _GetPiEnv(self):
     """Get a proper environment for Pi.
 
-    We need to set XDG_RUNTIME_DIR for pi for pulseaudio tools to run correctly.
+    We need to set XDG_RUNTIME_DIR for pi for pulseaudio tools to run
+    correctly. Setting environmental variable DBUS_SESSION_BUS_ADDRESS to force
+    the pulseaudio to connect to an existing DBSU session before starting a new
+    one.
     """
     self._pi_env = os.environ.copy()
     self._pi_env['XDG_RUNTIME_DIR'] = '/run/user/1000'
+    self._pi_env['DBUS_SESSION_BUS_ADDRESS'] = '/run/user/1000/bus'
 
   def GetToolPath(self, name):
     """Get the path of the tool.

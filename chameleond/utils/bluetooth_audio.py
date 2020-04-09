@@ -162,7 +162,22 @@ class BluetoothAudio(BluezPeripheral):
     logging.info('SIGKILL was sent to %s.', self.PULSEAUDIO)
 
   def _StartPulseaudio(self):
-    """Start Pulseaudio process or restart it if runnning.
+    """Start Pulseaudio process or restart it if running.
+
+    The pulseaudio command line options applied here are mostly based on trial
+    and error. '--daemonize' will free pulseaudio from tightening to the
+    subprocess thread (i.e. a opened terminal window in a subprocess). From
+    local test experiments with bluetooth_AdapterAUSanity.au_avrcp_command_test
+    daemonize the pulseaudio will slightly improve the test pass rate.
+    '--disallow-exit' and '--exit-idle-time=-1' will prevent the pulseaudio
+    exit by the user or due to idle timeout. In audio test that does not play
+    an audio these option make sure the pulseaudio stay alive the whole test.
+    '--scache-idle-time=-1' disallow auto offload samples, which always happen
+    before pulseaudio exit itself.
+
+    TODO(michaelfsun/josephsih): running pulseaudio related test with more/less
+    command line options to make a data driven decision on how to start
+    pulseaudio b/153289327.
 
     Returns:
       True if it starts successfully.
@@ -171,7 +186,8 @@ class BluetoothAudio(BluezPeripheral):
 
     try:
       self._pulseaudio = SystemTools.RunInSubprocessAsPi(
-          self.PULSEAUDIO, '--start')
+          self.PULSEAUDIO, '--start --daemonize --disallow-exit'
+          ' --exit-idle-time=-1 --scache-idle-time=-1')
     except Exception as e:
       logging.error('Failed to start %s: %s.', self.PULSEAUDIO, e)
       return False
