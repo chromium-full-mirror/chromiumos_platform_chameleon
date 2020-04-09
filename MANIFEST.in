@@ -11,6 +11,7 @@ include deploy/init.d/stream_server
 include deploy/init.d/chameleon-updater
 include updatable/python2.7/*.py
 include updatable/pip/*
+include updatable/packages/*
 recursive-include updatable boot-partition.img fpga.rbf socfpga.dtb zImage modules.tgz
 # The following are servod dependencies for measuring power consumption.
 include usr/lib64/python-exec/python2.7/dut-control

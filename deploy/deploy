@@ -86,6 +86,16 @@ validate_socket_installation() {
     fi
 }
 
+validate_wbs_packages_installation() {
+    wbs_tarball="$(dirname "${SCRIPT}")/../updatable/packages/wbs.tbz2"
+
+    if tar xf "${wbs_tarball}" -C / > /dev/null; then
+        echo "Customized packages in wbs.tbz2 installed"
+    else
+        echo "Error in installing customized packages in wbs.tbz2!"
+    fi
+}
+
 provide_daemon_symlinks(){
     ALT_CHAMELEON_DIR='/usr/local/bin'
     SCRIPT_NAME="run_$1"
@@ -216,6 +226,9 @@ if [ "${PLATFORM}" = "raspberrypi" ]; then
     validate_python_package_installation "pexpect"
 
     validate_socket_installation
+
+    # Install customized packages in wbs.tbz2 to enable wideband speech.
+    validate_wbs_packages_installation
 
     # Update bluetooth rules in service config files
     BT_ADMIN_CONF="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"

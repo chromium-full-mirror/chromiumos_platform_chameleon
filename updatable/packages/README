@@ -1,0 +1,9 @@
+The tarball wbs.tbz2 contains the executables and shared libraries of
+customized pulseaudio and ofono packages with wideband speech capability.
+
+The customized packages were made on a Raspberry Pi. They exist in tarball
+format so that the deployment is fast. Otherwise, it would take about 20 mins
+for compilation and installation on a Pi 4B platform.
+
+When the changes are pushed to upstream and become available in raspbian,
+we can remove this tarball.
