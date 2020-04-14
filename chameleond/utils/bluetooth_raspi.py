@@ -41,7 +41,7 @@ DBUS_OBJECT_MANAGER_INTERFACE = 'org.freedesktop.DBus.ObjectManager'
 # Time to wait for bluetoothd to start
 BLUETOOTHD_WAIT_TIME = 30
 MAX_DBUS_RETRY_ATTEMPTS = 3
-CONNECTION_WAIT_TIME = 5
+CONNECTION_WAIT_TIME = 10
 
 # Definitions of mouse button HID encodings
 RAW_HID_BUTTONS_RELEASED = 0x0
@@ -88,6 +88,7 @@ class BluezPeripheral(PeripheralKit):
 
     # Bluez DBus constants - npnext
     self._service_iface = None
+    self._adapter_iface = None
     self._dbus_system_bus = dbus.SystemBus()
     self._dbus_hci_adapter_path = '/org/bluez/hci0'
     self._dbus_hci_props = None
@@ -139,7 +140,7 @@ class BluezPeripheral(PeripheralKit):
       handle.Get('org.bluez.Adapter1', 'Powered')
       return True
 
-    except Exception, e:
+    except Exception as e:
       logging.info('Failed to retrieve bluez adapter property: %s', str(e))
       return False
 
@@ -495,7 +496,7 @@ class BluezPeripheral(PeripheralKit):
     try:
       addr = str(self._get_hci_prop('org.bluez.Adapter1', 'Address'))
       self._address = addr
-    except Exception, e:
+    except Exception as e:
       logging.error('Failed to get local addr: {}'.format(e))
       addr = None
     return addr
@@ -574,25 +575,55 @@ class BluezPeripheral(PeripheralKit):
     return True
 
   def Connect(self):
-    """Attempts to connect to the address specified with SetRemoteAddress()"""
+    """Attempts to connect to the address specified with SetRemoteAddress()
+
+    Returns:
+      True if connection to remote address succeeds, False otherwise
+    """
 
     if self.remote_address is None:
       logging.error('Connect called with no remote address supplied')
       return False
 
-    logging.debug('Attempting to connect to %s', self.remote_address)
+    logging.info('Attempting to connect to %s', self.remote_address)
+    device = self.GetDeviceWithAddress(self.remote_address)
 
-    # Request Bluez service to connect to address
-    self.get_service_iface().Connect(
-        self.remote_address,
-        reply_handler=self.ConnectDoneHandler,
-        error_handler=self.ConnectErrorHandler)
+    if 'BLE' in self._device_type:
+      # Call connect directly through bluez device object
 
-    # Autotest currently doesn't account for the time it takes for connection
-    # to succeed, so we put a small wait here. TODO b:145628709
-    time.sleep(CONNECTION_WAIT_TIME)
+      if not device:
+        logging.error('Device {} is None, can not connect'.format(
+            self.remote_address))
+        return False
 
-    return True
+      try:
+        device.Connect()
+
+      except Exception as e:
+        logging.error('Failed to connect to {}: {}'.format(self.remote_address,
+                                                           e))
+        return False
+
+    else:
+      # Request Bluez service to connect to address
+      self.get_service_iface().Connect(
+          self.remote_address,
+          reply_handler=self.ConnectDoneHandler,
+          error_handler=self.ConnectErrorHandler)
+
+    device_iface = dbus.Interface(device, DBUS_PROP_IFACE)
+    is_connected = bool(device_iface.Get(DBUS_BLUEZ_DEVICE_IFACE, 'Connected'))
+    start_time = time.time()
+
+    while not is_connected:
+      if time.time() > start_time + CONNECTION_WAIT_TIME:
+        break
+
+      time.sleep(1)
+      is_connected = bool(device_iface.Get(DBUS_BLUEZ_DEVICE_IFACE,
+                                           'Connected'))
+
+    return is_connected
 
 
   def ConnectDoneHandler(self):
@@ -604,13 +635,153 @@ class BluezPeripheral(PeripheralKit):
     """Called in case of error on connect"""
     logging.error('ConnectErrorHandler: %s', err)
 
+
+  def _GetAdapterIface(self):
+    """Returns handle to bluez adapter interface
+
+    Returns:
+      Handle to bluez adapter interface
+    """
+
+    if self._adapter_iface is None:
+      self._adapter_iface = dbus.Interface(
+          self._dbus_system_bus.get_object(
+              DBUS_BLUEZ_SERVICE_IFACE,
+              self._dbus_hci_adapter_path),
+          DBUS_BLUEZ_ADAPTER_IFACE)
+
+    return self._adapter_iface
+
+
+  def RemoveDevice(self, remote_address):
+    """Removes a remote device from bluez
+
+    Args:
+      remote_address: string address of BT device
+    """
+
+    try:
+      logging.info('Trying to remove {}'.format(remote_address))
+      device = self.GetDeviceWithAddress(remote_address)
+
+      if device:
+        self._GetAdapterIface().RemoveDevice(device)
+
+    except Exception as e:
+      logging.info('Failed to remove device {}: {}'.format(remote_address, e))
+
+
+  def StartDiscovery(self):
+    """Tries to start discovery on the adapter"""
+
+    try:
+      self._GetAdapterIface().StartDiscovery()
+
+    except Exception as e:
+      logging.error('Failed to start discovery: {}'.format(e))
+
+
+  def StopDiscovery(self):
+    """Tries to stop discovery on the adapter"""
+
+    try:
+      self._GetAdapterIface().StopDiscovery()
+
+    except Exception as e:
+      logging.error('Failed to stop discovery: {}'.format(e))
+
+
+  def _DiscoverDevice(self, remote_address, wait_time=10,
+                      allow_early_discovery_by_path=False):
+    """This method determines if a device has been discovered via dbus path
+
+    Here, we perform the same operation as test_discover_device in autotest,
+    where we consider a remote device "discovered" when bluez creates a dbus
+    object for it. This allows us to avoid installing and importing extra
+    libraries for scanning, particularly for LE.
+
+    Args:
+      remote_address: string address of desired BT device
+      wait_time: seconds we should wait before returning failure to discover
+      allow_early_discovery_by_path: boolean denoting whether we can return
+        immediately if we already have a dbus object for this address.
+        Otherwise, a fresh advertisement is required for a device to be
+        discovered
+
+    Returns:
+      True if device is found, False otherwise
+    """
+
+    if allow_early_discovery_by_path:
+      # Return early if we already have this device
+      if self.GetDeviceWithAddress(remote_address):
+        logging.info('Device {} found without discovery'.format(remote_address))
+        return True
+
+    self.discovered_devices = []
+    # Register callback on PropertiesChanged signal
+    receiver = self._dbus_system_bus.add_signal_receiver(
+        self._DeviceFound,
+        signal_name='PropertiesChanged',
+        bus_name='org.bluez',
+        path_keyword='device_path')
+
+    # Start searching for devices
+    self.StartDiscovery()
+
+    # Wait until our device has been added to discovered_devices by listening
+    # thread, or timeout
+    start_time = time.time()
+    while remote_address not in self.discovered_devices:
+      if time.time() > start_time + wait_time:
+        break
+
+      time.sleep(1)
+
+    # Clean up
+    receiver.remove()
+    self.StopDiscovery()
+
+    return remote_address in self.discovered_devices
+
+
+  def _DeviceFound(self, *args, **kwargs):
+    """Called when a property changes on the bluez d-bus interface
+
+    Useful for tracking reception of advertisements, as they update the bluez
+    device
+
+    Args:
+      args: list of form [caller, property_dict]
+      kwargs: dict containing keyword arguments requested in the
+        add_signal_receiver call i.e. device_path of calling object
+    """
+
+    # Renaming to be more human readable while satisfying pylint
+    changed_prop = args
+    caller_details = kwargs
+
+    caller = str(changed_prop[0])
+
+    if 'Device1' in caller:
+      device_path = caller_details.get('device_path')
+      device_address = device_path[-17:].replace('_', ':')
+
+      # Store new devices. list append is thread safe
+      if device_address not in self.discovered_devices:
+        logging.info('New device %s found', device_address)
+        self.discovered_devices.append(device_address)
+
+
   def Discover(self, remote_address):
     """Try to discover the remote device
 
     Returns:
       True if remote address is discovered.
     """
-    return self._bluez_service.Discover(remote_address)
+
+    return self._DiscoverDevice(remote_address)
+
 
   def Disconnect(self):
     """Requests a disconnect from the remote device
