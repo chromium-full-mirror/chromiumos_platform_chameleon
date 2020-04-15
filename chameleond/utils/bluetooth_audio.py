@@ -552,15 +552,15 @@ class BluetoothAudio(BluezPeripheral):
     if len(output.splitlines()) != 1 or output == self.NO_PLAYER_FOUND:
       return ''
 
-    self._media_player = output
+    self._media_player = output.strip()
     return self._media_player
 
 
-  def _PlayerCommandOutput(self, command):
+  def _PlayerCommandOutput(self, *args):
     """Execute command towards the given player, and return its output.
 
     Args:
-      command: playerctl command to be executed.
+      *args: playerctl args to be executed.
 
     Returns:
       Requested media information on success, empty string otherwise.
@@ -569,8 +569,8 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('No Bluetooth media player was exported.')
       return ''
 
-    return SystemTools.Output(self.PLAYERCTL, '-p', self._media_player,
-                              command)
+    return SystemTools.Output(
+        self.PLAYERCTL, '-p', self._media_player, *args).strip()
 
 
   def SendMediaPlayerCommand(self, command):
@@ -601,10 +601,11 @@ class BluetoothAudio(BluezPeripheral):
     media_info['status'] = self._PlayerCommandOutput('status')
     media_info['position'] = self._PlayerCommandOutput('position')
     media_info['volume'] = self._PlayerCommandOutput('volume')
-    media_info['title'] = self._PlayerCommandOutput('metadata title')
-    media_info['album'] = self._PlayerCommandOutput('metadata album')
-    media_info['artist'] = self._PlayerCommandOutput('metadata artist')
-    media_info['duration'] = self._PlayerCommandOutput('metadata duration')
+    media_info['title'] = self._PlayerCommandOutput('metadata', 'title')
+    media_info['album'] = self._PlayerCommandOutput('metadata', 'album')
+    media_info['artist'] = self._PlayerCommandOutput('metadata', 'artist')
+    media_info['length'] = self._PlayerCommandOutput('metadata',
+                                                     'mpris:length')
 
     return media_info
 
