@@ -18,11 +18,32 @@ STREAM_SRCS = $(wildcard $(SRCDIR)/stream_server/*.c)
 STREAM_OBJS = $(patsubst $(SRCDIR)/stream_server/*.c,$(BINDIR)/%.o,$(STREAM_SRCS))
 CONFFILES = chameleond.conf
 IDENTITY_FILE := ~/trunk/src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa
+COMMIT_FILE := $(DISTDIR)/commit
 
-TARGETS = directories chameleond
+TARGETS = check_git_tree_clean directories chameleond
+
+COMMIT = $(shell git log HEAD^..HEAD --pretty=format:"%h")
 
 .PHONY: all
 all: $(TARGETS)
+
+.PHONY: check_git_tree_clean
+check_git_tree_clean:
+	@if [ -n "$(shell git status --porcelain)" ]; then \
+	    echo "Git work tree should be clean."; \
+	    echo "Please commit your changes and make chameleon in order to" \
+	         "keep a record in the commit history on chameleon hosts."; \
+	    exit 1; \
+	fi
+
+.PHONY: check_git_commit_HEAD
+check_git_commit_HEAD:
+	@if [ $(COMMIT) != $(shell cat $(COMMIT_FILE))  ]; then \
+	    echo "Your commit HEAD is different from that in the" \
+	         "chameleon bundle."; \
+	    echo "Please re-make chameleon again."; \
+	    exit 1; \
+	fi
 
 .PHONY: directories
 directories:
@@ -36,6 +57,7 @@ binaries: $(BINARIES)
 
 .PHONY: chameleond
 chameleond: binaries
+	@echo $(COMMIT) > $(COMMIT_FILE)
 	@python setup.py sdist
 
 $(BINDIR)/%.o: $(SRCDIR)/%.c
@@ -91,8 +113,9 @@ BUNDLE = chameleond-$(VERSION).tar.gz
 BUNDLEDIR = chameleond-$(VERSION)
 
 .PHONY: remote-install
-remote-install:
+remote-install: check_git_tree_clean check_git_commit_HEAD
 	@echo "Set bundle version to $(BUNDLE_VERSION)"
+	@echo "Set bundle commit to $(COMMIT)"
 	@echo "Set board to $(CHAMELEON_BOARD)"
 	@echo "Current host time: $(HOST_NOW)"
 ifdef CHAMELEON_HOST

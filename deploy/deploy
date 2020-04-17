@@ -6,6 +6,8 @@
 
 SCRIPT="$(readlink -f "$0")"
 SCRIPT_DIR="$(dirname "${SCRIPT}")/init.d"
+COMMIT="$(dirname "${SCRIPT}")/../dist/commit"
+COMMITS_LOG="/var/log/chameleon_commits"
 
 INITD_DIR='/etc/init.d'
 CHAMELEOND_DIR='/usr/bin'
@@ -129,12 +131,22 @@ install_daemon_and_config () {
     update-rc.d -f "${DAEMON_NAME}" remove
 
     CONFIG_TMP="$(mktemp /tmp/"${DAEMON_NAME}".XXXXXX)"
+    commit_hash="$(cat ${COMMIT})"
     cat <<END >"${CONFIG_TMP}"
 CHAMELEOND_DIR="${CHAMELEOND_DIR}"
 BUNDLE_VERSION="${BUNDLE_VERSION}"
+BUNDLE_COMMIT_HASH="${commit_hash}"
 CHAMELEON_BOARD="${CHAMELEON_BOARD}"
 END
     mv -f "${CONFIG_TMP}" "${CONFIG_FILE}"
+
+    if [ "${DAEMON_NAME}" = "${CHAMELEOND_NAME}" ]; then
+        now="$(date -u "+%Y-%m-%d_%H:%M:%S")_UTC"
+        TMP_COMMITS_LOG="$(mktemp /tmp/chameleon_commits.XXXXXX)"
+        [ -f "${COMMITS_LOG}" ] && cp "${COMMITS_LOG}" "${TMP_COMMITS_LOG}"
+        echo "${commit_hash} ${now}" >> "${TMP_COMMITS_LOG}"
+        mv -f "${TMP_COMMITS_LOG}" "${COMMITS_LOG}"
+    fi
 }
 
 install_servo_packages() {

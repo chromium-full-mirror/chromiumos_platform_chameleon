@@ -9,6 +9,7 @@ include deploy/init.d/displayd
 include deploy/init.d/scheduler
 include deploy/init.d/stream_server
 include deploy/init.d/chameleon-updater
+include dist/commit
 include updatable/python2.7/*.py
 include updatable/pip/*
 include updatable/packages/*
