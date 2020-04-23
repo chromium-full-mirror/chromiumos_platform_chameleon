@@ -25,6 +25,7 @@ try:
 except ImportError:
   pass
 
+from chameleond.utils import system_tools
 from chameleond.utils.raspi_bluez_service import BluezService
 from .bluetooth_peripheral_kit import PeripheralKit
 from .bluetooth_peripheral_kit import PeripheralKitException
@@ -672,7 +673,11 @@ class BluezPeripheral(PeripheralKit):
 
 
   def StartDiscovery(self):
-    """Tries to start discovery on the adapter"""
+    """Tries to start discovery on the adapter
+
+    Returns:
+      True if discovery started without error, False otherwise
+    """
 
     try:
       self._GetAdapterIface().StartDiscovery()
@@ -680,15 +685,94 @@ class BluezPeripheral(PeripheralKit):
     except Exception as e:
       logging.error('Failed to start discovery: {}'.format(e))
 
+      return False
+
+    return True
+
 
   def StopDiscovery(self):
-    """Tries to stop discovery on the adapter"""
+    """Tries to stop discovery on the adapter
+
+    Returns:
+      True if discovery stopped without error, False otherwise
+    """
 
     try:
       self._GetAdapterIface().StopDiscovery()
 
     except Exception as e:
       logging.error('Failed to stop discovery: {}'.format(e))
+
+      return False
+
+    return True
+
+
+  def FindAdvertisementWithAttributes(self, attrs=[], timeout=10):
+    """Locate an advertisement containing the requested attributes from btmon
+
+    Args:
+      attrs: List of strings to be located within an advertising event
+      timeout: Seconds to discover before returning failure
+
+    Returns:
+      String containing matching advertising event if found, None otherwise
+    """
+
+    def _IsMatchedEvent(ev):
+      """Determines whether an event matches the requested criteria
+
+      Args:
+        ev: String containing btmon event
+
+      Returns: True if event matches criteria, False otherwise
+      """
+      content = ''.join(ev)
+
+      if 'LE Advertising Report' not in content:
+        return False
+
+      # Search for all requested attributes. Only return true if all are found
+      for attr in attrs:
+        if attr not in content:
+          return False
+
+      return True
+
+    current_event = []
+
+    # Start searching for devices
+    if not self.StartDiscovery():
+      return None
+
+    end_time = time.time() + timeout
+    process = system_tools.SystemTools.RunInSubprocess('btmon')
+    desired_event = None
+    while time.time() < end_time:
+      output = process.stdout.readline()
+      if output == '' and process.poll() is not None:
+        break
+
+      # output will contain a single line of btmon, i.e.
+      # '> HCI Event: LE Meta Event (0x3e) plen 43'
+      if output:
+        # Event headers are labeled with their data length. If we encounter a
+        # header, we check the last event to see if it matches our search
+        if ' plen ' in output:
+          if current_event and _IsMatchedEvent(current_event):
+            desired_event = ''.join(current_event)
+            break
+
+          # If we found an event header and the previous wasn't a match, start
+          # recording this event
+          current_event = []
+
+        current_event.append(output)
+
+    # Terminate listening process and stop discovery
+    process.terminate()
+    self.StopDiscovery()
+    return desired_event
 
 
   def _DiscoverDevice(self, remote_address, wait_time=10,

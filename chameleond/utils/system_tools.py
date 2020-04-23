@@ -21,6 +21,7 @@ class _SystemTools(object):
       'aplay': '/usr/bin/aplay',
       'arecord': '/usr/bin/arecord',
       'avsync': '/usr/bin/avsync',
+      'btmon': '/usr/bin/btmon',
       'chameleond': '/etc/init.d/chameleond',
       'date': '/bin/date',
       'dut-control': '/usr/local/lib/python-exec/python2.7/dut-control',
