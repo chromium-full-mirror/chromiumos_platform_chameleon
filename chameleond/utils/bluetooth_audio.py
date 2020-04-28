@@ -167,7 +167,27 @@ class BluetoothAudio(BluezPeripheral):
     SystemTools.OrigCall('killall', '-9', self.PULSEAUDIO)
     logging.info('SIGKILL was sent to %s.', self.PULSEAUDIO)
 
-  def _StartPulseaudio(self):
+  def _UsingLocalVersion(self, audio_profile):
+    """Is it preferaable to use a local version of the executable?
+
+    Use /usr/local/bin/pulseaudio for the 'hfp_wbs' profile
+        - This version was made with a vendor patch to enable WBS.
+          It suffers from stability issues. The pulseaudio process
+          may crash at various functions.
+
+    Use /usr/bin/pulseaudio for the 'hfp_nbs' and 'a2dp' profiles
+        - This version was installed through "sudo apt install pulseaudio"
+          which is a stable version from upstream.
+
+    Args:
+      audio_profile: the audio profile being tested
+
+    Returns:
+      True if a local version is preferred.
+    """
+    return True if audio_profile == 'hfp_wbs' else False
+
+  def _StartPulseaudio(self, use_local_version):
     """Start Pulseaudio process or restart it if running.
 
     The pulseaudio command line options applied here are mostly based on trial
@@ -185,6 +205,9 @@ class BluetoothAudio(BluezPeripheral):
     command line options to make a data driven decision on how to start
     pulseaudio b/153289327.
 
+    Args:
+      use_local_version: True to use a local version of executable
+
     Returns:
       True if it starts successfully.
     """
@@ -193,7 +216,7 @@ class BluetoothAudio(BluezPeripheral):
     try:
       self._pulseaudio = SystemTools.RunInSubprocessAsPi(
           self.PULSEAUDIO, '--start --daemonize --disallow-exit'
-          ' --exit-idle-time=-1 --scache-idle-time=-1')
+          ' --exit-idle-time=-1 --scache-idle-time=-1', use_local_version)
     except Exception as e:
       logging.error('Failed to start %s: %s.', self.PULSEAUDIO, e)
       return False
@@ -201,19 +224,22 @@ class BluetoothAudio(BluezPeripheral):
     logging.info('%s is started.', self.PULSEAUDIO)
     return True
 
-  def StartPulseaudio(self):
+  def StartPulseaudio(self, audio_profile):
     """Start pulseaudio process.
 
     Retry a few times as sometimes it may not start correctly.
+
+    Args:
+      audio_profile: the audio profile being tested
 
     Returns:
       True if it starts successfully.
     """
     for i in range(self.START_PULSEAUDIO_TIMES):
       logging.info('try to start pulseaudio ... %d', i)
-      if self._StartPulseaudio():
+      if self._StartPulseaudio(self._UsingLocalVersion(audio_profile)):
         time.sleep(self.WAIT_PULSEAUDIO_READY_SECS)
-        output = self.ListSources()
+        output = self.ListSources(audio_profile)
         logging.info('ListSources: %s', output)
         if bool(output):
           return True
@@ -300,7 +326,7 @@ class BluetoothAudio(BluezPeripheral):
           'Trying to start audio playing process when it is still running.')
       return False
 
-    device_number = self.GetBluezSinkHFPDevice()
+    device_number = self.GetBluezSinkHFPDevice(audio_profile)
     if device_number is None:
       logging.error('Failed to get the device number of bluez_sink for HFP')
       return False
@@ -313,7 +339,8 @@ class BluetoothAudio(BluezPeripheral):
     args = (('--playback --device=%s --format=%s --rate=%d --channels=%d %s') %
             (device_number, profile['format'], profile['rate'],
              profile['channels'], profile['file']))
-    self._play = SystemTools.RunInSubprocessAsPi('pacat', args)
+    self._play = SystemTools.RunInSubprocessAsPi(
+        'pacat', args, self._UsingLocalVersion(audio_profile))
     # The process needs some time to start.
     time.sleep(wait_secs)
     return True
@@ -333,31 +360,43 @@ class BluetoothAudio(BluezPeripheral):
     self._play = None
     return True
 
-  def ListCards(self):
+  def ListCards(self, audio_profile):
     """List all sound cards.
+
+    Args:
+      audio_profile: the audio profile being tested
 
     Returns:
       the list of sounds cards
     """
-    return SystemTools.OutputAsPi('pactl', 'list cards short')
+    return SystemTools.OutputAsPi('pactl', 'list cards short',
+                                  self._UsingLocalVersion(audio_profile))
 
-  def ListSources(self):
+  def ListSources(self, audio_profile):
     """List all audio sources cards.
+
+    Args:
+      audio_profile: the audio profile being tested
 
     Returns:
       the list of audio sources
     """
-    return SystemTools.OutputAsPi('pactl', 'list sources short')
+    return SystemTools.OutputAsPi('pactl', 'list sources short',
+                                  self._UsingLocalVersion(audio_profile))
 
-  def ListSinks(self):
+  def ListSinks(self, audio_profile):
     """List all audio sinks.
+
+    Args:
+      audio_profile: the audio profile being tested
 
     Returns:
       the list of audio sinks
     """
-    return SystemTools.OutputAsPi('pactl', 'list sinks short')
+    return SystemTools.OutputAsPi('pactl', 'list sinks short',
+                                  self._UsingLocalVersion(audio_profile))
 
-  def GetBluezSourceDevice(self):
+  def GetBluezSourceDevice(self, audio_profile):
     """Get the number of the bluez_source device.
 
     A target bluez_source device looks like:
@@ -366,26 +405,32 @@ class BluetoothAudio(BluezPeripheral):
     18      bluez_source.DC_71_96_68_E0_9C.headset_audio_gateway
     module-bluez5-device.c  s16le 1ch 8000Hz        RUNNING
 
+    Args:
+      audio_profile: the audio profile being tested
+
     Returns:
       the first bluez source if found; None otherwise
     """
-    sources = self.ListSources()
+    sources = self.ListSources(audio_profile)
     for line in sources.splitlines():
       if 'bluez_source' in line:
         return line.split()[0]
     return None
 
-  def GetBluezSourceHFPDevice(self):
+  def GetBluezSourceHFPDevice(self, audio_profile):
     """Get the number of the bluez_source device.
 
     A target bluez_source HFP device looks like:
     5      bluez_source.DC_71_96_68_E0_9C.headset_audio_gateway
     module-bluez5-device.c  s16le 1ch 8000Hz        RUNNING
 
+    Args:
+      audio_profile: the audio profile being tested
+
     Returns:
       the device number of the first hfp bluez source if found; None otherwise
     """
-    sources = self.ListSources()
+    sources = self.ListSources(audio_profile)
     for line in sources.splitlines():
       logging.info('sources: %s', line)
       result = self._hfp_source_pattern.search(line)
@@ -395,17 +440,20 @@ class BluetoothAudio(BluezPeripheral):
         return hfp_id
     return None
 
-  def GetBluezSinkHFPDevice(self):
+  def GetBluezSinkHFPDevice(self, audio_profile):
     """Get the number of the bluez_sink device.
 
     A target bluez_source HFP device looks like:
     1       bluez_sink.34_13_E8_DB_47_5E.headset_audio_gateway
     module-bluez5-device.c  s16le 1ch 16000Hz
 
+    Args:
+      audio_profile: the audio profile being tested
+
     Returns:
       the device number of the first hfp bluez sink if found; None otherwise
     """
-    sinks = self.ListSinks()
+    sinks = self.ListSinks(audio_profile)
     for line in sinks.splitlines():
       logging.info('sinks: %s', line)
       result = self._hfp_sink_pattern.search(line)
@@ -415,17 +463,20 @@ class BluetoothAudio(BluezPeripheral):
         return hfp_id
     return None
 
-  def GetBluezSourceA2DPDevice(self):
+  def GetBluezSourceA2DPDevice(self, audio_profile):
     """Get the number of the bluez_source device.
 
     A target bluez_source A2DP device looks like:
     1       bluez_source.34_13_E8_DB_47_5E.a2dp_source
     module-bluez5-device.c  s16le 2ch 48000Hz       SUSPENDED'
 
+    Args:
+      audio_profile: the audio profile being tested
+
     Returns:
       the device number of the first a2dp bluez source if found; None otherwise
     """
-    sources = self.ListSources()
+    sources = self.ListSources(audio_profile)
     for line in sources.splitlines():
       logging.info('sources: %s', line)
       result = self._a2dp_source_pattern.search(line)
@@ -449,7 +500,7 @@ class BluetoothAudio(BluezPeripheral):
           'Trying to start audio recording process when it is still running.')
       return False
 
-    device_number = self.GetBluezSourceDevice()
+    device_number = self.GetBluezSourceDevice(audio_profile)
     if device_number is None:
       logging.error('Failed to get the device number of bluez_source')
       return False
@@ -463,7 +514,8 @@ class BluetoothAudio(BluezPeripheral):
              '--raw --file-format=wav %s') %
             (device_number, profile['format'], profile['rate'],
              profile['channels'], profile['recorded_file']))
-    self._record = SystemTools.RunInSubprocessAsPi('pacat', args)
+    self._record = SystemTools.RunInSubprocessAsPi(
+        'pacat', args, self._UsingLocalVersion(audio_profile))
     # The process needs some time to start.
     time.sleep(1)
     return True

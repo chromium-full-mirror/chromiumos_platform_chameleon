@@ -150,12 +150,17 @@ class _SystemTools(object):
     else:
       return output
 
-  def _FindPreferredExecutablePath(self, name):
+  def _FindPreferredExecutablePath(self, name, use_local_version=False):
     """Find the preferred executable path.
 
     For some daemons, e.g., pulseaudio, there may exist a locally made
     version. In this situation, the executables will reside in
     /usr/local/bin instead of the original /usr/bin when they are installed.
+
+    Args:
+      name: The name of the tool.
+      use_local_version: True to use a local version of the executable.
+                         Default value is False to favor the native version.
 
     Returns:
       The preferred executable path if a locally made version exists;
@@ -163,10 +168,13 @@ class _SystemTools(object):
     """
     local_name = name + '.local'
     local_path = self._TOOL_PATHS.get(local_name)
-    return (local_path if local_path is not None and os.path.isfile(local_path)
-            else self._TOOL_PATHS[name])
 
-  def OutputAsPi(self, name, args_str):
+    if (use_local_version and bool(local_path) and os.path.isfile(local_path)):
+      return local_path
+    else:
+      return self._TOOL_PATHS.get(name)
+
+  def OutputAsPi(self, name, args_str, use_local_version):
     """Calls the tool with arguments as Pi and returns its output.
 
     This is primarily used on Raspberry Pi as the chameleon host. This is
@@ -177,11 +185,12 @@ class _SystemTools(object):
     Args:
       name: The name of the tool.
       args_str: the args string (not a list)
+      use_local_version: True to use a local version of the executable
 
     Returns:
       The output message of the call, including stderr message.
     """
-    preferred_path = self._FindPreferredExecutablePath(name)
+    preferred_path = self._FindPreferredExecutablePath(name, use_local_version)
     args = self._pi_args + [preferred_path + ' ' + args_str]
     try:
       output = subprocess.check_output(args, env=self._pi_env).decode()
@@ -218,7 +227,7 @@ class _SystemTools(object):
     """
     return self.RunInSubprocessOutputToFile(name, subprocess.PIPE, *args)
 
-  def RunInSubprocessAsPi(self, name, args_str):
+  def RunInSubprocessAsPi(self, name, args_str, use_local_version):
     """Calls the tool and run it in a separate process as user Pi.
 
     This is primarily used on Raspberry Pi as the chameleon host. This is
@@ -229,11 +238,12 @@ class _SystemTools(object):
     Args:
       name: The name of the tool.
       args_str: the args string (not a list)
+      use_local_version: True to use a local version of the executable
 
     Returns:
       process: The subprocess spawned for the command.
     """
-    preferred_path = self._FindPreferredExecutablePath(name)
+    preferred_path = self._FindPreferredExecutablePath(name, use_local_version)
     args = self._pi_args + [preferred_path + ' ' + args_str]
     logging.info('args: %s', str(args))
     return subprocess.Popen(args, stdout=subprocess.PIPE,
