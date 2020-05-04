@@ -6,6 +6,7 @@
 import logging
 import multiprocessing
 import os
+import time
 
 import http.server
 import socketserver
@@ -42,13 +43,25 @@ class CachingServer(multiprocessing.Process):
     super(CachingServer, self).__init__()
     ClearCachedDir()
     os.chdir(CACHED_DIR)
+    self.KillLingeringCachingServer(port)
     logging.info('Creating caching server on port %d...', port)
     self.httpd = socketserver.TCPServer(('', port), RemoveFileOnceGetHandler)
+
+  def KillLingeringCachingServer(self, port):
+    """
+    lsof -i :9993
+    COMMAND     PID USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
+    run_chame 22147 root   21u  IPv4 4316296      0t0  TCP *:9993 (LISTEN)
+    """
+    cmd = 'lsof -t -i :%d | xargs kill -9 2&>1 > /dev/null' % port
+    logging.debug('killing command: %s', cmd)
+    os.system(cmd)
+    time.sleep(1)
 
   def run(self):
     try:
       logging.info('Caching server serves forever...')
       self.httpd.serve_forever()
     finally:
-      logging.info('Close the server.')
+      logging.info('Close the caching server.')
       self.httpd.server_close()
