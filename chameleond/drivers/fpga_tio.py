@@ -96,6 +96,8 @@ class ChameleondDriver(ChameleondInterface):
     self.bt_pkg_version = '0.0.2'
     logging.info('bt_pkg_version: %s', self.bt_pkg_version)
 
+    logging.info('bt_pkg_commit: %s', self.get_bt_commit_hash())
+
     self._captured_params = {}
     self._process = None
 
@@ -246,6 +248,19 @@ class ChameleondDriver(ChameleondInterface):
   def get_bt_pkg_version(self):
     """Return bt_pkg_version."""
     return self.bt_pkg_version
+
+  def get_bt_commit_hash(self):
+    """Return the last commit hash in chameleon_commits."""
+    try:
+      output = system_tools.SystemTools.Output('tail', '-1',
+          '/var/log/chameleon_commits')
+      logging.debug('output is %s', output)
+      commit = output.split(' ')[0].strip()
+      logging.debug('got commit %s', commit)
+      return commit
+    except Exception as e:
+      logging.error('Exception %s in get_bt_commit_hash', str(e))
+      return ''
 
   def log_message(self, msg):
     """Write the msg to the chamelond log and system log."""

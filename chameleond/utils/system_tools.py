@@ -55,6 +55,7 @@ class _SystemTools(object):
       'servod': '/usr/local/lib/python-exec/python2.7/servod',
       'ssh': '/usr/bin/ssh',
       'su': '/bin/su',
+      'tail': '/usr/bin/tail',
       'wget': '/usr/bin/wget',
   }
 
