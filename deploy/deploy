@@ -77,7 +77,7 @@ validate_socket_installation() {
         fi
 
         python setup.py build
-        sudo python setup.py install
+        python setup.py install
 
         # Return to directory we started at
         cd ${cwd}
