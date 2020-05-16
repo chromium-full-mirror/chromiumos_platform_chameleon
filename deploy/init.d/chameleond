@@ -26,11 +26,14 @@ LOGFILE="/var/log/${DAEMON_NAME}_init"
 PLATFORM="FPGA"
 
 RPI_INFO_FILE="/proc/device-tree/model"
+BTPEER_INFO_FILE="/etc/btpeer"
 
 RETRY_PERIOD=10
 
-# Some custom settings if chameleon is raspberry pi
-if [ -f ${RPI_INFO_FILE} ] && grep -qi 'raspberry' ${RPI_INFO_FILE} ; then
+# Some custom settings if chameleon is raspberry pi.
+# Bluetooth peer on generic x86 is also treated as raspberry pi.
+if [ -f ${RPI_INFO_FILE} ] && grep -qi 'raspberry' ${RPI_INFO_FILE} || \
+        [ -f ${BTPEER_INFO_FILE} ]; then
     DAEMON_ARGS="${DAEMON_ARGS} platform=raspi"
     RETRY_PERIOD=1
     PLATFORM="RASPI"

@@ -6,6 +6,10 @@ SHELL := bash
 VERSION := 0.0.2
 CC := armv7a-cros-linux-gnueabihf-gcc
 CFLAGS := -g -Wall -O2 -Wl,--no-experimental-use-relr
+ifeq ($(PLATFORM), x86-generic)
+	CC := gcc
+	CFLAGS := -g -Wall -O2
+endif
 INCLUDES := -Iinclude
 DESTDIR := /usr/bin
 BINDIR := ./bin

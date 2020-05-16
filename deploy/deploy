@@ -20,6 +20,10 @@ LIGHTTPD_NAME='lighttpd'
 
 PLATFORM="$1"
 
+if [ "${PLATFORM}" = "raspberrypi" ] || [ "${PLATFORM}" = "x86-generic" ]; then
+    IS_BLUETOOTH_PEER=1
+fi
+
 # We do not want lighttpd and chameleon-updater to run on startup.
 update-rc.d -f "${LIGHTTPD_NAME}" remove
 update-rc.d -f "${UPDATER_NAME}" remove
@@ -184,11 +188,11 @@ install_servo_packages() {
         "${DST_DIST_PACKAGES}"
 }
 
-# For Raspberry Pi, create symlinks if daemons were installed in /usr/local/bin
-# instead of /usr/bin where chameleond expects them. This seems to be least
-# invasive way to resolve disagreement without either breaking fizz or fpga
-# device.
-if [ "${PLATFORM}" = "raspberrypi" ]; then
+# For Bluetooth peer, create symlinks if daemons were installed in
+# /usr/local/bin instead of /usr/bin where chameleond expects them. This seems
+# to be least invasive way to resolve disagreement without either breaking fizz
+# or fpga device.
+if [ -n "${IS_BLUETOOTH_PEER}" ]; then
     create_daemon_symlinks
 fi
 
@@ -213,8 +217,8 @@ update-rc.d "${SCHEDULER_NAME}" defaults 98 4
 cp -f "${SCRIPT_DIR}/${UPDATER_NAME}" "${INITD_DIR}"
 update-rc.d "${UPDATER_NAME}" defaults 90 10
 
-# Some custom actions if chameleon is raspberry pi
-if [ "${PLATFORM}" = "raspberrypi" ]; then
+# Some custom actions if chameleon is for Bluetooth peer.
+if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     # Install required packages
     validate_package_installation "bluetooth"
     validate_package_installation "python-bluez"
@@ -240,7 +244,11 @@ if [ "${PLATFORM}" = "raspberrypi" ]; then
     validate_socket_installation
 
     # Install customized packages in wbs.tbz2 to enable wideband speech.
-    validate_wbs_packages_installation
+    # These are arm binaries, so we don't install for x86-generic.
+    # TODO(b/156780358): Provide a way to build this from source for x86.
+    if [ "${PLATFORM}" = "raspberrypi" ]; then
+        validate_wbs_packages_installation
+    fi
 
     # Update bluetooth rules in service config files
     BT_ADMIN_CONF="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"
@@ -286,6 +294,11 @@ if [ "${PLATFORM}" = "raspberrypi" ]; then
     if ! groups pi | grep bluetooth > /dev/null; then
       usermod -a -G bluetooth pi
       need_reboot=1
+    fi
+
+    # Mark that this platform is used for Bluetooth peer.
+    if [ "${PLATFORM}" = "x86-generic" ]; then
+        touch /etc/btpeer
     fi
 
     if [ -n "${need_reboot}" ]; then
