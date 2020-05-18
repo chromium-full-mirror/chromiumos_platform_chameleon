@@ -216,7 +216,8 @@ class BluetoothAudio(BluezPeripheral):
     try:
       self._pulseaudio = SystemTools.RunInSubprocessAsPi(
           self.PULSEAUDIO, '--start --daemonize --disallow-exit'
-          ' --exit-idle-time=-1 --scache-idle-time=-1', use_local_version)
+          ' --exit-idle-time=-1 --scache-idle-time=-1 --log-level=debug',
+          use_local_version)
     except Exception as e:
       logging.error('Failed to start %s: %s.', self.PULSEAUDIO, e)
       return False
