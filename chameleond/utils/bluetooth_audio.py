@@ -170,12 +170,12 @@ class BluetoothAudio(BluezPeripheral):
   def _UsingLocalVersion(self, audio_profile):
     """Is it preferaable to use a local version of the executable?
 
-    Use /usr/local/bin/pulseaudio for the 'hfp_wbs' profile
+    Use /usr/local/bin/pulseaudio for the 'hfp_wbs' and 'hfp_nbs' profiles
         - This version was made with a vendor patch to enable WBS.
           It suffers from stability issues. The pulseaudio process
           may crash at various functions.
 
-    Use /usr/bin/pulseaudio for the 'hfp_nbs' and 'a2dp' profiles
+    Use /usr/bin/pulseaudio for the 'a2dp' profile
         - This version was installed through "sudo apt install pulseaudio"
           which is a stable version from upstream.
 
@@ -185,7 +185,7 @@ class BluetoothAudio(BluezPeripheral):
     Returns:
       True if a local version is preferred.
     """
-    return True if audio_profile == 'hfp_wbs' else False
+    return False if audio_profile == 'a2dp' else True
 
   def _StartPulseaudio(self, use_local_version):
     """Start Pulseaudio process or restart it if running.
