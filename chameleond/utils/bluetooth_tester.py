@@ -110,10 +110,11 @@ class BluetoothTester(BluetoothVirtualDevice, VirtualFlow):
       ( address, bluetooth_version, manufacturer_id,
         supported_settings, current_settings, class_of_device,
         name, short_name ) = _control.read_info(self.index)
+
+      logging.info('Supported: {}; Requested: {}'.format(supported_settings,
+                        profile_settings))
       if profile_settings & supported_settings != profile_settings:
           logging.warning('Controller does not support requested settings')
-          logging.debug('Supported: %b; Requested: %b', supported_settings,
-                        profile_settings)
           return False
 
       # The high 8 bits of class_of_device is part of Class of Service field
