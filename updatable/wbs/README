@@ -33,6 +33,11 @@ Patches:
         Cypress Bluetooth chip and improves the HFP NBS primary frequency
         precision significantly.
 
+  0003: module-bluez5-device: sleep to wait for SCO socket to be ready
+        On some platforms on which Bluetooth controllers are connected
+        through the UART bus, we need to wait for the socket to be ready.
+        Such platforms include minnie, mickey, etc.
+
   For patches after 0002, they are stored in this directory so that it is
   possible to construct the correct pulseaudio git tree with all patches.
 
