@@ -284,8 +284,9 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         eval "cp ${SRC_KBD_CONF} ${DEST_KBD_CONF}"
     fi
 
-    # Install servo related packages.
-    install_servo_packages
+    # No need to install servo packages as servo is not fully supported
+    # in the lab yet.
+    # install_servo_packages
 
     # Add pi to the bluetooth group so that pulseaudio started by pi has
     # the permission to interact with bluetooth daemon.
