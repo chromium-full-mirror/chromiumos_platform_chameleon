@@ -28,6 +28,13 @@ Patches:
   0001: bluetooth: WBS: MSBC encoder support
         This is the 3rd party patch for enabling WBS on pulseaudio.
 
+  0002: backend-ofono: always use dlen 60 for the builtin BT
+        This patch configures the correct mtu size with the builtin
+        Cypress Bluetooth chip and improves the HFP NBS primary frequency
+        precision significantly.
+
+  For patches after 0002, they are stored in this directory so that it is
+  possible to construct the correct pulseaudio git tree with all patches.
 
 Instructions to build pulseaudio
   - Do a git clone of the pulseaudio source.

@@ -1,0 +1,45 @@
+From 92823f7866d108babb9021c0710a78d1f314fd2a Mon Sep 17 00:00:00 2001
+From: Joseph Hwang <josephsih@chromium.org>
+Date: Thu, 14 May 2020 17:33:50 +0800
+Subject: [PATCH 2/3] backend-ofono: always use dlen 60 for the builtin BT
+ controller
+
+---
+ src/modules/bluetooth/backend-ofono.c | 21 ++++++++++++++-------
+ 1 file changed, 14 insertions(+), 7 deletions(-)
+
+diff --git a/src/modules/bluetooth/backend-ofono.c b/src/modules/bluetooth/backend-ofono.c
+index 394f5c157..748f81a0c 100644
+--- a/src/modules/bluetooth/backend-ofono.c
++++ b/src/modules/bluetooth/backend-ofono.c
+@@ -187,13 +187,20 @@ static int hf_audio_agent_transport_acquire(pa_bluetooth_transport *t, bool opti
+      * value from the Isoc USB endpoint in use by btusb and should be
+      * made available to userspace by the Bluetooth kernel subsystem.
+      * Meanwhile the empiric value 48 will be used. */
+-    if (selected_codec == 1) {
+-    if (imtu)
+-        *imtu = 48;
+-    if (omtu)
+-        *omtu = 48;
+-    } else
+-	    *imtu = *omtu = 60;
++
++    /* The empiric value 48 above is generally used for the USB bus.
++     * For the UART bus used in Raspberry Pi, it should be 60 instead. */
++    if (selected_codec >= 0) {
++        if (imtu)
++            *imtu = 60;
++        if (omtu)
++            *omtu = 60;
++    } else {
++        if (imtu)
++            *imtu = 48;
++        if (omtu)
++            *omtu = 48;
++    }
+ 
+     t->codec = selected_codec;
+ 
+-- 
+2.20.1
+
