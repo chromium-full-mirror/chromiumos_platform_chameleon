@@ -1,0 +1,37 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+The tarball wbs_xxxx.tbz2 contains the executables and shared libraries of
+customized pulseaudio and ofono packages with wideband speech capability.
+
+The customized packages were made on a Raspberry Pi. They exist in tarball
+format so that the deployment is fast. Otherwise, it would take about 20 mins
+for compilation and installation on a Pi 4B platform.
+
+When the changes are pushed to upstream and become available in raspbian,
+we can remove this tarball.
+
+The tarball wbs_xxxx.tbz2 is required to be packed into the chameleon bundle.
+The tarball wbs_xxxx.tbz2 is itself placed in the git-ignored path,
+chameleon/dist/, so that the tarballs will not take git space.
+
+Only the latest wbs_xxxx.tbz2 is required to make a chameleon bundle.
+
+In the tarball wbs_xxxx.tbz2, the 'xxxx' means the patch number.
+
+To upload a wbs tarball to Google cloud storage:
+(cros) ~/trunk/src/platform/chameleon $ ./deploy/release_bundle \
+                                        dist/wbs_xxxx.tbz2
+
+Patches:
+  0001: bluetooth: WBS: MSBC encoder support
+        This is the 3rd party patch for enabling WBS on pulseaudio.
+
+
+Instructions to build pulseaudio
+  - Do a git clone of the pulseaudio source.
+  - Do a hard reset to the pulseaudio 12 release.
+  - Apply all the patches.
+  - ./autogen.sh; make -j 4; sudo make install && sudo ldconfig;
+  - reboot

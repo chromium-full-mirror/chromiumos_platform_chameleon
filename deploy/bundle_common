@@ -58,3 +58,15 @@ update_cloud_LATEST() {
       die "Failed to update ${LATEST} file"
   echo "The ${LATEST} is updated to ${latest_bundle}"
 }
+
+# Get the latest WBS bundle name.
+get_latest_wbs_bundle_name() {
+  local latest_bundle=$(wget -qO - "${HTTP_BUNDLE_URL}/LATEST_WBS")
+  echo "${latest_bundle}"
+}
+
+# Download the specified file $1 to the path $2.
+download_cloud_file() {
+  wget -q -P "$2" "${HTTP_BUNDLE_URL}/$1" ||
+      die "Failed to access $1 file from GS"
+}

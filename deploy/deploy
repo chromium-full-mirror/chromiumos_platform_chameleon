@@ -5,8 +5,11 @@
 # found in the LICENSE file.
 
 SCRIPT="$(readlink -f "$0")"
-SCRIPT_DIR="$(dirname "${SCRIPT}")/init.d"
-COMMIT="$(dirname "${SCRIPT}")/../dist/commit"
+CWD="$(dirname "${SCRIPT}")"
+
+SCRIPT_DIR="${CWD}/init.d"
+DIST_PATH="${CWD}/../dist"
+COMMIT="${DIST_PATH}/commit"
 COMMITS_LOG="/var/log/chameleon_commits"
 
 INITD_DIR='/etc/init.d'
@@ -17,6 +20,8 @@ STREAM_SERVER_NAME='stream_server'
 SCHEDULER_NAME='scheduler'
 UPDATER_NAME='chameleon-updater'
 LIGHTTPD_NAME='lighttpd'
+
+. "${CWD}/bundle_common"
 
 PLATFORM="$1"
 
@@ -93,12 +98,17 @@ validate_socket_installation() {
 }
 
 validate_wbs_packages_installation() {
-    wbs_tarball="$(dirname "${SCRIPT}")/../updatable/packages/wbs.tbz2"
+    local wbs_name="$(get_latest_wbs_bundle_name)"
+    local wbs_tarball="${DIST_PATH}/${wbs_name}"
+
+    # Download the latest wbs tarball.
+    download_cloud_file "${wbs_name}" "${DIST_PATH}"
+    echo "The latest ${wbs_tarball} is downloaded."
 
     if tar xf "${wbs_tarball}" -C / > /dev/null; then
-        echo "Customized packages in wbs.tbz2 installed"
+        echo "Customized packages in ${wbs_name} installed"
     else
-        echo "Error in installing customized packages in wbs.tbz2!"
+        echo "Error in installing customized packages in ${wbs_name}!"
     fi
 }
 
