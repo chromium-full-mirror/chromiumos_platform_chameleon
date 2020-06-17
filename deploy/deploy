@@ -16,6 +16,8 @@ INITD_DIR='/etc/init.d'
 CHAMELEOND_DIR='/usr/bin'
 CHAMELEOND_NAME='chameleond'
 DISPLAYD_NAME='displayd'
+NETWORKING_NAME='networking'
+NETWORKING_DIR='network'
 STREAM_SERVER_NAME='stream_server'
 SCHEDULER_NAME='scheduler'
 UPDATER_NAME='chameleon-updater'
@@ -182,6 +184,14 @@ update-rc.d "${CHAMELEOND_NAME}" defaults 92 8
 
 cp -f "${SCRIPT_DIR}/${DISPLAYD_NAME}" "${INITD_DIR}"
 update-rc.d "${DISPLAYD_NAME}" defaults 94 6
+
+cp -f "${SCRIPT_DIR}/${NETWORKING_NAME}" "${INITD_DIR}"
+cp -pr "${CWD}/${NETWORKING_DIR}" "/etc"
+mkdir -p "/etc/${NETWORKING_DIR}/if-down.d"
+mkdir -p "/etc/${NETWORKING_DIR}/if-post-down.d"
+mkdir -p "/etc/${NETWORKING_DIR}/if-pre-up.d"
+mkdir -p "/etc/${NETWORKING_DIR}/if-up.d"
+update-rc.d "${NETWORKING_NAME}" defaults 88 12
 
 cp -f "${SCRIPT_DIR}/${STREAM_SERVER_NAME}" "${INITD_DIR}"
 update-rc.d "${STREAM_SERVER_NAME}" defaults 96 4

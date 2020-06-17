@@ -7,9 +7,11 @@ include deploy/deploy_pip
 include deploy/init/chameleond.conf
 include deploy/init.d/chameleond
 include deploy/init.d/displayd
+include deploy/init.d/networking
 include deploy/init.d/scheduler
 include deploy/init.d/stream_server
 include deploy/init.d/chameleon-updater
+graft deploy/network
 include dist/commit
 include updatable/python2.7/*.py
 include updatable/pip/*
