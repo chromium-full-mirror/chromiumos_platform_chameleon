@@ -1,6 +1,7 @@
 include Makefile
 include *.txt
 include bin/*
+include deploy/bundle_common
 include deploy/deploy
 include deploy/deploy_pip
 include deploy/init/chameleond.conf
