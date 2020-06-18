@@ -21,7 +21,7 @@ from chameleond.utils import system_tools
 class Servod(object):
   """A simple object that performs Servod operations."""
 
-  CONFIG_PATH = '/usr/local/lib/python2.7/dist-packages/servo/data/'
+  CONFIG_PATH = '/usr/local/lib64/python2.7/site-packages/servo/data'
 
   # TODO: We had better figure out a way to auto detect the config path to use.
   CONFIG = {

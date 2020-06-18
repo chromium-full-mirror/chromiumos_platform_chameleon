@@ -163,41 +163,6 @@ END
     fi
 }
 
-install_servo_packages() {
-    echo "Install servo packages from ${BUNDLE_PATH}".
-
-    # Install servo configs.
-    DST_SHARE="/usr/share"
-    install -d "${DST_SHARE}"
-    cp -pr "${BUNDLE_PATH}/usr/share/servo_updater" "${DST_SHARE}"
-
-    # Install servo executables.
-    BUNDLE_PYTHON_EXEC="${BUNDLE_PATH}/usr/lib64/python-exec/python2.7"
-    DST_PYTHON_EXEC="/usr/local/lib/python-exec/python2.7"
-    install -d "${DST_PYTHON_EXEC}"
-    cp -pr \
-        "${BUNDLE_PYTHON_EXEC}/servod" \
-        "${BUNDLE_PYTHON_EXEC}/dut-control" \
-        "${DST_PYTHON_EXEC}"
-
-    # Install servo and its dependent packages.
-    BUNDLE_SITE_PACKAGES="${BUNDLE_PATH}/usr/lib64/python2.7/site-packages"
-    DST_DIST_PACKAGES="/usr/local/lib/python2.7/dist-packages"
-    install -d "${DST_DIST_PACKAGES}"
-    cp -pr \
-        "${BUNDLE_SITE_PACKAGES}"/fw_update.py \
-        "${BUNDLE_SITE_PACKAGES}"/ec3po \
-        "${BUNDLE_SITE_PACKAGES}"/ec3po-*.egg-info \
-        "${BUNDLE_SITE_PACKAGES}"/servo \
-        "${BUNDLE_SITE_PACKAGES}"/servo-*.egg-info \
-        "${BUNDLE_SITE_PACKAGES}"/ecusb \
-        "${BUNDLE_SITE_PACKAGES}"/ecusb-*.egg-info \
-        "${BUNDLE_SITE_PACKAGES}"/usb \
-        "${BUNDLE_SITE_PACKAGES}"/servo_updater.py \
-        "${BUNDLE_SITE_PACKAGES}"/servo_updater-*.egg-info \
-        "${DST_DIST_PACKAGES}"
-}
-
 # For Bluetooth peer, create symlinks if daemons were installed in
 # /usr/local/bin instead of /usr/bin where chameleond expects them. This seems
 # to be least invasive way to resolve disagreement without either breaking fizz

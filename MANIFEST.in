@@ -15,17 +15,3 @@ include updatable/python2.7/*.py
 include updatable/pip/*
 include updatable/packages/*
 recursive-include updatable boot-partition.img fpga.rbf socfpga.dtb zImage modules.tgz
-# The following are servod dependencies for measuring power consumption.
-include usr/lib64/python-exec/python2.7/dut-control
-include usr/lib64/python-exec/python2.7/servod
-graft usr/share/servo_updater
-include usr/lib64/python2.7/site-packages/fw_update.py
-include usr/lib64/python2.7/site-packages/servo_updater.py
-graft usr/lib64/python2.7/site-packages/servo_updater-*.egg-info
-graft usr/lib64/python2.7/site-packages/usb
-graft usr/lib64/python2.7/site-packages/ec3po
-graft usr/lib64/python2.7/site-packages/ec3po-*.egg-info
-graft usr/lib64/python2.7/site-packages/servo
-graft usr/lib64/python2.7/site-packages/servo-*.egg-info
-graft usr/lib64/python2.7/site-packages/ecusb
-graft usr/lib64/python2.7/site-packages/ecusb-*.egg-info
