@@ -68,7 +68,8 @@ do_stop () {
     if is_already_running; then
         start-stop-daemon --stop --pidfile "${PIDFILE}" --retry ${RETRY_PERIOD}
         # Sometimes a hanging thread is left. Kill all instances of this script
-        pkill -f ${DAEMON}
+        killall ${DAEMON}
+        echo "kill ${DAEMON}, rc = $?"
         rm -f "${PIDFILE}"
     else
         echo "${DAEMON_NAME} is already stopped"
