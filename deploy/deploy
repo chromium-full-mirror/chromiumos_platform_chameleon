@@ -337,7 +337,7 @@ if [ -e "${file}" ]; then
     echo "current_modules_version ${current_modules_version}"
     if [ "${new_modules_version}" != "${current_modules_version}" ]; then
         echo "Updating ${file}"
-        rm -rf "${MODULE_DIR}:?"/*
+        rm -rf "${MODULE_DIR}"/*
         tar zxvf "${file}" -C "${MODULE_DIR}"
         need_reboot=1
     fi
