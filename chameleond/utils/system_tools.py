@@ -248,8 +248,10 @@ class _SystemTools(object):
     preferred_path = self._FindPreferredExecutablePath(name, use_local_version)
     args = self._pi_args + [preferred_path + ' ' + args_str]
     logging.info('args: %s', str(args))
-    return subprocess.Popen(args, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+    process = subprocess.Popen(args, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    process.name = name
+    return process
 
   def RunInSubprocessOutputToFile(self, name, handle, *args):
     """Calls the tool and run it in a separate process, and outputs to a file.
@@ -266,6 +268,7 @@ class _SystemTools(object):
     process = subprocess.Popen(command,
                                stdout=handle,
                                stderr=handle)
+    process.name = name
     return process
 
   def GetSubprocessOutput(self, process, decode=True):

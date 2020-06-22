@@ -247,6 +247,12 @@ class BluetoothAudio(BluezPeripheral):
       time.sleep(self.INTERVAL_BETWEEN_START_PULSEAUDIO_SECS)
     return False
 
+  def _PrintProcessStderr(self, proc):
+    """Print the stderr of the proc if any."""
+    err_msg = proc.stderr.read()
+    if bool(err_msg):
+      logging.error('[%s]: %s', proc.name, err_msg)
+
   def StopPulseaudio(self):
     """Stop Pulseaudio process.
 
@@ -260,6 +266,7 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('Stop %s before starting it.', self.PULSEAUDIO)
       return False
 
+    self._PrintProcessStderr(self._pulseaudio)
     self._pulseaudio.terminate()
     self._KillPulseAudio()
     self._pulseaudio = None
@@ -357,6 +364,7 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('Stop playing audio before starting it.')
       return False
 
+    self._PrintProcessStderr(self._play)
     self._play.terminate()
     self._play = None
     return True
@@ -533,6 +541,7 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('Stop audio recording before starting it.')
       return False
 
+    self._PrintProcessStderr(self._record)
     if self._record.poll() is None:
       self._record.terminate()
       logging.info('Audio recording is terminated.')
