@@ -171,6 +171,7 @@ END
 # or fpga device.
 if [ -n "${IS_BLUETOOTH_PEER}" ]; then
     create_daemon_symlinks
+    CHAMELEOND_DIR="/usr/local/bin"
 fi
 
 mkdir -p "${INITD_DIR}"
