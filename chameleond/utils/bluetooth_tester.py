@@ -111,8 +111,8 @@ class BluetoothTester(BluetoothVirtualDevice, VirtualFlow):
         supported_settings, current_settings, class_of_device,
         name, short_name ) = _control.read_info(self.index)
 
-      logging.info('Supported: {}; Requested: {}'.format(supported_settings,
-                        profile_settings))
+      logging.info('Supported: {}; Requested: {}; Current: {}'.format(
+                   supported_settings, profile_settings, current_settings))
       if profile_settings & supported_settings != profile_settings:
           logging.warning('Controller does not support requested settings')
           return False
