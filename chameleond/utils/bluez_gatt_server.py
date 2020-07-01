@@ -162,10 +162,13 @@ class GATTServer(object):
     # Add total length of data to front of data, followed by data
     dat = '{:02x} {}'.format(len(data), ' '.join(['{:02x}'.format(val)
                                                   for val in data]))
-
+    scan_rsp_dat = ' '.join(['00' for _ in range(0, 32)])
     # hci commands can be found in Version 5.1 | Vol 2, Part E Sec 7.8
     # Advertisement structure
-    adv_cmd = 'sudo hcitool -i hci0 cmd 0x08 0x0008 {}'.format(dat)
+    set_adv_data_cmd = 'sudo hcitool -i hci0 cmd 0x08 0x0008 {}'.format(dat)
+    # Also clear scan response data
+    set_adv_resp_cmd = 'sudo hcitool -i hci0 cmd 0x08 0x0009 {}'.format(
+        scan_rsp_dat)
     # Stop advertising
     stop_adv = 'sudo hcitool -i hci0 cmd 0x08 0x000a 00'
     # Start advertising
@@ -174,7 +177,7 @@ class GATTServer(object):
     rapid_adv = ('sudo hcitool -i hci0 cmd 0x08 0x0006 A0 00'
                  ' A0 00 00 00 00 00 00 00 00 00 00 07 00')
 
-    cmds = [stop_adv, adv_cmd, rapid_adv, start_adv
+    cmds = [stop_adv, set_adv_data_cmd, set_adv_resp_cmd, rapid_adv, start_adv
            ] if self._discoverable else [stop_adv]
 
     # Run commands sequentially
