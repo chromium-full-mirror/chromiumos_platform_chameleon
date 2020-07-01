@@ -4,7 +4,9 @@
 # found in the LICENSE file.
 """Common utilities."""
 
-import logging
+from __future__ import print_function
+
+import logging  # pylint: disable=cros-logging-import
 import time
 
 
@@ -37,6 +39,60 @@ def WaitForCondition(func, value, delay, timeout):
                (func.__name__, str(value)))
     logging.warn(message)
     raise TimeoutError(message)
+
+
+def PollForCondition(condition, exception=None, timeout=10, sleep_interval=0.1,
+                     desc=None):
+  """Polls until a condition becomes truthy and returns the condition's output.
+
+  This function polls until bool(condition) becomes True.
+
+  This function is different from the WaitForCondition function above primarily
+  for two things:
+  - This function allows any output returned from the condition function that
+    is evaluated to be true. This is useful when the output is not known in
+    advance.
+  - This function returns the output of the condition.
+
+  Minor differences also include
+  - This function allows for a customized timeout description.
+  - This function allows for a customized exception.
+
+  Args:
+    condition: function taking no args and returning anything that will
+               evaluate to True in a conditional check
+    exception: exception to throw if condition doesn't evaluate to true
+    timeout: maximum number of seconds to wait
+    sleep_interval: time to sleep between polls
+    desc: description of default TimeoutError used if 'exception' is None
+
+  Returns:
+    The evaluated value that caused the poll loop to terminate.
+
+  Raises:
+    Raise 'exception' arg if supplied; TimeoutError otherwise
+  """
+  start_time = time.time()
+  while True:
+    value = condition()
+    if bool(value):
+      return value
+
+    if time.time() + sleep_interval - start_time <= timeout:
+      time.sleep(sleep_interval)
+      continue
+
+    # Raise an exception due to timeout.
+    if exception:
+      logging.error('Raise error %r due to unexpected value: %r',
+                    exception, str(value))
+      raise exception # pylint: disable=raising-bad-type
+
+    if desc is None:
+      desc = condition.__name__
+    msg = 'Timed out waiting for ' + desc
+    logging.error(msg)
+    raise TimeoutError(msg)
 
 
 def lazy(original_class):
