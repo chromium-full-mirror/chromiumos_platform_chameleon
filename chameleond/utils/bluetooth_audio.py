@@ -162,6 +162,19 @@ class BluetoothAudio(BluezPeripheral):
     return (PERIPHERAL_DEVICE_CLASS[PeripheralKit.BLUETOOTH_AUDIO] &
             CLASS_OF_SERVICE_MASK)
 
+  def _PollForCondition(self, condition, timeout=10, sleep_interval=1,
+                        desc=None):
+    try:
+      ret = common.PollForCondition(condition=condition,
+                                    timeout=timeout,
+                                    sleep_interval=sleep_interval,
+                                    desc=desc)
+    except common.TimeoutError as e:
+      ret = ''
+      logging.warn('Failed to start %s in %d seconds: %s.',
+                   self.PULSEAUDIO, timeout, e)
+    return ret
+
   def _KillPulseAudio(self):
     """Send a SIGKILL to all pulseaudio process."""
     SystemTools.OrigCall('killall', '-9', self.PULSEAUDIO)
@@ -240,7 +253,9 @@ class BluetoothAudio(BluezPeripheral):
       logging.info('try to start pulseaudio ... %d', i)
       if self._StartPulseaudio(self._UsingLocalVersion(audio_profile)):
         time.sleep(self.WAIT_PULSEAUDIO_READY_SECS)
-        output = self.ListSources(audio_profile)
+        output = self._PollForCondition(
+            lambda: self.ListSources(audio_profile),
+            desc='pulseaudio fully started')
         logging.info('ListSources: %s', output)
         if bool(output):
           return True
