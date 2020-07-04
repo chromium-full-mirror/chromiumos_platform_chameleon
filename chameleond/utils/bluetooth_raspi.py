@@ -25,6 +25,8 @@ try:
 except ImportError:
   pass
 
+
+from chameleond.utils import pairing_agent
 from chameleond.utils import system_tools
 from chameleond.utils.raspi_bluez_service import BluezService
 from .bluetooth_peripheral_kit import PeripheralKit
@@ -65,6 +67,9 @@ SHORTHAND_REPORT_FORMAT_KEYBOARD_MAX_LEN_SCAN_CODES = 6
 RAW_REPORT_FORMAT_MOUSE_LENGTH = 5
 RAW_REPORT_FORMAT_MOUSE_DESCRIPTOR = 2
 
+# Time to wait about the pairing agent to exit.
+AGENT_EXIT_TIMEOUT_SECS = 5
+
 
 class BluezPeripheralException(PeripheralKitException):
   """A dummy exception class for Bluez class."""
@@ -98,6 +103,8 @@ class BluezPeripheral(PeripheralKit):
     # self._dbus_hci_props, and even start bluetoothd if necessary
     self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(1))
 
+    self._agent = None
+
     logging.debug('Bluetooth peripheral powered and waiting for bind to device')
 
 
@@ -113,6 +120,35 @@ class BluezPeripheral(PeripheralKit):
       self._service_iface = dbus.Interface(self._service, BLUEZ_SERVICE_NAME)
 
     return self._service_iface
+
+
+  def StartPairingAgent(self, capability):
+    """Start a pairing agent with the specified capability.
+
+    Args:
+      capability: the capability of the device.
+                  The capability parameter can have the values:
+                  DisplayOnly, DisplayYesNo, KeyboardOnly, NoInputNoOutput
+                  and KeyboardDisplay.
+                  Refer to bluez/doc/agent-api.txt for more details.
+    """
+    if self._agent:
+      self.StopPairingAgent()
+
+    self._agent = threading.Thread(target=pairing_agent.SetupAgent,
+                                   args=(capability,))
+    logging.info('The pairing agent is started with capability %s', capability)
+    self._agent.start()
+
+
+  def StopPairingAgent(self):
+    """Stop the pairing agent."""
+    logging.info('Stop the pairing agent')
+    if self._agent:
+      pairing_agent.StopAgent()
+      self._agent.join(AGENT_EXIT_TIMEOUT_SECS)
+      logging.info('agent exited and joined')
+      self._agent = None
 
 
   def _setup_dbus_loop(self):
