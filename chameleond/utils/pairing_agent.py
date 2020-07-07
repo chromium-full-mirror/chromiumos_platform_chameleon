@@ -25,8 +25,8 @@ AGENT_MANAGER_INTERFACE = 'org.bluez.AgentManager1'
 DEVICE_INTERFACE = 'org.bluez.Device1'
 PROP_INTERFACE = 'org.freedesktop.DBus.Properties'
 
-BLUEZ_OBJECT_PATH = '/org/bluez'
-AGENT_PATH = '/test/agent'
+BLUEZ_OBJECT_PATH = dbus.ObjectPath('/org/bluez')
+AGENT_PATH = dbus.ObjectPath('/test/agent')
 
 agent = None
 bus = None
@@ -37,7 +37,7 @@ class Agent(dbus.service.Object):
   """A Pairing Agent"""
 
   PASSKEY = dbus.UInt32(123456)
-  PIN = '0000'
+  PIN = dbus.String('0000')
 
   def __init__(self, *args, **kwargs):
     super(Agent, self).__init__(*args, **kwargs)
@@ -46,7 +46,7 @@ class Agent(dbus.service.Object):
 
 
   def SetPin(self, pin):
-    self._pin = pin
+    self._pin = dbus.String(pin)
 
 
   def SetPasskey(self, passkey):
@@ -133,7 +133,7 @@ def SetupAgent(capability):
 
   bluez_obj = bus.get_object(BUS_NAME, BLUEZ_OBJECT_PATH)
   agent_manager = dbus.Interface(bluez_obj, AGENT_MANAGER_INTERFACE)
-  agent_manager.RegisterAgent(AGENT_PATH, capability)
+  agent_manager.RegisterAgent(AGENT_PATH, dbus.String(capability))
   logging.info('Agent registered')
 
   agent_manager.RequestDefaultAgent(AGENT_PATH)
