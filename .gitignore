@@ -5,3 +5,4 @@ dist/
 chameleond.egg-info/
 # Generated files
 *.pyc
+tags
