@@ -223,6 +223,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     validate_package_installation "bluez-firmware"
     validate_package_installation "ofono"
     validate_package_installation "playerctl"
+    validate_package_installation "lsof"
 
     # Install python packages for Raspberry Pi.
     validate_python_package_installation "pexpect"
