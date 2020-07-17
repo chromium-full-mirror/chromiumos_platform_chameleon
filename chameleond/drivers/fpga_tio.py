@@ -244,10 +244,10 @@ class ChameleondDriver(ChameleondInterface):
   def get_bt_commit_hash(self):
     """Return the last commit hash in chameleon_commits."""
     try:
-      output = system_tools.SystemTools.Output('tail', '-1',
-          '/var/log/chameleon_commits')
+      output = system_tools.SystemTools.Output('grep', 'BUNDLE_COMMIT_HASH',
+          '/etc/default/chameleond')
       logging.debug('output is %s', output)
-      commit = output.split(' ')[0].strip()
+      commit = output.split('=')[1].strip()
       logging.debug('got commit %s', commit)
       return commit
     except Exception as e:
