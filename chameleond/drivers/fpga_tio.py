@@ -92,10 +92,6 @@ class ChameleondDriver(ChameleondInterface):
     self._platform = os.environ.get('PLATFORM')
     logging.info('platform: %s', self._platform)
 
-    # This version control autoupdate of BT peer in the lab
-    self.bt_pkg_version = '0.0.2'
-    logging.info('bt_pkg_version: %s', self.bt_pkg_version)
-
     logging.info('bt_pkg_commit: %s', self.get_bt_commit_hash())
 
     self._captured_params = {}
@@ -244,10 +240,6 @@ class ChameleondDriver(ChameleondInterface):
     """Reboots Chameleon board."""
     logging.info('The chameleon board is going to reboot.')
     system_tools.SystemTools.Call('reboot')
-
-  def get_bt_pkg_version(self):
-    """Return bt_pkg_version."""
-    return self.bt_pkg_version
 
   def get_bt_commit_hash(self):
     """Return the last commit hash in chameleon_commits."""
