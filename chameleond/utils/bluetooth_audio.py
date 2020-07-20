@@ -556,8 +556,11 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('Stop audio recording before starting it.')
       return False
 
+    logging.info('Printing process error.')
     self._PrintProcessStderr(self._record)
+    logging.info('Checking if the audio recording is finished.')
     if self._record.poll() is None:
+      logging.info('Audio recording is not finished yet, terminating it now.')
       self._record.terminate()
       logging.info('Audio recording is terminated.')
     self._record = None
