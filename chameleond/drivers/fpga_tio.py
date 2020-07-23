@@ -247,7 +247,7 @@ class ChameleondDriver(ChameleondInterface):
       output = system_tools.SystemTools.Output('grep', 'BUNDLE_COMMIT_HASH',
           '/etc/default/chameleond')
       logging.debug('output is %s', output)
-      commit = output.split('=')[1].strip()
+      commit = output.split('=')[1].strip().replace('"', '')
       logging.debug('got commit %s', commit)
       return commit
     except Exception as e:

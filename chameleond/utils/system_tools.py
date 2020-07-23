@@ -25,6 +25,7 @@ class _SystemTools(object):
       'chameleond': '/etc/init.d/chameleond',
       'date': '/bin/date',
       'dut-control': '/usr/local/bin/dut-control',
+      'grep': '/bin/grep',
       'histogram': '/usr/bin/histogram',
       'hpd_control': '/usr/bin/hpd_control',
       'i2cdump': '/usr/local/sbin/i2cdump',
