@@ -113,6 +113,11 @@ else
 endif
 
 CHAMELEON_USER ?= root
+# Allow users to override the SSH port to allow remote installs to devices
+# that use a non-standard SSH port. This includes devices forwarded using SSH
+# port forwarding, or for devices exposed to the internet using router port
+# forwarding.
+CHAMELEON_SSH_PORT ?= 22
 BUNDLE = chameleond-$(VERSION).tar.gz
 BUNDLEDIR = chameleond-$(VERSION)
 
@@ -124,10 +129,10 @@ remote-install: check_git_tree_clean check_git_commit_HEAD
 	@echo "Current host time: $(HOST_NOW)"
 ifdef CHAMELEON_HOST
 	@scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	    -i $(IDENTITY_FILE) \
+	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
 	    $(DISTDIR)/$(BUNDLE) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
 	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	    -i $(IDENTITY_FILE) \
+	    -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
 	    $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
 	    "cd /tmp && rm -rf $(BUNDLEDIR) && tar zxf $(BUNDLE) &&" \
 	    "cd $(BUNDLEDIR) && find -exec touch -c {} \; &&" \
