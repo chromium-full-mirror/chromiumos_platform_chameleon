@@ -359,7 +359,7 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('%s is not a supported audio profile', audio_profile)
       return False
 
-    args = (('--playback --device=%s --format=%s --rate=%d --channels=%d %s') %
+    args = (('--playback --device=%s --file-format=wav --format=%s --rate=%d --channels=%d %s') %
             (device_number, profile['format'], profile['rate'],
              profile['channels'], profile['file']))
     self._play = SystemTools.RunInSubprocessAsPi(
