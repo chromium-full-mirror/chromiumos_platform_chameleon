@@ -28,6 +28,7 @@ from chameleond.utils.bluez_service_consts import (
 # The audio test data for various profiles.
 audio_test_dir = os.path.join(os.path.dirname(__file__), 'data/audio')
 audio_record_dir = '/tmp'
+audio_data_dir = '/usr/share/autotest/audio-test-data'
 audio_test_data = {
     # hfp nbs test data
     'hfp_nbs': {
@@ -334,11 +335,12 @@ class BluetoothAudio(BluezPeripheral):
       return False
     return True
 
-  def StartPlayingAudioSubprocess(self, audio_profile, wait_secs=1):
+  def StartPlayingAudioSubprocess(self, audio_profile, test_data, wait_secs=1):
     """Start playing the audio file in a subprocess.
 
     Args:
-      audio_profile: the audio file to play
+      audio_profile: the audio profile, either a2dp, hfp_wbs, or hfp_nbs
+      test_data: the audio file to play and data about the file
       wait_secs: the time interval to wait for ofono to complete starting.
 
     Returns:
@@ -354,14 +356,16 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('Failed to get the device number of bluez_sink for HFP')
       return False
 
-    self._profile = profile = audio_test_data.get(audio_profile)
-    if profile is None:
-      logging.error('%s is not a supported audio profile', audio_profile)
-      return False
+    self._profile = test_data
+    file_path = os.path.join(audio_data_dir,
+                             os.path.split(test_data['file'])[1])
+    file_format = test_data['format'].lower().replace('_', '')
 
-    args = (('--playback --device=%s --file-format=wav --format=%s --rate=%d --channels=%d %s') %
-            (device_number, profile['format'], profile['rate'],
-             profile['channels'], profile['file']))
+    args = '--playback --device={d} --file-format=wav --format={f} --rate={r} '
+    args += '--channels={c} {fp}'
+    args = args.format(d=device_number, f=file_format, r=test_data['rate'],
+                       c=test_data['channels'], fp=file_path)
+
     self._play = SystemTools.RunInSubprocessAsPi(
         'pacat', args, self._UsingLocalVersion(audio_profile))
     # The process needs some time to start.
@@ -510,11 +514,12 @@ class BluetoothAudio(BluezPeripheral):
         return a2dp_id
     return None
 
-  def StartRecordingAudioSubprocess(self, audio_profile):
+  def StartRecordingAudioSubprocess(self, audio_profile, test_data):
     """Start recording audio in a subprocess.
 
     Args:
       audio_profile: the audio profile used to get the recording settings
+      test_data: the details of the file being recorded
 
     Returns:
       True if successful
@@ -529,17 +534,18 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('Failed to get the device number of bluez_source')
       return False
 
-    self._profile = profile = audio_test_data.get(audio_profile)
-    if profile is None:
-      logging.error('%s is not a supported audio profile', audio_profile)
-      return False
+    self._profile = test_data
+    file_path = test_data['recorded_by_peer']
+    file_format = test_data['format'].lower().replace('_', '')
 
-    args = (('--record --device=%s --format=%s --rate=%d --channels=%d '
-             '--raw --file-format=wav %s') %
-            (device_number, profile['format'], profile['rate'],
-             profile['channels'], profile['recorded_file']))
+    args = '--record --device={d} --format={f} --rate={r} --channels={c}'
+    args += '--raw --file-format=wav {fp}'
+    args = args.format(d=device_number, f=file_format, r=test_data['rate'],
+                       c=test_data['channels'], fp=file_path)
+
     self._record = SystemTools.RunInSubprocessAsPi(
         'pacat', args, self._UsingLocalVersion(audio_profile))
+
     # The process needs some time to start.
     time.sleep(1)
     return True

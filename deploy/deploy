@@ -22,6 +22,7 @@ STREAM_SERVER_NAME='stream_server'
 SCHEDULER_NAME='scheduler'
 UPDATER_NAME='chameleon-updater'
 LIGHTTPD_NAME='lighttpd'
+TEST_DATA_DIR='/usr/share/autotest'
 
 . "${CWD}/bundle_common"
 
@@ -111,6 +112,25 @@ validate_wbs_packages_installation() {
         echo "Customized packages in ${wbs_name} installed"
     else
         echo "Error in installing customized packages in ${wbs_name}!"
+    fi
+}
+
+validate_audio_test_data_packages_installation() {
+    local data_name='audio-test-data.tar.gz'
+    local data_tarball="${TEST_DATA_DIR}/${data_name}"
+
+    # Download the audio-test-data tarball.
+    download_cloud_file "${data_name}" "${TEST_DATA_DIR}"
+    echo "The latest ${data_tarball} is downloaded."
+
+    if tar xf "${data_tarball}" -C "${TEST_DATA_DIR}"; then
+        # Give read and write permission to all the test files
+        chmod ugo+rw -R "${TEST_DATA_DIR}/audio-test-data/"
+        # If not deleted, tarball gets redownloaded to a different file name
+        rm -f "${data_tarball}"
+        echo "Customized packages in ${data_name} installed"
+    else
+        echo "Error in installing customized packages in ${data_name}!"
     fi
 }
 
@@ -235,6 +255,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     # TODO(b/156780358): Provide a way to build this from source for x86.
     if [ "${PLATFORM}" = "raspberrypi" ]; then
         validate_wbs_packages_installation
+        validate_audio_test_data_packages_installation
     fi
 
     # Update bluetooth rules in service config files
