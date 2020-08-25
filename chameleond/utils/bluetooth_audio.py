@@ -11,7 +11,11 @@ from __future__ import print_function
 import logging  # pylint: disable=cros-logging-import
 import os
 import re
+import struct
 import time
+import wave
+
+import numpy as np
 
 from . import chameleon_common  # pylint: disable=W0611
 
@@ -66,6 +70,67 @@ audio_test_data = {
 class BluetoothAudioException(BluezPeripheralException):
   """A dummy exception class for BluetoothAudio class."""
   pass
+
+
+class Wav(object):
+  """A class to generate a wav file and write frames in an efficient way."""
+
+  # The max count of reading frames through fromfile to prevent from reading
+  # unlimitedly.
+  COUNT_MAX = 10
+
+  def __init__(self, filename, nchannels=2, sample_width=2, frame_rate=48000,
+               nframes=0, comptype='NONE', compname='not compressed'):
+    self.nframes = nframes
+    self.filename = filename
+    self.wav_file = wave.open(filename, 'w')
+    params = (nchannels, sample_width, frame_rate, nframes, comptype, compname)
+    self.wav_file.setparams(params)
+
+  def _write(self, data):
+    """Write frames to the wave file in an efficient way.
+
+    It is about 20 times faster by writing all data at once than the usual way
+    of writing frame by frame:
+
+      for d in data:
+        self.wav_file.writeframes(struct.pack('h', int(d)))
+
+    Args:
+      data: the frame data
+    """
+    s = ''.join([struct.pack('h', int(d)) for d in data])
+    self.wav_file.writeframes(s)
+
+  def WriteToWavFile(self, fin):
+    """Write the frames to the wave file.
+
+    Read frames from fin and write the frames to the wave file.
+
+    Args:
+      fin: the input file object which is the stdout pipe of a subprocess
+
+    Returns:
+      The number of frames written into the wave file.
+    """
+    logging.info('WriteToWavFile: from %s to %s', fin.name, self.filename)
+
+    nframes = 0
+    count = 0
+    buf_count = self.nframes
+    while nframes < self.nframes and count < self.COUNT_MAX:
+      frames = np.fromfile(fin.stdout, dtype=np.int16, count=buf_count)
+      nframes += len(frames)
+      self._write(frames)
+      logging.info('count %d, get / accumulate / total: %d / %d / %d frames',
+                   count, len(frames), nframes, self.nframes)
+      buf_count = self.nframes - nframes
+      count += 1
+    return nframes
+
+  def close(self):
+    """Close the wave file."""
+    self.wav_file.close()
 
 
 class BluetoothAudio(BluezPeripheral):
