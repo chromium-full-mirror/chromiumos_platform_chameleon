@@ -31,7 +31,7 @@ from chameleond.utils.bluez_service_consts import (
 
 # The audio test data for various profiles.
 audio_test_dir = os.path.join(os.path.dirname(__file__), 'data/audio')
-audio_record_dir = '/tmp'
+audio_record_dir = '/tmp/audio'
 audio_data_dir = '/usr/share/autotest/audio-test-data'
 audio_test_data = {
     # hfp nbs test data
@@ -56,13 +56,22 @@ audio_test_data = {
                                       'hfp_wbs_recorded_by_peer.wav'),
     },
 
-    # a2dp est data
+    # a2dp test data
     'a2dp': {
         'format': 's16le',
         'rate': 48000,
         'channels': 2,
         'recorded_file': os.path.join(audio_record_dir,
-                                      'a2dp_recorded_by_peer.wav'),
+                                      'a2dp_recorded_by_peer_%d.wav'),
+    },
+
+    # a2dp long test data
+    'a2dp_long': {
+        'format': 's16le',
+        'rate': 48000,
+        'channels': 2,
+        'recorded_file': os.path.join(audio_record_dir,
+                                      'a2dp_long_recorded_by_peer_%d.wav'),
     },
 }
 
@@ -154,10 +163,12 @@ class BluetoothAudio(BluezPeripheral):
     """Initializes a Bluetooth audio object."""
     BluezPeripheral.__init__(self)
     self._record = None
+    self._wav = None
     self._pulseaudio = None
     self._play = None
     self._profile = None
     self._media_player = None
+    self._MakeAudioRecordDirectory()
 
     # A hfp bluez source device looks like:
     #   5 bluez_source.DC_71_96_68_E0_9C.headset_audio_gateway \
@@ -179,6 +190,15 @@ class BluetoothAudio(BluezPeripheral):
 
     self._start_pulseaudio_cmd = ('%s --start' %
                                   SystemTools.GetToolPath(self.PULSEAUDIO))
+
+  def _MakeAudioRecordDirectory(self):
+    if not os.path.exists(audio_record_dir):
+      os.makedirs(audio_record_dir)
+
+      # Let all users have the right to r,w,x.
+      # This is required for a pi user to write into this directory.
+      os.chmod(audio_record_dir, 0777)
+
 
   def ConnectToRemoteAddress(self, remote_address):
     """Connect to a remote device with a specified address.
@@ -432,11 +452,11 @@ class BluetoothAudio(BluezPeripheral):
       file_path = os.path.join(audio_data_dir,
                                os.path.split(test_data['file'])[1])
 
-    file_format = test_data['format'].lower().replace('_', '')
+    sample_format = test_data['format'].lower().replace('_', '')
 
-    args = '--playback --device={d} --file-format=wav --format={f} --rate={r} '
+    args = '--playback --device={d} --file-format=wav --format={s} --rate={r} '
     args += '--channels={c} {fp}'
-    args = args.format(d=device_number, f=file_format, r=test_data['rate'],
+    args = args.format(d=device_number, s=sample_format, r=test_data['rate'],
                        c=test_data['channels'], fp=file_path)
 
     self._play = SystemTools.RunInSubprocessAsPi(
@@ -608,19 +628,39 @@ class BluetoothAudio(BluezPeripheral):
       return False
 
     self._profile = test_data
-    file_path = test_data['recorded_by_peer']
-    file_format = test_data['format'].lower().replace('_', '')
+    sample_format = test_data['format'].lower().replace('_', '')
 
-    args = '--record --device={d} --format={f} --rate={r} --channels={c}'
-    args += '--raw --file-format=wav {fp}'
-    args = args.format(d=device_number, f=file_format, r=test_data['rate'],
-                       c=test_data['channels'], fp=file_path)
+    if audio_profile.startswith('a2dp'):
+      # output to stdout instead of a regular file
+      file_path = ''
+      # default is .raw (not .wav)
+      file_format = ''
+    else:
+      file_path = test_data['recorded_by_peer']
+      file_format = '--file-format=wav'
+
+    args = '--record --device={d} --format={s} --rate={r} --channels={c}'
+    args += '--raw {ff} {fp}'
+    args = args.format(d=device_number, s=sample_format, r=test_data['rate'],
+                       c=test_data['channels'], ff=file_format, fp=file_path)
 
     self._record = SystemTools.RunInSubprocessAsPi(
         'pacat', args, self._UsingLocalVersion(audio_profile))
 
     # The process needs some time to start.
     time.sleep(1)
+    return True
+
+  def HandleOneChunk(self, chunk_in_secs, index, audio_profile):
+    self._profile = profile = audio_test_data.get(audio_profile)
+    nframes = profile['rate'] * profile['channels'] * chunk_in_secs
+    filename = self._profile['recorded_file'] % index
+
+    self._wav = Wav(filename, nframes=nframes)
+    self._wav.WriteToWavFile(self._record)
+    self._wav.close()
+    self._wav = None
+
     return True
 
   def StopRecordingingAudioSubprocess(self):
