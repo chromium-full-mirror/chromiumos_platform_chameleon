@@ -356,15 +356,17 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('Failed to get the device number of bluez_sink for HFP')
       return False
 
-    self._profile = test_data
-    file_path = os.path.join(audio_data_dir,
-                             os.path.split(test_data['file'])[1])
+    self._profile = profile = audio_test_data.get(audio_profile)
+    if profile is None:
+      logging.error('%s is not a supported audio profile', audio_profile)
+      return False
+
     file_format = test_data['format'].lower().replace('_', '')
 
     args = '--playback --device={d} --file-format=wav --format={f} --rate={r} '
     args += '--channels={c} {fp}'
     args = args.format(d=device_number, f=file_format, r=test_data['rate'],
-                       c=test_data['channels'], fp=file_path)
+                       c=test_data['channels'], fp=profile['file'])
 
     self._play = SystemTools.RunInSubprocessAsPi(
         'pacat', args, self._UsingLocalVersion(audio_profile))
