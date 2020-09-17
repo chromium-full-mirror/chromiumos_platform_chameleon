@@ -1,8 +1,13 @@
+# Lint as: python2, python3
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """This module provides controls of A/V sync probe."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import logging
 import struct
@@ -11,6 +16,7 @@ import time
 from chameleond.devices import chameleon_device
 from chameleond.utils import serial_utils
 from chameleond.utils import system_tools
+from six.moves import range
 
 
 class AVSyncProbeSerial(object):

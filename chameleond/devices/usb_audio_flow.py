@@ -1,7 +1,12 @@
+# Lint as: python2, python3
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """This module specifies the interface for usb audio flows."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import logging
 import os
@@ -12,6 +17,7 @@ from chameleond.devices import chameleon_device
 from chameleond.utils import audio
 from chameleond.utils import serial_utils
 from chameleond.utils import system_tools
+from six.moves import range
 
 
 class USBAudioFlowError(Exception):

@@ -1,7 +1,12 @@
+# Lint as: python2, python3
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Input flow module which abstracts the entire flow for a specific input."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import itertools
 import logging
@@ -23,6 +28,8 @@ from chameleond.utils import i2c
 from chameleond.utils import ids
 from chameleond.utils import chameleon_io as io
 from chameleond.utils import rx
+from six.moves import range
+from six.moves import zip
 
 
 class InputFlowError(Exception):
