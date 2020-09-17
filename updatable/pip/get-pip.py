@@ -20,12 +20,16 @@
 # in tasks/generate.py called "installer". It can be invoked by using
 # ``invoke generate.installer``.
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import os.path
 import pkgutil
 import shutil
 import sys
 import struct
 import tempfile
+from six.moves import range
 
 # Useful for very coarse version differentiation.
 PY2 = sys.version_info[0] == 2
