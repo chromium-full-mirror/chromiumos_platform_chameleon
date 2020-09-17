@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # -*- coding: utf-8 -*-
 
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -7,6 +8,10 @@
 """This module implements the PeripheralKit instance for a bluez peripheral
    on Raspberry Pi.
 """
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import logging
 import os
@@ -34,6 +39,7 @@ from .bluetooth_peripheral_kit import PeripheralKitException
 from .bluez_service_consts import PERIPHERAL_DEVICE_CLASS, \
     PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH
 from .bluez_gatt_server import GATTServer
+from six.moves import range
 
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
 DBUS_BLUEZ_ADAPTER_IFACE = DBUS_BLUEZ_SERVICE_IFACE + '.Adapter1'

@@ -1,9 +1,14 @@
+# Lint as: python2, python3
 # -*- coding: utf-8 -*-
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """This module provides an abstraction of the RN-42 bluetooth chip."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import logging
 import time
@@ -13,6 +18,8 @@ import sys
 from .bluetooth_peripheral_kit import PeripheralKit
 from .bluetooth_peripheral_kit import PeripheralKitException
 from .ids import RN42_SET
+from six.moves import map
+from six.moves import range
 
 class RN42Exception(PeripheralKitException):
   """A dummpy exception class for RN42 class."""
@@ -1140,34 +1147,34 @@ class RN42(PeripheralKit):
     """A simple demo of getting kit information."""
     # TODO(josephsih): This compatability test is very, very basic
     if connect_separately:
-      print('create serial device: ', self.CreateSerialDevice())
-    print('enter command mode:', self.EnterCommandMode())
+      print(('create serial device: ', self.CreateSerialDevice()))
+    print(('enter command mode:', self.EnterCommandMode()))
     if test_reset:
-      print('factory reset: ', self.FactoryReset())
-    print('advertised name:', self.GetAdvertisedName())
-    print('firmware version:', self.GetFirmwareVersion())
-    print('operation mode:', self.GetOperationMode())
-    print('authentication mode:', self.GetAuthenticationMode())
-    print('service profile:', self.GetServiceProfile())
-    print('local bluetooth address:', self.GetLocalBluetoothAddress())
-    print('connection status:', self.GetConnectionStatus())
+      print(('factory reset: ', self.FactoryReset()))
+    print(('advertised name:', self.GetAdvertisedName()))
+    print(('firmware version:', self.GetFirmwareVersion()))
+    print(('operation mode:', self.GetOperationMode()))
+    print(('authentication mode:', self.GetAuthenticationMode()))
+    print(('service profile:', self.GetServiceProfile()))
+    print(('local bluetooth address:', self.GetLocalBluetoothAddress()))
+    print(('connection status:', self.GetConnectionStatus()))
     remote_addr = self.GetRemoteConnectedBluetoothAddress()
-    print('remote bluetooth address:', remote_addr)
-    print('device type:', self.GetDeviceType())
+    print(('remote bluetooth address:', remote_addr))
+    print(('device type:', self.GetDeviceType()))
     # The class of service/device is None for LE kits (it is BR/EDR-only)
     class_of_service = self.GetClassOfService()
     try:
       class_of_service = hex(class_of_service)
     except TypeError:
       pass
-    print('Class of service:', class_of_service)
+    print(('Class of service:', class_of_service))
     class_of_device = self.GetClassOfDevice()
     try:
       class_of_device = hex(class_of_device)
     except TypeError:
       pass
-    print('Class of device:', class_of_device)
-    print('leave command mode:', self.LeaveCommandMode())
+    print(('Class of device:', class_of_device))
+    print(('leave command mode:', self.LeaveCommandMode()))
 
 
 if __name__ == '__main__':
@@ -1176,4 +1183,4 @@ if __name__ == '__main__':
   if len(sys.argv) > 1 and sys.argv[1] == '--list':
     print("\nKnown device serial numbers:")
     for device in kit_instance.KNOWN_DEVICE_SET:
-      print("%s" % device)
+      print(("%s" % device))

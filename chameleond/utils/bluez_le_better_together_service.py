@@ -11,8 +11,10 @@ try:
 except ImportError:
   import gobject as GObject
 
-from example_gatt_server import Characteristic, GATT_CHRC_IFACE, Service
-from bluez_le_hid_service import LEApplication, BatteryService, DevInfoService
+from utils.example_gatt_server import Characteristic, GATT_CHRC_IFACE, Service
+from utils.bluez_le_hid_service import (
+    LEApplication, BatteryService, DevInfoService)
+
 
 class PhoneLEBetterTogetherApplication(LEApplication):
   """Fake Better together application"""

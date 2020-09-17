@@ -1,12 +1,18 @@
+# Lint as: python2, python3
 # Copyright (c) 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import logging
 import socket
 import struct
 
 import btsocket
+from six.moves import range
 
 SDP_HDR_FORMAT        = '>BHH'
 SDP_HDR_SIZE          = struct.calcsize(SDP_HDR_FORMAT)

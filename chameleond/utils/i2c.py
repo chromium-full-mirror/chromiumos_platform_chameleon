@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,12 +8,17 @@ It is customized for the FPGA board with the TIO (Three-In-One) daughter
 card. It drives the I2C controllers emulated in the FPGA.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import logging
 import struct
 import time
 
 from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import mem
+from six.moves import range
 
 
 class I2cBusError(Exception):

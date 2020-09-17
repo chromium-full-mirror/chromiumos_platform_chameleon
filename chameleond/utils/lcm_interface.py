@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -23,6 +24,10 @@ PAGE state:
     - Press left: leave the page and go back to MENU state.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 from collections import OrderedDict
 import logging
 import math
@@ -33,6 +38,7 @@ from chameleond.utils import gpio
 from chameleond.utils import lcm_display
 from chameleond.utils import lcm_font
 from chameleond.utils import lcm_funcpool as FuncPool
+from six.moves import range
 
 
 # Create function callers for menu leaf nodes by function name and list of

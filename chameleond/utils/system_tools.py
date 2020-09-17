@@ -1,9 +1,12 @@
+# Lint as: python2, python3
 # -*- coding: utf-8 -*-
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """System tools required for Chameleond execution."""
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 
 # TODO: to port chromite.lib.cros_logging to replace legacy logging
@@ -12,6 +15,8 @@ import os
 import subprocess
 import sys
 import threading
+
+import six
 
 
 class _SystemTools(object):
@@ -288,8 +293,8 @@ class _SystemTools(object):
     out, err = process.communicate()
     return_code = process.returncode
     if decode:
-      return (return_code, out.decode(), err.decode())
-    return (return_code, out, err.decode())
+      return (return_code, six.ensure_text(out), six.ensure_text(err))
+    return (return_code, out, six.ensure_text(err))
 
 # Singleton
 SystemTools = _SystemTools()

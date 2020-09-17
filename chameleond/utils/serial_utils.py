@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -12,6 +13,8 @@ Provides an interface to communicate w/ a serial device: SerialDevice. See
 class comment for details.
 """
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 import glob
 import logging
@@ -20,6 +23,7 @@ import re
 # site-packages: dev-python/pyserial
 import serial
 import time
+from six.moves import range
 
 def OpenSerial(**kwargs):
   """Tries to open a serial port.

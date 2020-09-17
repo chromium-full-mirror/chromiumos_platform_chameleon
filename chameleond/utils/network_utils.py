@@ -19,7 +19,7 @@ def HasIp():
   ip_output = subprocess.check_output(['ip', 'addr', 'show', 'dev', 'eth0'])
 
   # Pattern is like " inet 100.102.7.163/25 scope global eth0"
-  match = re.search(r'^\s+inet ([.0-9]+)/[0-9]+', ip_output, re.MULTILINE)
+  match = re.search(r'^\s+inet ([.0-9]+)/[0-9]+', ip_output.decode('utf-8'), re.MULTILINE)
   if match:
     ip_address = match.group(1)
     logging.debug('Get IP %s', ip_address)

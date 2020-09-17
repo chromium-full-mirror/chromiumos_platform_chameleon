@@ -4,6 +4,10 @@
 Copied from third-party/bluez/test/example-gatt-server
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import dbus
 import dbus.exceptions
 import dbus.mainloop.glib
@@ -296,7 +300,7 @@ class HeartRateMeasurementChrc(Characteristic):
                 min(0xffff, self.service.energy_expended + 1)
         self.hr_ee_count += 1
 
-        print('Updating value: ' + repr(value))
+        print(('Updating value: ' + repr(value)))
 
         self.PropertiesChanged(GATT_CHRC_IFACE, { 'Value': value }, [])
 
@@ -358,7 +362,7 @@ class HeartRateControlPointChrc(Characteristic):
             raise InvalidValueLengthException()
 
         byte = value[0]
-        print('Control Point value: ' + repr(byte))
+        print(('Control Point value: ' + repr(byte)))
 
         if byte != 1:
             raise FailedException("0x80")
@@ -409,12 +413,12 @@ class BatteryLevelCharacteristic(Characteristic):
             self.battery_lvl -= 2
             if self.battery_lvl < 0:
                 self.battery_lvl = 0
-        print('Battery Level drained: ' + repr(self.battery_lvl))
+        print(('Battery Level drained: ' + repr(self.battery_lvl)))
         self.notify_battery_level()
         return True
 
     def ReadValue(self, options):
-        print('Battery Level read: ' + repr(self.battery_lvl))
+        print(('Battery Level read: ' + repr(self.battery_lvl)))
         return [dbus.Byte(self.battery_lvl)]
 
     def StartNotify(self):
@@ -467,11 +471,11 @@ class TestCharacteristic(Characteristic):
                 CharacteristicUserDescriptionDescriptor(bus, 1, self))
 
     def ReadValue(self, options):
-        print('TestCharacteristic Read: ' + repr(self.value))
+        print(('TestCharacteristic Read: ' + repr(self.value)))
         return self.value
 
     def WriteValue(self, value, options):
-        print('TestCharacteristic Write: ' + repr(value))
+        print(('TestCharacteristic Write: ' + repr(value)))
         self.value = value
 
 
@@ -539,11 +543,11 @@ class TestEncryptCharacteristic(Characteristic):
                 CharacteristicUserDescriptionDescriptor(bus, 3, self))
 
     def ReadValue(self, options):
-        print('TestEncryptCharacteristic Read: ' + repr(self.value))
+        print(('TestEncryptCharacteristic Read: ' + repr(self.value)))
         return self.value
 
     def WriteValue(self, value, options):
-        print('TestEncryptCharacteristic Write: ' + repr(value))
+        print(('TestEncryptCharacteristic Write: ' + repr(value)))
         self.value = value
 
 class TestEncryptDescriptor(Descriptor):
@@ -585,11 +589,11 @@ class TestSecureCharacteristic(Characteristic):
                 CharacteristicUserDescriptionDescriptor(bus, 3, self))
 
     def ReadValue(self, options):
-        print('TestSecureCharacteristic Read: ' + repr(self.value))
+        print(('TestSecureCharacteristic Read: ' + repr(self.value)))
         return self.value
 
     def WriteValue(self, value, options):
-        print('TestSecureCharacteristic Write: ' + repr(value))
+        print(('TestSecureCharacteristic Write: ' + repr(value)))
         self.value = value
 
 
@@ -617,7 +621,7 @@ def register_app_cb():
 
 
 def register_app_error_cb(error):
-    print('Failed to register application: ' + str(error))
+    print(('Failed to register application: ' + str(error)))
     mainloop.quit()
 
 

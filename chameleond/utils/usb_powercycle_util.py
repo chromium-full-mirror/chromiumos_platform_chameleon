@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -5,10 +6,14 @@
 
 """This module implement code to powercycle USB port on fizz board."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import collections
 import logging
 import subprocess
 import time
+from six.moves import range
 
 
 TOKEN_NEW_BUS = '/:  '
@@ -65,7 +70,7 @@ def PowerCycleUSBPort(usb_vid, usb_pid):
   def _run(cmd):
     logging.debug('running command %s', cmd)
     result = subprocess.check_output(cmd, stderr=subprocess.STDOUT,
-                                     shell=True).strip('\n')
+                                     shell=True).strip(b'\n')
     logging.debug('cmd result is  %s', result)
     return result
 
@@ -138,7 +143,7 @@ def PowerCycleUSBPort(usb_vid, usb_pid):
     if lsusb_output == '':
       return result
 
-    lsusb_device_info = lsusb_output.strip().split('\n')
+    lsusb_device_info = lsusb_output.strip().split(b'\n')
 
     for line in lsusb_device_info:
       # An example of the info line is 'Bus 001 Device 006:  ID 266e:0110 '
@@ -177,13 +182,13 @@ def PowerCycleUSBPort(usb_vid, usb_pid):
 
     Returns the target port number, if device not found, returns None.
     """
-    lsusb_device_buses = lsusb_tree_output.strip().split(TOKEN_NEW_BUS)
+    lsusb_device_buses = lsusb_tree_output.strip().split(TOKEN_NEW_BUS.encode('utf-8'))
     target_bus_token = 'Bus {:02d}.'.format(bus)
     for bus_info in lsusb_device_buses:
       if bus_info.find(target_bus_token) != 0:
         continue
       target_dev_token = 'Dev %s' % dev
-      device_info = bus_info.strip(target_bus_token).split(TOKEN_ROOT_DEVICE)
+      device_info = bus_info.strip(target_bus_token).split(TOKEN_ROOT_DEVICE.encode('utf-8').decode('utf-8'))
       for device in device_info:
         if target_dev_token not in device:
           continue

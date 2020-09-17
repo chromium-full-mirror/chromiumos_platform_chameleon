@@ -1,8 +1,13 @@
+# Lint as: python2, python3
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """This module provides emulation of bluetooth HID devices."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import argparse
 import logging
@@ -13,6 +18,7 @@ from .bluetooth_peripheral_kit import PeripheralKit
 from .bluetooth_rn42 import RN42
 from .bluetooth_rn42 import RN42Exception
 from chameleond.utils.bluetooth_nrf52 import nRF52
+from six.moves import range
 
 class BluetoothHIDException(Exception):
   """A dummpy exception class for Bluetooth HID class."""
@@ -319,12 +325,12 @@ def DemoBluetoothHIDKeyboard(remote_address, chars):
   keyboard = BluetoothHIDKeyboard(PeripheralKit.PIN_CODE_MODE, RN42)
   keyboard.Init()
 
-  print('Connecting to the remote address %s...' % remote_address)
+  print(('Connecting to the remote address %s...' % remote_address))
   try:
     if keyboard.ConnectToRemoteAddress(remote_address):
       # Send printable ASCII strings a few times.
       for i in range(1, 4):
-        print('Sending "%s" for the %dth time...' % (chars, i))
+        print(('Sending "%s" for the %dth time...' % (chars, i)))
         keyboard.Send(chars + ' ' + str(i))
 
       # Demo special key combinations below.
@@ -370,7 +376,7 @@ def DemoBluetoothHIDMouse(remote_address):
   mouse.Init()
 
   connected = False
-  print('Connecting to the remote address %s...' % remote_address)
+  print(('Connecting to the remote address %s...' % remote_address))
   try:
     if mouse.ConnectToRemoteAddress(remote_address):
       connected = True
@@ -445,11 +451,11 @@ def _Parse():
   args = parser.parse_args()
 
   if len(args.remote_host_address.replace(':', '')) != 12:
-    print('"%s" is not a valid bluetooth address.' % args.remote_host_address)
+    print(('"%s" is not a valid bluetooth address.' % args.remote_host_address))
     exit(1)
 
-  print('Emulate a %s and connect to remote host at %s' %
-        (args.device, args.remote_host_address))
+  print(('Emulate a %s and connect to remote host at %s' %
+        (args.device, args.remote_host_address)))
   return args
 
 

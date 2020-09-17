@@ -1,7 +1,12 @@
+# Lint as: python2, python3
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """DisplayPort, HDMI, and CRT receiver modules."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import logging
 import time
@@ -9,6 +14,7 @@ import time
 from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils import common
 from chameleond.utils import i2c
+from six.moves import range
 
 
 class RxError(Exception):

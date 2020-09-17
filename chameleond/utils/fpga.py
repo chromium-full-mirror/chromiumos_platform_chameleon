@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -16,6 +17,10 @@ Usage:
   fpga_ctrl.vpass.Select(input_id)
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import logging
 import struct
 
@@ -24,6 +29,7 @@ from chameleond.utils import audio
 from chameleond.utils import ids
 from chameleond.utils import mem
 from chameleond.utils import system_tools
+from six.moves import range
 
 
 class FpgaController(object):

@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # -*- coding: utf-8 -*-
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -5,6 +6,8 @@
 
 """This module provides an abstraction of bluetooth audio device."""
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 
 # TODO: to port chromite.lib.cros_logging to replace legacy logging
@@ -19,14 +22,15 @@ import numpy as np
 
 from . import chameleon_common  # pylint: disable=W0611
 
-from . import common
-from .bluetooth_raspi import BluezPeripheral
-from .bluetooth_raspi import BluezPeripheralException
+from chameleond.utils import common
+from chameleond.utils.bluetooth_raspi import (
+    BluezPeripheral, BluezPeripheralException)
 from chameleond.utils.system_tools import SystemTools
 from chameleond.utils.bluetooth_peripheral_kit import PeripheralKit
 from chameleond.utils.bluez_service_consts import (
     CLASS_OF_DEVICE_MASK, CLASS_OF_SERVICE_MASK,
     PERIPHERAL_DEVICE_CLASS, PERIPHERAL_DEVICE_NAME)
+from six.moves import range
 
 
 # The audio test data for various profiles.
@@ -204,7 +208,7 @@ class BluetoothAudio(BluezPeripheral):
 
       # Let all users have the right to r,w,x.
       # This is required for a pi user to write into this directory.
-      os.chmod(audio_record_dir, 0777)
+      os.chmod(audio_record_dir, 0o777)
 
 
   def ConnectToRemoteAddress(self, remote_address):
@@ -770,7 +774,7 @@ class BluetoothAudio(BluezPeripheral):
     """
     SystemTools.OrigCall('killall', '-9', self.MPRISPROXY)
 
-    if not os.environ.has_key(self.DBUS_SESSION_ENV_VAR_NAME):
+    if self.DBUS_SESSION_ENV_VAR_NAME not in os.environ:
       os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
           self.DBUS_SESSION_ENV_VAR_VALUE)
 
@@ -794,7 +798,7 @@ class BluetoothAudio(BluezPeripheral):
     Returns:
       Return player name if only one player found, empty string otherwise.
     """
-    if not os.environ.has_key(self.DBUS_SESSION_ENV_VAR_NAME):
+    if self.DBUS_SESSION_ENV_VAR_NAME not in os.environ:
       os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
           self.DBUS_SESSION_ENV_VAR_VALUE)
 

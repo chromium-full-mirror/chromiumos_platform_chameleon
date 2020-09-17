@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # -*- coding: utf-8 -*-
 # pylint: disable=cros-logging-import,import-error
 
@@ -7,6 +8,8 @@
 
 """Bluez Service Classes (for Bluetooth/BLE HID)"""
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 
 import logging
@@ -23,6 +26,7 @@ from gi.repository import GLib
 from .bluez_service_consts import (BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH,
                                    BLUEZ_PROFILE_PATH, SERVICE_PROFILE_SDP_PATH,
                                    PERIPHERAL_PROFILE_UUID)
+from six.moves import range
 
 P_CTRL = 17
 P_INTR = 19

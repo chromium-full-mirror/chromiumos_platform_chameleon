@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -271,7 +272,7 @@ class USBAudioController(USBController):
       status = super(USBAudioController, self).EnableDriver()
     except USBControllerError as e:
       self._driver_configs_in_use = None
-      raise USBControllerError(e.message)
+      raise USBControllerError(str(e))
     if status == self.MODPROBE_SUCCESS:
       self._driver_configs_in_use = copy.deepcopy(self._driver_configs_to_set)
     return status

@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -11,6 +12,10 @@ IO pinmux setting. Such as LCM_RST_n(GPIO48), LCM_D_C(GPIO62), and
 LCM_BK(GPIO40).
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import logging
 import os
 import time
@@ -20,6 +25,7 @@ from chameleond.utils import lcm_canvas
 from chameleond.utils import lcm_font
 from chameleond.utils import mem
 from chameleond.utils import spim
+from six.moves import range
 
 
 class LcmDisplayError(Exception):

@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # -*- coding: utf-8 -*-
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -5,12 +6,17 @@
 
 """Common functionality for abstracting peripheral emulation kits."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import logging
 import serial
 import time
 
 from . import serial_utils
 from . import usb_powercycle_util
+from six.moves import range
 
 class PeripheralKitException(Exception):
   """A dummpy exception class for the PeripheralKit class."""

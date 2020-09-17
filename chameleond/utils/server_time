@@ -5,6 +5,10 @@
 
 """Get time from the chameleon mirror server."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import datetime
 
 from chameleond.utils import system_tools
@@ -102,4 +106,4 @@ class ServerTime(object):
 
 if __name__ == '__main__':
   # Print the chameleon mirror server time when running as a script.
-  print(ServerTime().get())
+  print((ServerTime().get()))

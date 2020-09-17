@@ -1,9 +1,14 @@
+# Lint as: python2, python3
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """ASCII font table for LCM display."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import copy
+from six.moves import range
 
 FONT_WIDTH = 8
 FONT_HEIGHT = 16

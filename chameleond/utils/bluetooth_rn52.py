@@ -1,9 +1,12 @@
+# Lint as: python2, python3
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """This module provides an abstraction of the RN-52 bluetooth chip."""
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 
 import logging
@@ -14,6 +17,7 @@ import sys
 from .bluetooth_peripheral_kit import PeripheralKit
 from .bluetooth_peripheral_kit import PeripheralKitException
 from .ids import RN52_SET
+from six.moves import range
 
 class RN52Exception(PeripheralKitException):
   """A dummpy exception class for RN52 class."""
