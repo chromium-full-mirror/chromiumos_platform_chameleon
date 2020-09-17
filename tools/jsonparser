@@ -10,6 +10,8 @@
 
 """Creates an EDID binary blob out of a Json representation of an EDID."""
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 
 import itertools
@@ -18,6 +20,8 @@ import sys
 
 import edid.edid as edid_module
 import options as options_module
+from six.moves import map
+from six.moves import range
 
 
 def _BuildBitsFromOptions(options, json_map):
@@ -249,7 +253,7 @@ def BuildStandardTimings(edid, sts_json):
   base = 0x26
   edid[base:(base + 16)] = [0x01] * 16
 
-  for x in xrange(0, num_st):
+  for x in range(0, num_st):
     edid[base + (x * 2):base + 2 + (x * 2)] = BuildSt(sts_json[x])
 
 
@@ -286,7 +290,7 @@ def BuildDescriptors(edid, descs_json):
     descs_json: The list of dictionaries of descriptor info.
   """
   base = 0x36
-  for x in xrange(0, 4):
+  for x in range(0, 4):
     edid[base + (x * 18):base + ((x + 1) * 18)] = BuildDescriptor(descs_json[x])
 
 
@@ -418,7 +422,7 @@ def BuildDescriptor(desc_json):
       d[5:18] = [0x20] * 13  # Padding with 0x20
       data = desc_json['Data string']
       str_len = len(data)
-      d[5:(5 + str_len)] = map(ord, data)
+      d[5:(5 + str_len)] = list(map(ord, data))
       if str_len < 13:
         d[5 + str_len] = 0x0A
 
@@ -594,7 +598,7 @@ def BuildDescriptor(desc_json):
     elif atype == 'Standard Timing Identifiers':
 
       sts = desc_json['Standard Timings']
-      for x in xrange(0, 6):
+      for x in range(0, 6):
         d[5 + (x * 2):7 + (x * 2)] = BuildSt(sts[x])
 
       d[17] = 0x0A
@@ -619,7 +623,7 @@ def BuildDescriptor(desc_json):
 
       d[5] = 0x01
       cvts = desc_json['Coordinated Video Timings']
-      for x in xrange(0, len(cvts)):  # Up to 4
+      for x in range(0, len(cvts)):  # Up to 4
         d[6 + (x * 3):9 + (x * 3)] = BuildCvt(cvts[x])
 
   return d
@@ -1080,7 +1084,7 @@ def BuildEdid(edid_json):
   edid[126] = ext_count
 
   # Set checksums for each 128-byte block
-  for x in xrange(0, len(edid), 128):
+  for x in range(0, len(edid), 128):
     current_sum = sum(edid[x:127 + x])
     edid[127 + x] = 256 - (current_sum % 256)
 
@@ -1097,7 +1101,7 @@ def PrintHexEdid(data):
 
   print('\t\t 0 1  2 3  4 5  6 7  8 9  A B  C D  E F')
 
-  for x in xrange(0, hex_rows):
+  for x in range(0, hex_rows):
 
     start = 0x10 * x
     row = '%02X%02X ' * 8 % tuple(data[start : start + 16])
@@ -1115,10 +1119,10 @@ def JsonToBinary(in_file, out_file):
     json_data = json.load(json_file)
     list_edid = BuildEdid(json_data)
 
-    list_edid = map(int, list_edid) # make sure every byte is an int
+    list_edid = list(map(int, list_edid)) # make sure every byte is an int
     PrintHexEdid(list_edid)
 
-    invalid_bytes = [i for i in xrange(0, len(list_edid)) if not 0 <=
+    invalid_bytes = [i for i in range(0, len(list_edid)) if not 0 <=
                      list_edid[i] < 256]
     if not invalid_bytes:
       edid_obj = edid_module.Edid(list_edid)

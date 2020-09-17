@@ -17,6 +17,8 @@
 
 """Parses EDID into python object and outputs Json form of EDID object."""
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 
 import json
@@ -26,6 +28,8 @@ import edid.data_block as data_block
 import edid.descriptor as descriptor
 import edid.edid as edid
 import edid.extensions as extensions
+from six.moves import map
+from six.moves import range
 
 
 def BytesFromFile(filename):
@@ -39,7 +43,7 @@ def BytesFromFile(filename):
   """
   with open(filename, 'rb') as f:
     chunk = f.read()
-    return map(ord, chunk)
+    return list(map(ord, chunk))
 
 
 def _XYDict(x_value, y_value, first='x', second='y'):
@@ -555,7 +559,7 @@ def BuildExtensions(e):
   Returns:
     A list of extension information.
   """
-  return [AnalyzeExtension(e, x + 1) for x in list(xrange(0,
+  return [AnalyzeExtension(e, x + 1) for x in list(range(0,
                                                           e.extension_count))]
 
 
