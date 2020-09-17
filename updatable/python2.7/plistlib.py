@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 r"""plistlib.py -- a tool to generate and parse MacOSX .plist files.
 
 The PropertyList (.plist) file format is a simple XML pickle supporting
@@ -50,6 +51,10 @@ Parse Plist example:
     print pl["aKey"]
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 
 __all__ = [
     "readPlist", "writePlist", "readPlistFromString", "writePlistToString",
@@ -60,9 +65,12 @@ __all__ = [
 
 import binascii
 import datetime
-from cStringIO import StringIO
+from six import StringIO
 import re
 import warnings
+
+import six
+from six.moves import range
 
 
 def readPlist(pathOrFile):
@@ -71,7 +79,7 @@ def readPlist(pathOrFile):
     usually is a dictionary).
     """
     didOpen = 0
-    if isinstance(pathOrFile, (str, unicode)):
+    if isinstance(pathOrFile, (str, six.text_type)):
         pathOrFile = open(pathOrFile)
         didOpen = 1
     p = PlistParser()
@@ -86,7 +94,7 @@ def writePlist(rootObject, pathOrFile):
     file name or a (writable) file object.
     """
     didOpen = 0
-    if isinstance(pathOrFile, (str, unicode)):
+    if isinstance(pathOrFile, (str, six.text_type)):
         pathOrFile = open(pathOrFile, "w")
         didOpen = 1
     writer = PlistWriter(pathOrFile)
@@ -219,7 +227,7 @@ def _escapeAndEncode(text):
     text = text.replace("&", "&amp;")       # escape '&'
     text = text.replace("<", "&lt;")        # escape '<'
     text = text.replace(">", "&gt;")        # escape '>'
-    return text.encode("utf-8")             # encode as UTF-8
+    return six.ensure_binary(text, "utf-8")             # encode as UTF-8
 
 
 PLISTHEADER = """\
@@ -235,7 +243,7 @@ class PlistWriter(DumbXMLWriter):
         DumbXMLWriter.__init__(self, file, indentLevel, indent)
 
     def writeValue(self, value):
-        if isinstance(value, (str, unicode)):
+        if isinstance(value, (str, six.text_type)):
             self.simpleElement("string", value)
         elif isinstance(value, bool):
             # must switch for bool before int, as bool is a
@@ -244,7 +252,7 @@ class PlistWriter(DumbXMLWriter):
                 self.simpleElement("true")
             else:
                 self.simpleElement("false")
-        elif isinstance(value, (int, long)):
+        elif isinstance(value, six.integer_types):
             self.simpleElement("integer", "%d" % value)
         elif isinstance(value, float):
             self.simpleElement("real", repr(value))
@@ -275,7 +283,7 @@ class PlistWriter(DumbXMLWriter):
         items = list(d.items())
         items.sort()
         for key, value in items:
-            if not isinstance(key, (str, unicode)):
+            if not isinstance(key, (str, six.text_type)):
                 raise TypeError("keys must be strings")
             self.simpleElement("key", key)
             self.writeValue(value)
