@@ -27,14 +27,22 @@ TEST_DATA_DIR='/usr/share/autotest'
 . "${CWD}/bundle_common"
 
 PLATFORM="$1"
+PY_VERSION="$2"
 
 if [ "${PLATFORM}" = "raspberrypi" ] || [ "${PLATFORM}" = "x86-generic" ]; then
     IS_BLUETOOTH_PEER=1
 fi
 
+[ "${PY_VERSION=}" = "python3" ] && pip_cmd=pip3 || pip_cmd=pip
+
 # We do not want lighttpd and chameleon-updater to run on startup.
 update-rc.d -f "${LIGHTTPD_NAME}" remove
 update-rc.d -f "${UPDATER_NAME}" remove
+
+die() {
+  [ -n "$1" ] && echo "ERROR: $1" >&2
+  exit 1
+}
 
 validate_package_installation() {
     PACKAGE_NAME=$1
@@ -57,15 +65,36 @@ validate_package_installation() {
 validate_python_package_installation() {
     PACKAGE_NAME=$1
 
-    if pip show "${PACKAGE_NAME}" > /dev/null; then
+    if eval "${pip_cmd} show "${PACKAGE_NAME}" > /dev/null"; then
         echo "Python package ${PACKAGE_NAME} already installed"
     else
         echo "Installing python package ${PACKAGE_NAME}..."
-        if pip install "${PACKAGE_NAME}" > /dev/null; then
+        if eval "${pip_cmd} install "${PACKAGE_NAME}" > /dev/null"; then
             echo "Python package ${PACKAGE_NAME} installed"
         else
             echo "Error: fail to install python package ${PACKAGE_NAME}"
         fi
+    fi
+}
+
+use_python_version() {
+    target_python_version=$1
+
+    curr_python_version="$(readlink "$(which python)")"
+    if [ "${curr_python_version}" != "python2" ] && \
+         [ "${curr_python_version}" != "python3" ]; then
+        die "Python version should be python2 or python3."
+    fi
+
+    if [ "${curr_python_version}" = "${target_python_version}" ]; then
+        echo "Python version is already ${target_python_version}"
+    else
+        echo "Update Python version from ${curr_python_version}" \
+            "to ${target_python_version}"
+        ln -fs "${target_python_version}" /usr/bin/python || \
+                die update "${target_python_version}"
+        ln -fs "${target_python_version}-config" /usr/bin/python-config || \
+                die update "${target_python_version}-config"
     fi
 }
 
@@ -248,6 +277,10 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     # Install python packages for Raspberry Pi.
     validate_python_package_installation "pexpect"
     validate_python_package_installation "numpy"
+    validate_python_package_installation "pybluez"
+
+    echo deploy: PY_VERSION "${PY_VERSION}"
+    use_python_version "${PY_VERSION}"
 
     validate_socket_installation
 

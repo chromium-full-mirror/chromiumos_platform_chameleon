@@ -7,8 +7,13 @@ SCRIPT="$(readlink -f $0)"
 UPDATABLE_DIR="$(realpath $(dirname ${SCRIPT})/../updatable)"
 SRC_PYTHON_DIR="${UPDATABLE_DIR}/python2.7"
 PIP_DIR="${UPDATABLE_DIR}/pip"
-DST_PYTHON_DIR="/usr/lib/python2.7"
 PIP_BOOTSTRAP="get-pip.py"
+
+if [ "${PY_VERSION}" = python3 ]; then
+    DST_PYTHON_DIR="/usr/lib/python3"
+else
+    DST_PYTHON_DIR="/usr/lib/python2.7"
+fi
 
 set_time() {
     echo Current chameleon time: $(date --set="$NOW")

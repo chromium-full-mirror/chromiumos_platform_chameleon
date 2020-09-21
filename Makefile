@@ -24,6 +24,10 @@ CONFFILES = chameleond.conf
 IDENTITY_FILE := ~/trunk/src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa
 COMMIT_FILE := $(DISTDIR)/commit
 
+# Set python3 as default after all teams using chameleon finish switching
+# to python3.
+PY_VERSION := python2
+
 TARGETS = check_git_tree_clean directories chameleond
 
 COMMIT = $(shell git log HEAD^..HEAD --pretty=format:"%h")
@@ -63,7 +67,16 @@ binaries: $(BINARIES)
 .PHONY: chameleond
 chameleond: binaries
 	@echo $(COMMIT) > $(COMMIT_FILE)
+
+ifeq ($(PY_VERSION), python3)
+	@echo PY_VERSION: $(PY_VERSION)
+	@echo python3 setup.py sdist
+	@python3 setup.py sdist
+else
+	@echo PY_VERSION: $(PY_VERSION)
+	@echo python2 setup.py sdist
 	@python setup.py sdist
+endif
 
 $(BINDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
@@ -95,12 +108,20 @@ install:
 	@cp -f $(BINARIES) "$(DESTDIR)"
 ifeq ($(REMOTE_INSTALL), TRUE)
 	@echo sync time with host...
-	@NOW="$(HOST_NOW)" sh deploy/deploy_pip
+	@NOW="$(HOST_NOW)" PY_VERSION="$(PY_VERSION)" sh deploy/deploy_pip
 else
 	@echo sync time with the chameleon mirror server...
-	@NOW="`chameleond/utils/server_time`" sh deploy/deploy_pip
+	@NOW="`chameleond/utils/server_time`" PY_VERSION="$(PY_VERSION)" \
+		sh deploy/deploy_pip
 endif
+
+ifeq ($(PY_VERSION), python3)
+	@echo python3 setup.py install -f
+	@python3 setup.py install -f
+else
+	@echo python2 setup.py install -f
 	@python setup.py install -f
+endif
 
 ifeq ($(PLATFORM), Chrome OS)
 	@cp -f $(INITDIR)/$(CONFFILES) $(CONFDIR)
@@ -108,7 +129,7 @@ ifeq ($(PLATFORM), Chrome OS)
 	@echo Please do \"\$ start chameleond\" or \"\$ restart chameleond\".
 else
 	@BUNDLE_VERSION=$(BUNDLE_VERSION) CHAMELEON_BOARD=$(CHAMELEON_BOARD) \
-	deploy/deploy $(PLATFORM)
+	deploy/deploy $(PLATFORM) $(PY_VERSION)
 	@echo Installing chameleon package on $(PLATFORM) platform is completed.
 endif
 
@@ -140,7 +161,8 @@ ifdef CHAMELEON_HOST
 	        "REMOTE_INSTALL=TRUE" \
 	        "HOST_NOW=\"$(HOST_NOW)\"" \
 	        "BUNDLE_VERSION=$(BUNDLE_VERSION) " \
-	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"
+	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
+	        "PY_VERSION=$(PY_VERSION)"
 else
 	$(error CHAMELEON_HOST is undefined)
 endif
