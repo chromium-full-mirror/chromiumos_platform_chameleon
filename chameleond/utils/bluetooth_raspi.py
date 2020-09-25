@@ -744,6 +744,32 @@ class BluezPeripheral(PeripheralKit):
     return True
 
 
+  def StartUnfilteredDiscovery(self):
+    """Starts unfiltered discovery session for DUT advertisement testing
+
+      Since there is no way to initiate an LE scan through bluez without
+      filtering enabled, submit request directly over HCI layer. This is useful
+      for LE advertising tests, as we will discover advertisements much faster.
+    """
+
+    # Submit LE Set Scan Enable command with filter_duplicates disabled
+    cmd = 'hcitool -i hci0 cmd 0x08 0x000C 0x01 0x00'
+
+    return os.system(cmd) == 0
+
+
+  def StopUnfilteredDiscovery(self):
+    """Stops unfiltered discovery session for DUT advertisement testing
+
+      Disables a scan started via self.StartUnfilteredDiscovery()
+    """
+
+    # Submit LE Set Scan Enable command with LE_Scan_enable set to false
+    cmd = 'hcitool -i hci0 cmd 0x08 0x000C 0x00 0x00'
+
+    return os.system(cmd) == 0
+
+
   def FindAdvertisementWithAttributes(self, attrs=[], timeout=10):
     """Locate an advertisement containing the requested attributes from btmon
 
@@ -778,11 +804,18 @@ class BluezPeripheral(PeripheralKit):
     current_event = []
 
     # Start searching for devices
-    if not self.StartDiscovery():
+    if not self.StartUnfilteredDiscovery():
       return None
 
     end_time = time.time() + timeout
     process = system_tools.SystemTools.RunInSubprocess('btmon')
+
+    # If no btmon traffic is occurring, the readline call will block forever.
+    # Here, configure a timer to terminate the process after our selected
+    # timeout.
+    timer = threading.Timer(timeout, process.terminate)
+    timer.start()
+
     desired_event = None
     while time.time() < end_time:
       output = process.stdout.readline()
@@ -803,11 +836,15 @@ class BluezPeripheral(PeripheralKit):
           # recording this event
           current_event = []
 
-        current_event.append(output)
+        # Don't add header to this event, as the header timestamp has a non-zero
+        # chance to match a numeric search attribute
+        else:
+          current_event.append(output)
 
     # Terminate listening process and stop discovery
     process.terminate()
-    self.StopDiscovery()
+    timer.cancel()
+    self.StopUnfilteredDiscovery()
     return desired_event
 
 
