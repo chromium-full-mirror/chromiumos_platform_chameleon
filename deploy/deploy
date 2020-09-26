@@ -247,6 +247,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
 
     # Install python packages for Raspberry Pi.
     validate_python_package_installation "pexpect"
+    validate_python_package_installation "numpy"
 
     validate_socket_installation
 
