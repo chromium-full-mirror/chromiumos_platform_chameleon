@@ -155,21 +155,21 @@ PYLINT_OPTIONS = \
 	--disable=R0921,R0922,R0923,R9100,cros-logging-import
 
 LINT_FILES = $(shell find -name '*.py' -type f | sort)
-LINT_BLACKLIST =
-LINT_WHITELIST = $(filter-out $(LINT_BLACKLIST),$(LINT_FILES))
+LINT_BLOCKLIST =
+LINT_ALLOWLIST = $(filter-out $(LINT_BLOCKLIST),$(LINT_FILES))
 
 lint:
 	@set -e -o pipefail; \
 	out=$$(mktemp); \
-	echo Linting $(shell echo $(LINT_WHITELIST) | wc -w) files...; \
-	if [ -n "$(LINT_WHITELIST)" ] && \
+	echo Linting $(shell echo $(LINT_ALLOWLIST) | wc -w) files...; \
+	if [ -n "$(LINT_ALLOWLIST)" ] && \
 	    ! env \
 	    PYTHONPATH=.:chameleond:../chameleon-private:../video-chameleon \
-	    pylint $(PYLINT_OPTIONS) $(LINT_WHITELIST) \
+	    pylint $(PYLINT_OPTIONS) $(LINT_ALLOWLIST) \
 	    |& tee $$out; then \
 	  echo; \
 	  echo To re-lint failed files, run:; \
-	  echo make lint LINT_WHITELIST=\""$$( \
+	  echo make lint LINT_ALLOWLIST=\""$$( \
 	    grep '^\*' $$out | cut -c22- | tr . / | \
 	    sed 's/$$/.py/' | tr '\n' ' ' | sed -e 's/ $$//')"\"; \
 	  echo; \
