@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
+# Lint as: python3
+# pylint: disable=import-error,logging-not-lazy
 
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """This module implements gatt server functionality on bluez"""
 
-import logging
-import os
-from subprocess import call
-import sys
-import time
+from __future__ import print_function
 
+import sys
+
+import logging # pylint: disable=cros-logging-import
 import dbus
 import dbus.mainloop.glib
 
@@ -27,6 +27,7 @@ from .example_gatt_server import Application, BLUEZ_SERVICE_NAME, \
     DBUS_OM_IFACE, GATT_MANAGER_IFACE
 from .bluez_service_consts import PERIPHERAL_DEVICE_APPEARANCE, \
     PERIPHERAL_DEVICE_NAME
+from .hci_cmd import HciCommands, HciTool
 
 mainloop = None
 
@@ -43,8 +44,7 @@ class GATTServer(object):
       return
 
     service_manager = dbus.Interface(
-        bus.get_object(BLUEZ_SERVICE_NAME, adapter),
-        GATT_MANAGER_IFACE)
+        bus.get_object(BLUEZ_SERVICE_NAME, adapter), GATT_MANAGER_IFACE)
 
     self.device_type = device_type
     self.peripheral_type = None
@@ -69,9 +69,10 @@ class GATTServer(object):
       logging.info('Generic application starting...')
 
     # We register application with empty callbacks to run it async
-    service_manager.RegisterApplication(self.app.GetPath(), {},
-                                        reply_handler=self._RegisterAppCB,
-                                        error_handler=self._RegisterAppErrCB)
+    service_manager.RegisterApplication(
+        self.app.GetPath(), {},
+        reply_handler=self._RegisterAppCB,
+        error_handler=self._RegisterAppErrCB)
 
     # Start with discoverable enabled
     self._discoverable = True
@@ -79,28 +80,27 @@ class GATTServer(object):
 
     # Add a handler for changes in state, specifically requesting caller's
     # device_path in the callback
-    bus.add_signal_receiver(self._PropertyChanged,
-                            signal_name='PropertiesChanged',
-                            bus_name='org.bluez',
-                            path_keyword='device_path')
+    bus.add_signal_receiver(
+        self._PropertyChanged,
+        signal_name='PropertiesChanged',
+        bus_name='org.bluez',
+        path_keyword='device_path')
 
   def _RegisterAppCB(self):
     """Callback for app registration"""
 
     pass
 
-
   def _RegisterAppErrCB(self, error):
     """Callback for app registration error"""
     logging.error('Failed to register application: ' + str(error))
     mainloop.quit()
 
-
   def _FindAdapter(self, bus):
     """Finds adapter within dbus tree"""
 
-    remote_om = dbus.Interface(bus.get_object(BLUEZ_SERVICE_NAME, '/'),
-                               DBUS_OM_IFACE)
+    remote_om = dbus.Interface(
+        bus.get_object(BLUEZ_SERVICE_NAME, '/'), DBUS_OM_IFACE)
 
     # TODO b:142131418 occasionally this stalls and times out, causing 25s delay
     objects = remote_om.GetManagedObjects()
@@ -111,7 +111,6 @@ class GATTServer(object):
 
     return None
 
-
   def _FormatDataField(self, attr_id, data):
     """Puts each data block into the correct structure
 
@@ -119,11 +118,10 @@ class GATTServer(object):
       data in structure [attr len, attr id, attr data]
     """
 
-    formatted_data = [len(data)+1, attr_id]
+    formatted_data = [len(data) + 1, attr_id]
     formatted_data.extend(data)
 
     return formatted_data
-
 
   def _ConfigureAdvertisements(self):
     """Configures and registers LE advertisement"""
@@ -157,15 +155,12 @@ class GATTServer(object):
     data.extend(self._FormatDataField(ADV_SERVICE_ID, service_uuid_data))
 
     # Pad the packet with zeros to make bluez happy
-    data.extend([0] * (31-len(data)))
-
-    # Add total length of data to front of data, followed by data
-    dat = '{:02x} {}'.format(len(data), ' '.join(['{:02x}'.format(val)
-                                                  for val in data]))
+    data.extend([0] * (31 - len(data)))
 
     # hci commands can be found in Version 5.1 | Vol 2, Part E Sec 7.8
     # Advertisement structure
-    set_adv_data_cmd = 'sudo hcitool -i hci0 cmd 0x08 0x0008 {}'.format(dat)
+    set_adv_data_cmd = HciCommands.le_set_advertising_data(
+        data_length=len(data), data=data)
 
     # (TODO b/158217517) we have found that a race condition exists in two-peer
     # tests where the adv and scan response of a peer is interrupted, which
@@ -174,27 +169,31 @@ class GATTServer(object):
     # while the underlying issue is fixed
 
     # Also apply adv data to scan response
-    set_adv_resp_cmd = 'sudo hcitool -i hci0 cmd 0x08 0x0009 {}'.format(dat)
+    set_adv_resp_cmd = HciCommands.le_set_scan_response_data(
+        data_length=len(data), data=data)
 
     # Stop advertising
-    stop_adv = 'sudo hcitool -i hci0 cmd 0x08 0x000a 00'
+    stop_adv = HciCommands.le_set_advertising_enable(enable=False)
     # Start advertising
-    start_adv = 'sudo hcitool -i hci0 cmd 0x08 0x000a 01'
-    # Advertise with low duty-cycle (100ms) to make discovery faster
-    rapid_adv = ('sudo hcitool -i hci0 cmd 0x08 0x0006 A0 00'
-                 ' A0 00 00 00 00 00 00 00 00 00 00 07 00')
+    start_adv = HciCommands.le_set_advertising_enable(enable=True)
+
+    # Advertise with low duty-cycle (30-35ms) to make discovery faster
+    rapid_adv = HciCommands.le_set_advertising_params(
+        interval_min=0x30, interval_max=0x38)
 
     cmds = [stop_adv, set_adv_data_cmd, set_adv_resp_cmd, rapid_adv, start_adv
            ] if self._discoverable else [stop_adv]
 
-    # Run commands sequentially
-    for cmd in cmds:
-      call(cmd, shell=True, stdout=open(os.devnull, 'w'))
-      time.sleep(.1)
+    # Add commands and run them via hcitool
+    tool = HciTool(sudo=True, wait_time=0.1)
 
+    for cmd in cmds:
+      tool.add_command(cmd)
+
+    tool.run_commands()
 
   def SetDiscoverable(self, discoverable):
-    """ Change whether device is discoverable and configure advertisements.
+    """Change whether device is discoverable and configure advertisements.
 
     Only configures advertisements if the discoverable value has changed.
 
@@ -251,15 +250,17 @@ def main():
   # Allow logging to work like print when server is run standalone
   logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
+  global mainloop # pylint: disable=global-statement
+
   # Set up main loop for incoming activity on the bus
-  global mainloop
   dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
   mainloop = GObject.MainLoop()
 
   # Establish and run server with example HoG application
-  server = GATTServer('MOUSE')
+  server = GATTServer('MOUSE')  # pylint: disable=unused-variable
 
   mainloop.run()
+
 
 if __name__ == '__main__':
   main()
