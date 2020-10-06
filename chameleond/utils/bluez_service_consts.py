@@ -6,6 +6,8 @@
 
 """Constants for Bluez services on Raspberry Pi."""
 
+from __future__ import print_function
+
 import os
 
 from chameleond.utils.bluetooth_peripheral_kit import PeripheralKit
@@ -57,6 +59,12 @@ SERVICE_PROFILE_SDP_PATH = {
 }
 
 HID_SERVICE_UUID = '00001124-0000-1000-8000-00805f9b34fb'
+
+PERIPHERAL_PROFILE_UUID = {
+    PeripheralKit.KEYBOARD: HID_SERVICE_UUID,
+    PeripheralKit.MOUSE:    HID_SERVICE_UUID,
+}
+
 
 keymap = {
     'KEY_RESERVED' : 0,

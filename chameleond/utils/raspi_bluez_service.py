@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=cros-logging-import,import-error
 
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -19,8 +20,9 @@ import dbus.service
 from bluetooth import BluetoothSocket, L2CAP
 from gi.repository import GLib
 
-from .bluez_service_consts import BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
-    BLUEZ_PROFILE_PATH, SERVICE_PROFILE_SDP_PATH, HID_SERVICE_UUID
+from .bluez_service_consts import (BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH,
+                                   BLUEZ_PROFILE_PATH, SERVICE_PROFILE_SDP_PATH,
+                                   PERIPHERAL_PROFILE_UUID)
 
 P_CTRL = 17
 P_INTR = 19
@@ -90,10 +92,12 @@ class BluezService(dbus.service.Object):
     self._address = adapter_address
     self._device_type = device_type
 
-    # Init profile
-    self._InitBluezProfile(SERVICE_PROFILE_SDP_PATH[self._device_type],
-                           BLUEZ_PROFILE_PATH,
-                           HID_SERVICE_UUID)
+    # Init profile only if one is declared for this device type
+    profile_uuid = PERIPHERAL_PROFILE_UUID.get(self._device_type, None)
+    if profile_uuid:
+      self._InitBluezProfile(
+          SERVICE_PROFILE_SDP_PATH.get(self._device_type, None),
+          BLUEZ_PROFILE_PATH, profile_uuid)
 
     self._Listen(self._address)
 
@@ -175,10 +179,10 @@ class BluezService(dbus.service.Object):
       raise BluezServiceException('Unknown error in _InitBluezProfile()')
     else:
       opts = {
-          'ServiceRecord':prf_content,
-          'Role':'server',
-          'RequireAuthentication':False,
-          'RequireAuthorization':False
+          'ServiceRecord': prf_content,
+          'Role': 'server',
+          'RequireAuthentication': False,
+          'RequireAuthorization': False
       }
 
       self._profile = BluezServiceProfile(dbus.SystemBus(), profile_dbus_path)
@@ -282,7 +286,7 @@ class BluezService(dbus.service.Object):
         logging.info('Unknown Error %s', e)
         raise
     except Exception as e:
-      logging.info('Unknown Error', e)
+      logging.info('Unknown Error %s', e)
       raise
 
 
