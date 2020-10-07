@@ -62,7 +62,9 @@ audio_test_data = {
         'rate': 48000,
         'channels': 2,
         'recorded_file': os.path.join(audio_record_dir,
-                                      'a2dp_recorded_by_peer_%d.wav'),
+                                      'a2dp_recorded_by_peer_%d.raw'),
+        'chunk_file': os.path.join(audio_record_dir,
+                                   'a2dp_recorded_by_peer_%d.raw'),
     },
 
     # a2dp long test data
@@ -71,7 +73,9 @@ audio_test_data = {
         'rate': 48000,
         'channels': 2,
         'recorded_file': os.path.join(audio_record_dir,
-                                      'a2dp_long_recorded_by_peer_%d.wav'),
+                                      'a2dp_long_recorded_by_peer_%d.raw'),
+        'chunk_file': os.path.join(audio_record_dir,
+                                   'a2dp_long_recorded_by_peer_%d.raw'),
     },
 }
 
@@ -163,6 +167,9 @@ class BluetoothAudio(BluezPeripheral):
     """Initializes a Bluetooth audio object."""
     BluezPeripheral.__init__(self)
     self._record = None
+    self._recorded_file = None
+    self._remaining_size = 0
+    self._chunk_file = None
     self._wav = None
     self._pulseaudio = None
     self._play = None
@@ -629,17 +636,15 @@ class BluetoothAudio(BluezPeripheral):
 
     self._profile = test_data
     sample_format = test_data['format'].lower().replace('_', '')
+    file_path = test_data['recorded_by_peer']
 
     if audio_profile.startswith('a2dp'):
-      # output to stdout instead of a regular file
-      file_path = ''
       # default is .raw (not .wav)
       file_format = ''
     else:
-      file_path = test_data['recorded_by_peer']
       file_format = '--file-format=wav'
 
-    args = '--record --device={d} --format={s} --rate={r} --channels={c}'
+    args = '--record --device={d} --format={s} --rate={r} --channels={c} '
     args += '--raw {ff} {fp}'
     args = args.format(d=device_number, s=sample_format, r=test_data['rate'],
                        c=test_data['channels'], ff=file_format, fp=file_path)
@@ -649,19 +654,61 @@ class BluetoothAudio(BluezPeripheral):
 
     # The process needs some time to start.
     time.sleep(1)
+
+    self._recorded_file = open(file_path, 'rb')
     return True
 
-  def HandleOneChunk(self, chunk_in_secs, index, audio_profile):
-    self._profile = profile = audio_test_data.get(audio_profile)
+  def _WriteOneChunk(self):
+    """Write one chunk of data to the chunk file.
+
+    Read audio data from the recorded file and save it to the chunk file.
+    Note that this method reads as much data as possible and writes it out.
+    The remaining data would be handled in next iteration by _PollForCondition.
+
+    Returns:
+      True if it is completed.
+    """
+    if self._remaining_size <= 0:
+      return True
+
+    buf = self._recorded_file.read(self._remaining_size)
+    self._chunk_file.write(buf)
+    self._remaining_size -= len(buf)
+    logging.debug('remaining size %d', self._remaining_size)
+    return self._remaining_size <= 0
+
+  def HandleOneChunk(self, chunk_in_secs, index, audio_profile, dut_ip):
+    """Save one chunk of data into a file and remote copy it to the DUT.
+
+    Args:
+      chunk_in_secs: the duration of the chunk to save in seconds
+      index: the i-th chunk in the whole recorded audio streams.
+      audio_profile: the audio profile used to get the recording settings
+      dut_ip: the DUT IP address to copy the chunk file to.
+
+    Returns:
+      the chunk filename if successful; None otherwise.
+    """
+
+    profile = self._profile
     nframes = profile['rate'] * profile['channels'] * chunk_in_secs
-    filename = self._profile['recorded_file'] % index
+    chunk_filename = audio_test_data[audio_profile]['chunk_file'] % index
 
-    self._wav = Wav(filename, nframes=nframes)
-    self._wav.WriteToWavFile(self._record)
-    self._wav.close()
-    self._wav = None
+    # Each frame takes 16 bits, or 2 bytes.
+    buf_size = nframes * 2
+    self._remaining_size = buf_size
+    logging.debug('start writing %d bytes to %s', buf_size, chunk_filename)
+    with open(chunk_filename, 'wb') as self._chunk_file:
+      try:
+        self._PollForCondition(self._WriteOneChunk,
+                               sleep_interval=0.2,
+                               desc='write chunk %d' % index)
+      except common.TimeoutError as e:
+        logging.error('writting to %s: %s', chunk_filename, e)
+        return None
 
-    return True
+    self.ScpToDut(chunk_filename, chunk_filename, dut_ip)
+    return chunk_filename
 
   def StopRecordingingAudioSubprocess(self):
     """Stop the recording subprocess.
@@ -683,6 +730,10 @@ class BluetoothAudio(BluezPeripheral):
     self._PrintProcessStderr(self._record)
     logging.info('Audio recording is terminated.')
     self._record = None
+
+    self._recorded_file.close()
+    self._recorded_file = None
+
     return True
 
   def ScpToDut(self, src_file, dst_file, dut_ip):
