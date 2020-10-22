@@ -4,17 +4,22 @@
 # found in the LICENSE file.
 """Connect to Chameleond and capture screenshot."""
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 
 import argparse
+import codecs
 import errno
+from functools import reduce
 import operator
 import os
 import subprocess
 import sys
 import tempfile
 import time
-import xmlrpclib
+import six
+import six.moves.xmlrpc_client
 
 
 class Edid(object):
@@ -39,8 +44,7 @@ class Edid(object):
         if filename.upper().endswith('.TXT'):
             # Convert the EDID text format, returning from xrandr.
             data = reduce(operator.add,
-                          map(lambda s: s.strip().decode('hex'),
-                              open(filename).readlines()))
+                          [codecs.decode(s.strip(), 'hex') for s in open(filename).readlines()])
         else:
             data = open(filename).read()
         return cls(data)
@@ -77,7 +81,7 @@ def main():
       parser.print_help()
       sys.exit(errno.EINVAL)
 
-  chameleon = xmlrpclib.ServerProxy(
+  chameleon = six.moves.xmlrpc_client.ServerProxy(
       'http://%s:%d' % (options.host, options.port))
   inputs = chameleon.ProbeInputs()
   main_input = inputs[0]
@@ -93,7 +97,7 @@ def main():
     print('Reading EDID from %s...' % options.edid_file)
     edid = Edid.from_file(options.edid_file)
     print('Applying EDID...')
-    edid_id = chameleon.CreateEdid(xmlrpclib.Binary(edid.data))
+    edid_id = chameleon.CreateEdid(six.moves.xmlrpc_client.Binary(edid.data))
     chameleon.ApplyEdid(main_input, edid_id)
     chameleon.DestroyEdid(edid_id)
     time.sleep(1)
