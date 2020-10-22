@@ -1,9 +1,14 @@
+# Lint as: python2, python3
 # Copyright 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 
 """Provides EDID class with methods for parsing info."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import array
 
@@ -13,6 +18,7 @@ import descriptor
 import error_check
 import established_timings
 import extensions
+from six.moves import range
 import standard_timings
 
 
@@ -186,7 +192,7 @@ class Edid(object):
     """
     base = 38
     sts = []
-    for x in xrange(0, 8):
+    for x in range(0, 8):
       st = standard_timings.GetStandardTiming(self._edid, (base + (x * 2)),
                                               self.edid_version)
       if st:
@@ -217,7 +223,7 @@ class Edid(object):
       A list of descriptor.Descriptor objects.
     """
     descs = []
-    for x in xrange(0, 4):
+    for x in range(0, 4):
       desc = self.GetDescriptor(x)
       if desc:
         descs.append(desc)

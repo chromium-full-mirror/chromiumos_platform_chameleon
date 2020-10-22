@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # Copyright 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,10 +8,15 @@
 18-byte descriptors are found both in the base EDID and in extensions.
 The various types of Descriptor all inherit the basic Descriptor object.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import collections
 
 import coordinated_video_timings as cvt_module
 import error
+from six.moves import range
 import standard_timings
 import tools
 
@@ -161,7 +167,7 @@ class StringDescriptor(Descriptor):
     """
     alphanum_data = ''
 
-    for x in xrange(5, 18):
+    for x in range(5, 18):
       if self._block[x] == 0x0A:
         break
       else:
@@ -691,7 +697,7 @@ class StandardTimingDescriptor(Descriptor):
     """
     sts = []
 
-    for x in xrange(0, 7):
+    for x in range(0, 7):
       st = standard_timings.GetStandardTiming(self._block, 5 + (x*2),
                                               self._version)
       if st:
@@ -786,7 +792,7 @@ class CoordinatedVideoTimingsDescriptor(Descriptor):
     """
     cvts = []
 
-    for x in xrange(0, 4):
+    for x in range(0, 4):
       cvt = cvt_module.GetCoordinatedVideoTiming(self._block, 6 + (x*3))
       if cvt:
         cvts.append(cvt)
@@ -805,7 +811,7 @@ class CoordinatedVideoTimingsDescriptor(Descriptor):
     errors = []
     cvts = self.coordinated_video_timings
 
-    for x in xrange(0, len(cvts)):
+    for x in range(0, len(cvts)):
       err = cvts[x].CheckErrors(x + 1)
       if err:
         errors.append(err)

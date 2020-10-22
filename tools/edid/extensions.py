@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # Copyright 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -9,10 +10,14 @@ Extensions are found after the 128-byte base EDID.
 The various types of Extensions all inherit the basic Extension object.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import coordinated_video_timings as cvt_module
 import data_block
 import descriptor
 import error
+from six.moves import range
 import standard_timings
 
 
@@ -233,7 +238,7 @@ class CEAExtension(Extension):
     """
     dtds = []
 
-    for x in xrange(self._dtd_start, self._GetPadIndex(), 18):
+    for x in range(self._dtd_start, self._GetPadIndex(), 18):
       dtd = descriptor.GetDescriptor(self._block, x, self._version)
       dtds.append(dtd)
 
@@ -245,7 +250,7 @@ class CEAExtension(Extension):
     Returns:
       An integer indicating the start index of post-DTD padding.
     """
-    for x in xrange(self._dtd_start, 127, 18):
+    for x in range(self._dtd_start, 127, 18):
       if self._block[x] == self._block[x + 1] == 0:
         return x
     return 127 - (127 - self._dtd_start) % 18
@@ -334,7 +339,7 @@ class VTBExtension(Extension):
     dtbs = []
     dtb_start = 5
 
-    for x in xrange(0, self._dtb_count):
+    for x in range(0, self._dtb_count):
       dtd = descriptor.GetDescriptor(self._block, dtb_start + (x * 18),
                                      self._version)
       dtbs.append(dtd)
@@ -351,7 +356,7 @@ class VTBExtension(Extension):
     cvts = []
     cvt_start = 5 + (18 * self._dtb_count)
 
-    for x in xrange(0, self._cvt_count):
+    for x in range(0, self._cvt_count):
       cvt = cvt_module.GetCoordinatedVideoTiming(self._block,
                                                  cvt_start + (x * 3))
       cvts.append(cvt)
@@ -368,7 +373,7 @@ class VTBExtension(Extension):
     sts = []
     st_start = 5 + (18 * self._dtb_count) + (3 * self._cvt_count)
 
-    for x in xrange(0, self._st_count):
+    for x in range(0, self._st_count):
       st = standard_timings.GetStandardTiming(self._block, st_start + (x * 2),
                                               self._version)
       sts.append(st)
@@ -387,13 +392,13 @@ class VTBExtension(Extension):
     errors = []
 
     cvts = self.cvts
-    for x in xrange(0, self._cvt_count):
+    for x in range(0, self._cvt_count):
       err = cvts[x].CheckErrors(x + 1)
       if err:
         errors.extend(err)
 
     sts = self.sts
-    for x in xrange(0, self._st_count):
+    for x in range(0, self._st_count):
       err = sts[x].CheckErrors(x + 1)
       if err:
         errors.extend(err)
