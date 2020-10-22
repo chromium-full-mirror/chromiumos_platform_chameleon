@@ -1,3 +1,4 @@
+# Lint as: python2, python3
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -11,8 +12,8 @@ try:
   from xmlrpc.server import SimpleXMLRPCServer  # Python 3.x
   from xmlrpc.server import SimpleXMLRPCRequestHandler
 except ImportError:
-  from SimpleXMLRPCServer import SimpleXMLRPCServer  # Python 2.x
-  from SimpleXMLRPCServer import SimpleXMLRPCRequestHandler
+  from six.moves.xmlrpc_server import SimpleXMLRPCServer  # Python 2.x
+  from six.moves.xmlrpc_server import SimpleXMLRPCRequestHandler
 
 from . import chameleon_common  # pylint: disable=W0611
 from chameleond.utils.caching_server import CachingServer
