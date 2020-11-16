@@ -429,8 +429,7 @@ class BluezPeripheral(PeripheralKit):
     reset_cmds = ['service bluetooth restart',
                   '/etc/init.d/chameleond restart']
 
-    # Disable power
-    self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(0))
+    self.AdapterPowerOff()
 
     # Stop Bluetooth audio related daemons which may interfere
     # with HID tests.
@@ -491,15 +490,17 @@ class BluezPeripheral(PeripheralKit):
   def GetPort(self):
     return '/dev/fakedev'
 
+  def AdapterPowerOff(self):
+    return self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(0))
+
+  def AdapterPowerOn(self):
+    return self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(1))
 
   def Reboot(self):
     logging.info('REBOOTING')
 
-    # Turn it off
-    self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(0))
-
-    # Turn it back on again
-    self._set_hci_prop('org.bluez.Adapter1', 'Powered', dbus.Boolean(1))
+    self.AdapterPowerOff()
+    self.AdapterPowerOn()
 
     # Put ourselves back into correct state for discovery
     return self.Init()
