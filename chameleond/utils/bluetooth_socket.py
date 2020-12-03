@@ -205,13 +205,14 @@ def parse_eir(eirdata):
     while pos < len(eirdata):
         # Byte at the current position is the field length, which should be
         # zero at the end of the structure.
-        (field_len,) = struct.unpack('B', buffer(eirdata, pos, 1))
+        (field_len,) = struct.unpack('B', memoryview(eirdata)[pos : pos + 1])
         if field_len == 0:
             break
         # Next byte is the field type, and the rest of the field is the data.
         # Note that the length field doesn't include itself so that's why the
         # offsets and lengths look a little odd.
-        (field_type,) = struct.unpack('B', buffer(eirdata, pos + 1, 1))
+        (field_type,) = struct.unpack('B',
+                                      memoryview(eirdata)[pos + 1 : pos + 2])
         data = eirdata[pos+2:pos+field_len+1]
         pos += field_len + 1
         # Parse the individual fields to make the data meaningful.
@@ -304,14 +305,14 @@ class BluetoothSocket(btsocket.socket):
             raise BluetoothInvalidPacketError('Packet shorter than header')
 
         # Parse the header
-        (event, index, length) = struct.unpack_from('<HHH', buffer(hdr))
+        (event, index, length) = struct.unpack_from('<HHH', memoryview(hdr))
         if nbytes < MGMT_HDR_SIZE + length:
             raise BluetoothInvalidPacketError('Packet shorter than length')
 
         return (event, index, data[:length])
 
 
-    def send_command_and_wait(self, cmd_code, cmd_index, cmd_data='',
+    def send_command_and_wait(self, cmd_code, cmd_index, cmd_data=b'',
                               expected_length=None):
         """Send a command to the socket and wait for the reply.
 
@@ -344,7 +345,8 @@ class BluetoothSocket(btsocket.socket):
                             ('Incorrect command complete event data length: ' +
                              '%d (expected at least 3)' % len(data)))
 
-                (code, status) = struct.unpack_from('<HB', buffer(data, 0, 3))
+                (code, status) = struct.unpack_from('<HB',
+                                                    memoryview(data)[0 : 3])
                 logging.debug('[0x%04x] command 0x%04x complete: 0x%02x',
                               index, code, status)
 
@@ -373,7 +375,8 @@ class BluetoothSocket(btsocket.socket):
                             ('Incorrect command status event data length: ' +
                              '%d (expected 3)' % len(data)))
 
-                (code, status) = struct.unpack_from('<HB', buffer(data, 0, 3))
+                (code, status) = struct.unpack_from('<HB',
+                                                    memoryview(data)[0 : 3])
                 logging.debug('[0x%04x] command 0x%02x status: 0x%02x',
                               index, code, status)
 
@@ -390,7 +393,7 @@ class BluetoothSocket(btsocket.socket):
                         ('Incorrect controller error event data length: ' +
                          '%d (expected 1)' % len(data)))
 
-                (error_code) = struct.unpack_from('<B', buffer(data, 0, 1))
+                (error_code) = struct.unpack_from('<B', memoryview(data)[0 : 1])
 
                 raise BluetoothControllerError('Controller error: %d' %
                                                error_code)
@@ -429,7 +432,8 @@ class BluetoothSocket(btsocket.socket):
                             ('Incorrect command complete event data length: ' +
                              '%d (expected at least 3)' % len(data)))
 
-                (code, status) = struct.unpack_from('<HB', buffer(data, 0, 3))
+                (code, status) = struct.unpack_from('<HB',
+                                                    memoryview(data)[0 : 3])
                 logging.debug('[0x%04x] command 0x%04x complete: 0x%02x '
                               '(Ignored)', index, code, status)
 
@@ -439,7 +443,8 @@ class BluetoothSocket(btsocket.socket):
                             ('Incorrect command status event data length: ' +
                              '%d (expected 3)' % len(data)))
 
-                (code, status) = struct.unpack_from('<HB', buffer(data, 0, 3))
+                (code, status) = struct.unpack_from('<HB',
+                                                    memoryview(data)[0 : 3])
                 logging.debug('[0x%04x] command 0x%02x status: 0x%02x '
                               '(Ignored)', index, code, status)
 
@@ -449,7 +454,7 @@ class BluetoothSocket(btsocket.socket):
                         ('Incorrect controller error event data length: ' +
                          '%d (expected 1)' % len(data)))
 
-                (error_code) = struct.unpack_from('<B', buffer(data, 0, 1))
+                (error_code) = struct.unpack_from('<B', memoryview(data)[0 : 1])
                 logging.debug('[0x%04x] controller error: %d (Ignored)',
                               index, error_code)
 
@@ -492,7 +497,7 @@ class BluetoothControlSocket(BluetoothSocket):
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (version, revision) = struct.unpack_from('<BH', buffer(data))
+        (version, revision) = struct.unpack_from('<BH', memoryview(data))
         return (version, revision)
 
 
@@ -512,7 +517,8 @@ class BluetoothControlSocket(BluetoothSocket):
                     ('Incorrect length of data for response: ' +
                      '%d (expected at least 4)' % len(data)))
 
-        (ncommands, nevents) = struct.unpack_from('<HH', buffer(data, 0, 4))
+        (ncommands, nevents) = struct.unpack_from('<HH',
+                                                  memoryview(data)[0 : 4])
         offset = 4
         expected_length = offset + (ncommands * 2) + (nevents * 2)
         if len(data) != expected_length:
@@ -522,12 +528,14 @@ class BluetoothControlSocket(BluetoothSocket):
 
         commands = []
         while len(commands) < ncommands:
-            commands.extend(struct.unpack_from('<H', buffer(data, offset, 2)))
+            commands.extend(struct.unpack_from(
+                    '<H', memoryview(data)[offset : offset + 2]))
             offset += 2
 
         events = []
         while len(events) < nevents:
-            events.extend(struct.unpack_from('<H', buffer(data, offset, 2)))
+            events.extend(struct.unpack_from(
+                    '<H', memoryview(data)[offset : offset + 2]))
             offset += 2
 
         return (commands, events)
@@ -549,7 +557,7 @@ class BluetoothControlSocket(BluetoothSocket):
                     ('Incorrect length of data for response: ' +
                      '%d (expected at least 2)' % len(data)))
 
-        (nindexes,) = struct.unpack_from('<H', buffer(data, 0, 2))
+        (nindexes,) = struct.unpack_from('<H', memoryview(data)[0 : 2])
         offset = 2
         expected_length = offset + (nindexes * 2)
         if len(data) != expected_length:
@@ -559,7 +567,8 @@ class BluetoothControlSocket(BluetoothSocket):
 
         indexes = []
         while len(indexes) < nindexes:
-            indexes.extend(struct.unpack_from('<H', buffer(data, offset, 2)))
+            indexes.extend(struct.unpack_from(
+                    '<H', memoryview(data)[offset : offset + 2]))
             offset += 2
 
         return indexes
@@ -590,8 +599,7 @@ class BluetoothControlSocket(BluetoothSocket):
          supported_settings, current_settings,
          class_of_device_lo, class_of_device_mid, class_of_device_hi,
          name, short_name) = struct.unpack_from(
-                '<6sBHLL3B249s11s',
-                buffer(data))
+                '<6sBHLL3B249s11s', memoryview(data))
 
         return (
                 ':'.join('%02X' % x
@@ -602,8 +610,8 @@ class BluetoothControlSocket(BluetoothSocket):
                 current_settings,
                 (class_of_device_lo |(class_of_device_mid << 8) |
                         (class_of_device_hi << 16)),
-                name.rstrip('\0'),
-                short_name.rstrip('\0'))
+                name.decode().rstrip('\0'),
+                short_name.decode().rstrip('\0'))
 
 
     def set_powered(self, index, powered):
@@ -624,7 +632,7 @@ class BluetoothControlSocket(BluetoothSocket):
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -652,7 +660,7 @@ class BluetoothControlSocket(BluetoothSocket):
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -677,7 +685,7 @@ class BluetoothControlSocket(BluetoothSocket):
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -717,7 +725,7 @@ class BluetoothControlSocket(BluetoothSocket):
                     ('Incorrect length of data for response: ' +
                      '%d (expected 4)' % len(data)))
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -740,7 +748,7 @@ class BluetoothControlSocket(BluetoothSocket):
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -768,7 +776,7 @@ class BluetoothControlSocket(BluetoothSocket):
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -793,7 +801,7 @@ class BluetoothControlSocket(BluetoothSocket):
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -818,7 +826,7 @@ class BluetoothControlSocket(BluetoothSocket):
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -843,7 +851,7 @@ class BluetoothControlSocket(BluetoothSocket):
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -875,7 +883,7 @@ class BluetoothControlSocket(BluetoothSocket):
             return None
 
         (class_of_device_lo, class_of_device_mid,
-         class_of_device_hi) = struct.unpack_from('<3B', buffer(data))
+         class_of_device_hi) = struct.unpack_from('<3B', memoryview(data))
         return (class_of_device_lo |(class_of_device_mid << 8) |
                 (class_of_device_hi << 16))
 
@@ -892,7 +900,8 @@ class BluetoothControlSocket(BluetoothSocket):
         """
         # Truncate the provided parameters and then zero-pad using struct
         # so we pass a fixed-length null-terminated string to the kernel.
-        msg_data = struct.pack('<249s11s', name[:248], short_name[:10])
+        msg_data = struct.pack('<249s11s', name[:248].encode(),
+                               short_name[:10].encode())
         (status, data) = self.send_command_and_wait(
                 MGMT_OP_SET_LOCAL_NAME,
                 index,
@@ -901,8 +910,8 @@ class BluetoothControlSocket(BluetoothSocket):
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (name, short_name) = struct.unpack_from('<249s11s', buffer(data))
-        return (name.rstrip('\0'), short_name.rstrip('\0'))
+        (name, short_name) = struct.unpack_from('<249s11s', memoryview(data))
+        return (name.decode().rstrip('\0'), short_name.decode().rstrip('\0'))
 
 
     def start_discovery(self, index, address_type):
@@ -926,7 +935,7 @@ class BluetoothControlSocket(BluetoothSocket):
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (address_type,) = struct.unpack_from('<B', buffer(data))
+        (address_type,) = struct.unpack_from('<B', memoryview(data))
         return address_type
 
 
@@ -953,7 +962,7 @@ class BluetoothControlSocket(BluetoothSocket):
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (address_type,) = struct.unpack_from('<B', buffer(data))
+        (address_type,) = struct.unpack_from('<B', memoryview(data))
         return address_type
 
 
@@ -988,7 +997,7 @@ class BluetoothControlSocket(BluetoothSocket):
                              '%d (expected 2)' % len(data)))
 
                 (address_type,
-                 discovering) = struct.unpack_from('<BB', buffer(data))
+                 discovering) = struct.unpack_from('<BB', memoryview(data))
 
             elif event == MGMT_EV_DEVICE_FOUND:
                 if len(data) < 14:
@@ -998,7 +1007,7 @@ class BluetoothControlSocket(BluetoothSocket):
 
                 (address, address_type, rssi,
                  flags, eir_len) = struct.unpack_from('<6sBbLH',
-                                                      buffer(data, 0, 14))
+                                                      memoryview(data)[0 : 14])
 
                 if len(data) != 14 + eir_len:
                     raise BluetoothInvalidPacketError(
@@ -1058,7 +1067,7 @@ class BluetoothControlSocket(BluetoothSocket):
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -1083,7 +1092,7 @@ class BluetoothControlSocket(BluetoothSocket):
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -1108,7 +1117,7 @@ class BluetoothControlSocket(BluetoothSocket):
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', buffer(data))
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
         return current_settings
 
 
@@ -1133,7 +1142,7 @@ class BluetoothControlSocket(BluetoothSocket):
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (address, address_type,) = struct.unpack_from('<6sB', buffer(data))
+        (address, address_type,) = struct.unpack_from('<6sB', memoryview(data))
         return (address, address_type)
 
 
@@ -1157,7 +1166,7 @@ class BluetoothControlSocket(BluetoothSocket):
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (address, address_type,) = struct.unpack_from('<6sB', buffer(data))
+        (address, address_type,) = struct.unpack_from('<6sB', memoryview(data))
         return (address, address_type)
 
 
