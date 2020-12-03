@@ -1048,17 +1048,17 @@ class BluezPeripheral(PeripheralKit):
             self._CheckValidScanCodes(keys)):
       return None
 
-    real_scan_codes = [chr(key) for key in keys]
-    padding_0s = (chr(0) * (RAW_REPORT_FORMAT_KEYBOARD_LEN_SCAN_CODES -
-                            len(real_scan_codes)))
+    real_scan_codes = [key for key in keys]
+    padding_0s = (0) * (RAW_REPORT_FORMAT_KEYBOARD_LEN_SCAN_CODES -
+                        len(real_scan_codes))
 
-    return (chr(UART_INPUT_RAW_MODE) +
-            chr(RAW_REPORT_FORMAT_KEYBOARD_LENGTH) +
-            chr(RAW_REPORT_FORMAT_KEYBOARD_DESCRIPTOR) +
-            chr(sum(modifiers)) +
-            chr(0x0) +
-            ''.join(real_scan_codes) +
-            padding_0s)
+    return bytearray((UART_INPUT_RAW_MODE,
+                      RAW_REPORT_FORMAT_KEYBOARD_LENGTH,
+                      RAW_REPORT_FORMAT_KEYBOARD_DESCRIPTOR,
+                      sum(modifiers),
+                      0x0) +
+                     tuple(keys) +
+                     padding_0s)
 
 
   def _MouseButtonsRawHidValues(self):
@@ -1174,12 +1174,12 @@ class BluezPeripheral(PeripheralKit):
         return value + 256
       return value
 
-    return (chr(RAW_REPORT_START) +
-            chr(RAW_REPORT_FORMAT_MOUSE_DESCRIPTOR) +
-            chr(SignedChar(buttons)) +
-            chr(SignedChar(x_stop)) +
-            chr(SignedChar(y_stop)) +
-            chr(SignedChar(wheel)))
+    return bytearray((RAW_REPORT_START,
+                      RAW_REPORT_FORMAT_MOUSE_DESCRIPTOR,
+                      SignedChar(buttons),
+                      SignedChar(x_stop),
+                      SignedChar(y_stop),
+                      SignedChar(wheel)))
 
 
   def PressShorthandCodes(self, modifiers=None, keys=None):

@@ -277,7 +277,7 @@ class BluezService(dbus.service.Object):
     """Sends HID report across socket"""
 
     # Convert from dbus to native type for socket send
-    native_report = ''.join([chr(b) for b in report])
+    native_report = bytes(report)
     try:
       self._cinterrupt.send(native_report)
     except IOError as e:

@@ -1,5 +1,5 @@
 # Lint as: python2, python3
-# Copyright (c) 2020 The Chromium OS Authors. All rights reserved.
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -240,7 +240,7 @@ class BluetoothSDPSocket(btsocket.socket):
                                           'Supported values are: 16, 32, 128'
                                           % preferred_size)
 
-        res = ''
+        res = b''
         for uuid in uuids:
             # Fall back to 128 bits if the UUID doesn't fit into preferred_size.
             if uuid >= (1 << preferred_size) or preferred_size == 128:
@@ -319,7 +319,7 @@ class BluetoothSDPSocket(btsocket.socket):
 
         pattern = self._pack_uuids(uuids, preferred_size) + struct.pack(
                   '>H', max_rec_cnt)
-        cont_state = '\0'
+        cont_state = b'\0'
         handles = []
 
         while True:
@@ -341,7 +341,7 @@ class BluetoothSDPSocket(btsocket.socket):
 
             cur_list, cont_state = self._unpack_uuids(response)
             handles.extend(cur_list)
-            if cont_state == '\0':
+            if cont_state == b'\0':
                 break
 
         return handles
@@ -358,7 +358,7 @@ class BluetoothSDPSocket(btsocket.socket):
 
         """
         attr_ids.sort()
-        res = ''
+        res = b''
         for attr_id in attr_ids:
             # Each element could be either a single Attribute ID or
             # a range of IDs.
@@ -386,7 +386,7 @@ class BluetoothSDPSocket(btsocket.socket):
         """
         res = 0
         for i in range(cnt):
-            res = (res << 8) | ord(data[i])
+            res = (res << 8) | data[i]
         return res
 
 
@@ -435,7 +435,7 @@ class BluetoothSDPSocket(btsocket.socket):
 
             res = data[int_size : int_size + str_size]
             scanned += int_size + str_size
-            return res, scanned
+            return res.decode(), scanned
         elif data_type == 6 or data_type == 7:
             if data_size < 5 or data_size > 7:
                 raise BluetoothSDPSocketError('Invalid size descriptor')
@@ -486,11 +486,11 @@ class BluetoothSDPSocket(btsocket.socket):
         pattern = (struct.pack('>I', handle) +
                    struct.pack('>H', max_attr_byte_count) +
                    self._pack_attr_ids(attr_ids))
-        cont_state = '\0'
-        complete_response = ''
+        cont_state = b'\0'
+        complete_response = b''
 
         while True:
-            request = (invalid_request if invalid_request
+            request = (invalid_request.encode() if invalid_request
                        else pattern + cont_state)
 
             code, response = self.send_request_and_wait(
@@ -511,7 +511,7 @@ class BluetoothSDPSocket(btsocket.socket):
             complete_response += response[:response_byte_count]
             cont_state = response[response_byte_count:]
 
-            if cont_state == '\0':
+            if cont_state == b'\0':
                 break
 
         id_values_list = self._unpack_sdp_data_element(complete_response)[0]
@@ -554,13 +554,13 @@ class BluetoothSDPSocket(btsocket.socket):
         pattern = (self._pack_uuids(uuids, preferred_size) +
                    struct.pack('>H', max_attr_byte_count) +
                    self._pack_attr_ids(attr_ids))
-        cont_state = '\0'
-        complete_response = ''
+        cont_state = b'\0'
+        complete_response = b''
 
         while True:
             request = pattern + cont_state
             if invalid_request:
-                request = invalid_request + request
+                request = invalid_request.encode() + request
 
             code, response = self.send_request_and_wait(
                     SDP_SVC_SEARCH_ATTR_REQ, request, forced_pdu_size)
@@ -580,7 +580,7 @@ class BluetoothSDPSocket(btsocket.socket):
             complete_response += response[:response_byte_count]
             cont_state = response[response_byte_count:]
 
-            if cont_state == '\0':
+            if cont_state == b'\0':
                 break
 
         id_values_list = self._unpack_sdp_data_element(complete_response)[0]

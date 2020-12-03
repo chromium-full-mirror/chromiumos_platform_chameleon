@@ -132,7 +132,7 @@ class RaspiHIDKeyboard(RaspiFlow, BluezPeripheral):
     for scan_code in input_scan_codes:
       time.sleep(.1)
 
-      self.SendHIDReport(scan_code)
+      self.SendHIDReport(bytearray(scan_code))
 
 
   def KeyboardSendString(self, string_to_send):
