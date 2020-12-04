@@ -23,6 +23,7 @@ STREAM_OBJS = $(patsubst $(SRCDIR)/stream_server/*.c,$(BINDIR)/%.o,$(STREAM_SRCS
 CONFFILES = chameleond.conf
 IDENTITY_FILE := ~/trunk/src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa
 COMMIT_FILE := $(DISTDIR)/commit
+PY_VERSION_FILE := $(DISTDIR)/py_version
 
 # Set python3 as default after all teams using chameleon finish switching
 # to python3.
@@ -67,6 +68,7 @@ binaries: $(BINARIES)
 .PHONY: chameleond
 chameleond: binaries
 	@echo $(COMMIT) > $(COMMIT_FILE)
+	@echo $(PY_VERSION) > $(PY_VERSION_FILE)
 
 ifeq ($(PY_VERSION), python3)
 	@echo PY_VERSION: $(PY_VERSION)
@@ -142,12 +144,41 @@ CHAMELEON_SSH_PORT ?= 22
 BUNDLE = chameleond-$(VERSION).tar.gz
 BUNDLEDIR = chameleond-$(VERSION)
 
+define get_chameleon_hostname
+$(shell ssh -o StrictHostKeyChecking=no \
+      -o UserKnownHostsFile=/dev/null \
+      -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
+      $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
+      "cat /etc/hostname")
+endef
+
+.PHONY: check_pi_make
+check_pi_make:
+	$(eval CHAMELEON_HOSTNAME := $(call get_chameleon_hostname))
+	@if [ $(CHAMELEON_HOSTNAME) == raspberrypi ]; then \
+	    $(eval PY_VERSION := python3) \
+	    if [ $(shell cat $(PY_VERSION_FILE)) != $(PY_VERSION) ]; then \
+		echo "Raspberry Pi has switched to python3."; \
+		echo "You need to explicitly make with python3 for Raspberry" \
+		 "Pi now until all other platforms have switched to python3" \
+		 "as well."; \
+		echo; \
+		echo "Please make with python3 and then install as"; \
+		echo "(cr) $$ make PY_VERSION=python3"; \
+		echo '(cr) $$ make remote-install' \
+		    'CHAMELEON_HOST=$$RASPBERRY_IP'; \
+		echo; \
+		exit 1; \
+	    fi; \
+	fi
+
 .PHONY: remote-install
-remote-install: check_git_tree_clean check_git_commit_HEAD
+remote-install: check_git_tree_clean check_git_commit_HEAD check_pi_make
 	@echo "Set bundle version to $(BUNDLE_VERSION)"
 	@echo "Set bundle commit to $(COMMIT)"
 	@echo "Set board to $(CHAMELEON_BOARD)"
 	@echo "Current host time: $(HOST_NOW)"
+	@echo "Python version: $(PY_VERSION)"
 ifdef CHAMELEON_HOST
 	@scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
