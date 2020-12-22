@@ -200,7 +200,7 @@ class BluezService(dbus.service.Object):
         try:
           manager.RegisterProfile(profile_dbus_path, profile_uuid, opts)
           break
-        except dbus.DBusException as e:
+        except (dbus.DBusException, TypeError) as e:
           logging.info('Registering profile again... %s', str(e))
           time.sleep(.1)
 
