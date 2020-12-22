@@ -19,6 +19,8 @@ BLUEZ_PROFILE_PATH = '/org/chromium/autotest/btkbprofile'
 CLASS_OF_SERVICE_MASK = 0xFFE000
 CLASS_OF_DEVICE_MASK = 0x001FFF
 
+BTD_CONF_FILE = '/lib/systemd/system/bluetooth.service'
+
 # https://www.bluetooth.com/specifications/assigned-numbers/baseband/
 PERIPHERAL_DEVICE_CLASS = {
     PeripheralKit.KEYBOARD: 0x002540,
@@ -56,6 +58,24 @@ SERVICE_PROFILE_SDP_PATH = {
     # TODO: find a suitable xml for Bluetooth audio device.
     PeripheralKit.BLUETOOTH_AUDIO: (os.path.dirname(os.path.abspath(__file__)) +
                                     '/keyboard_sdp_record.xml'),
+}
+
+"""
+Both AVRCP and A2DP profiles will try to role switch into master role on any
+L2CAP connection, which causes unexpected behavior when emulating a HID device.
+Here, we remove the bluetoothd avrcp and a2dp modules if we aren't emulating an
+audio device.
+
+The uppercased '-P' flag disables the comma-separated plugins that follow it
+"""
+AUDIO_BTD_FLAGS = '-d -P input'
+NON_AUDIO_BTD_FLAGS = '-d -P input,avrcp,a2dp'
+
+PERIPHERAL_BTD_FLAGS = {
+    PeripheralKit.KEYBOARD: NON_AUDIO_BTD_FLAGS,
+    PeripheralKit.MOUSE: NON_AUDIO_BTD_FLAGS,
+    PeripheralKit.PHONE: NON_AUDIO_BTD_FLAGS,
+    PeripheralKit.BLUETOOTH_AUDIO: AUDIO_BTD_FLAGS,
 }
 
 HID_SERVICE_UUID = '00001124-0000-1000-8000-00805f9b34fb'

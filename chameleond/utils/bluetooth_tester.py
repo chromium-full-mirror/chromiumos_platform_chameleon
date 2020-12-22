@@ -87,7 +87,7 @@ class BluetoothTester(BluetoothVirtualDevice, VirtualFlow):
     return _control.set_powered(self.index, True)
 
 
-  def ResetStack(self):
+  def ResetStack(self, next_device_type=None):
     """Restores BT stack to pristine state by restarting running services"""
     # Restart bluetooth adapter
     self.AdapterPowerOff()

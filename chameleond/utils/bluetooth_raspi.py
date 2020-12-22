@@ -15,6 +15,7 @@ from __future__ import print_function
 
 import logging
 import os
+import re
 import sys
 import threading
 import time
@@ -37,7 +38,8 @@ from chameleond.utils.raspi_bluez_service import BluezService
 from .bluetooth_peripheral_kit import PeripheralKit
 from .bluetooth_peripheral_kit import PeripheralKitException
 from .bluez_service_consts import PERIPHERAL_DEVICE_CLASS, \
-    PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH
+    PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
+    BTD_CONF_FILE, PERIPHERAL_BTD_FLAGS
 from .bluez_gatt_server import GATTServer
 from six.moves import range
 
@@ -424,10 +426,65 @@ class BluezPeripheral(PeripheralKit):
     return True
 
 
-  def ResetStack(self):
+  def SetBtdFlags(self, device_type):
+    """Allows us to set bluetoothd config execution flags
+
+    In some cases, we wish to apply specific bluetoothd execution flags
+    depending on the device type we are emulating. This function sets the
+    bluetoothd flags, and is intended to be run before the service is restarted
+
+    @param device_type: String device type, e.g. "MOUSE"
+    """
+    # Define regex to separate executable from flags. Example contents:
+    # ExecStart=/usr/libexec/bluetooth/bluetoothd -d -P input
+    PLUGIN_RE = re.compile(r'^(?P<prefix>\s*ExecStart=.*?)'  # pre-flags
+                           r'(?P<flags>\s*-.*)?$')  # optional flags block
+
+    desired_btd_flags = PERIPHERAL_BTD_FLAGS[self.GetBaseDeviceType(
+        device_type)]
+
+    file_contents = []
+    with open(BTD_CONF_FILE, 'r') as mf:
+      file_contents = mf.readlines()
+
+    exec_line = 0
+    m = None
+    for idx, line in enumerate(file_contents):
+      m = PLUGIN_RE.search(line)
+      if m:
+        exec_line = idx
+        break
+
+    if not m:
+      logging.warn('Failed to locate ExecStart block in bluetoothd config')
+      return
+
+    # Update the exec line with desired bluetoothd flags
+    old_line = file_contents[exec_line]
+    file_contents[exec_line] = '{} {}\n'.format(m.group('prefix'),
+                                                desired_btd_flags)
+
+    # Store the original as a comment above the new one, if it doesn't exist yet
+    if m.group('prefix') not in file_contents[exec_line-1]:
+      file_contents.insert(exec_line, '# {}'.format(old_line))
+
+    logging.info('Applying bluetoothd flags: %s', desired_btd_flags)
+
+    # Write new contents back to the file
+    with open(BTD_CONF_FILE, 'w') as mf:
+      mf.write(''.join(file_contents))
+
+  def ResetStack(self, next_device_type=None):
     """Restores BT stack to pristine state by restarting running services"""
-    reset_cmds = ['service bluetooth restart',
-                  '/etc/init.d/chameleond restart']
+    reset_cmds = [
+        'systemctl daemon-reload', 'service bluetooth restart',
+        '/etc/init.d/chameleond restart'
+    ]
+
+    # If we know what device type is used next, we can specify which plugins
+    # bluetoothd should be loaded with before the service is restarted
+    if next_device_type:
+      self.SetBtdFlags(next_device_type)
 
     self.AdapterPowerOff()
 
