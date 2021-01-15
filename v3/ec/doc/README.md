@@ -23,7 +23,7 @@ STM32F103ZG support added in Zephyr 2.4.
 
 ```
 cd ~/zephyrproject
-west build -b chameleon -s ~/chromiumos/src/platform/zephyr-chrome/projects/chameleon
+west build -b chameleon -s ~/chromiumos/src/platform/chameleon/v3/ec
 ```
 
 Output files are in `~/zephyrproject/build/zephyr`

@@ -8,7 +8,7 @@ Build the unit tests inside the `chroot` environment using `cmake` and `ninja`:
 
 ```
 (cr) $ export ZEPHYR_BASE=/mnt/host/source/src/third_party/zephyr/main/v2.4
-(cr) $ cd /mnt/host/source/src/platform/zephyr-chrome/projects/chameleon
+(cr) $ cd /mnt/host/source/src/platform/chameleon/v3/ec
 (cr) $ cmake -S tests/fpgaboot_sm -B build/fpgaboot_sm \
  -D ZEPHYR_TOOLCHAIN_VARIANT=host -D BOARD=native_posix -G Ninja
 (cr) $ ninja -C build/fpgaboot_sm
