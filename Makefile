@@ -110,11 +110,12 @@ install:
 	@cp -f $(BINARIES) "$(DESTDIR)"
 ifeq ($(REMOTE_INSTALL), TRUE)
 	@echo sync time with host...
-	@NOW="$(HOST_NOW)" PY_VERSION="$(PY_VERSION)" sh deploy/deploy_pip
+	@NOW="$(HOST_NOW)" PY_VERSION="$(PY_VERSION)" PLATFORM="$(PLATFORM)" \
+		sh deploy/deploy_pip
 else
 	@echo sync time with the chameleon mirror server...
 	@NOW="`chameleond/utils/server_time`" PY_VERSION="$(PY_VERSION)" \
-		sh deploy/deploy_pip
+		PLATFORM="$(PLATFORM)" sh deploy/deploy_pip
 endif
 
 ifeq ($(PY_VERSION), python3)

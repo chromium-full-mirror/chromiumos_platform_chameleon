@@ -77,27 +77,6 @@ validate_python_package_installation() {
     fi
 }
 
-use_python_version() {
-    target_python_version=$1
-
-    curr_python_version="$(readlink "$(which python)")"
-    if [ "${curr_python_version}" != "python2" ] && \
-         [ "${curr_python_version}" != "python3" ]; then
-        die "Python version should be python2 or python3."
-    fi
-
-    if [ "${curr_python_version}" = "${target_python_version}" ]; then
-        echo "Python version is already ${target_python_version}"
-    else
-        echo "Update Python version from ${curr_python_version}" \
-            "to ${target_python_version}"
-        ln -fs "${target_python_version}" /usr/bin/python || \
-                die update "${target_python_version}"
-        ln -fs "${target_python_version}-config" /usr/bin/python-config || \
-                die update "${target_python_version}-config"
-    fi
-}
-
 validate_socket_installation() {
     INSTALL_LOCATION="/tmp"
     PACKAGE_NAME="btsocket"
@@ -278,9 +257,6 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     validate_python_package_installation "pexpect"
     validate_python_package_installation "numpy"
     validate_python_package_installation "pybluez"
-
-    echo deploy: PY_VERSION "${PY_VERSION}"
-    use_python_version "${PY_VERSION}"
 
     validate_socket_installation
 

@@ -25,6 +25,27 @@ install_standard_python_modules() {
     done
 }
 
+use_python_version() {
+    target_python_version=$1
+
+    curr_python_version="$(readlink "$(which python)")"
+    if [ "${curr_python_version}" != "python2" ] && \
+         [ "${curr_python_version}" != "python3" ]; then
+        die "Python version should be python2 or python3."
+    fi
+
+    if [ "${curr_python_version}" = "${target_python_version}" ]; then
+        echo "Python version is already ${target_python_version}"
+    else
+        echo "Update Python version from ${curr_python_version}" \
+            "to ${target_python_version}"
+        ln -fs "${target_python_version}" /usr/bin/python || \
+                die update "${target_python_version}"
+        ln -fs "${target_python_version}-config" /usr/bin/python-config || \
+                die update "${target_python_version}-config"
+    fi
+}
+
 install_pip() {
     python "${PIP_DIR}/${PIP_BOOTSTRAP}" --no-setuptools
 }
@@ -49,6 +70,12 @@ uninstall_old_chameleond_from_pip() {
 
 # Set the correct time. Otherwise, installation of pip may fail.
 set_time
+
+# Switch python version for Raspberry Pi.
+if [ "${PLATFORM}" = "raspberrypi" ] || [ "${PLATFORM}" = "x86-generic" ]; then
+    echo deploy_pip: use PY_VERSION "${PY_VERSION}"
+    use_python_version "${PY_VERSION}"
+fi
 
 pip -V
 if [ $? -eq 0 ]; then
