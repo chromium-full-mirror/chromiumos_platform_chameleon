@@ -218,6 +218,35 @@
 			label = "DP2_PS8468_RST_L";
 		};
 	};
+
+	it68051 {
+		compatible = "gpio-keys";
+
+		it68051p0_pwr_det {
+			gpios = <&gpiof 0 GPIO_OUTPUT_LOW>;
+			label = "IT68051P0_PWR_DET";
+		};
+
+		it68051p1_pwr_det {
+			gpios = <&gpiof 1 GPIO_OUTPUT_LOW>;
+			label = "IT68051P1_PWR_DET";
+		};
+
+		it68051_rst_l {
+			gpios = <&gpiof 2 GPIO_OUTPUT_LOW>;
+			label = "IT68051_RST_L";
+		};
+
+		it68051p0_ddc_bp_l {
+			gpios = <&gpiod 6 GPIO_OUTPUT_LOW>;
+			label = "IT68051P0_DDC_BP_L";
+		};
+
+		it68051p1_ddc_bp_l {
+			gpios = <&gpiod 11 GPIO_OUTPUT_LOW>;
+			label = "IT68051P1_DDC_BP_L";
+		};
+	};
 };
 
 &usart1 {

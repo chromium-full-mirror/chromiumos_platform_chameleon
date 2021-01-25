@@ -11,5 +11,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(chameleon)
 
 FILE(GLOB app_sources src/*.c)
+FILE(GLOB ite_private_sources private/ite/src/*.c)
 target_include_directories(app PRIVATE include)
-target_sources(app PRIVATE ${app_sources})
+target_include_directories(app PRIVATE private/ite/include)
+target_sources(app PRIVATE ${app_sources} ${ite_private_sources})
