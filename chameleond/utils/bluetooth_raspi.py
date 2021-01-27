@@ -882,7 +882,7 @@ class BluezPeripheral(PeripheralKit):
 
     desired_event = None
     while time.time() < end_time:
-      output = process.stdout.readline()
+      output = process.stdout.readline().decode('utf8')
       if output == '' and process.poll() is not None:
         break
 
