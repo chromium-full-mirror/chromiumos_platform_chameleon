@@ -127,6 +127,46 @@ class HciCommands(object):
 
     return cmd
 
+  @staticmethod
+  def le_set_scan_params(le_scan_type=0x01,
+                         le_scan_interval=0x0010,
+                         le_scan_window=0x0010,
+                         own_address_type=0x0,
+                         scanning_filter_policy=0x0):
+    """LE Set Scan Params
+
+    Args:
+      le_scan_type: [1 octets] 0x0 = passive, 0x1 = public
+      le_scan_interval: [2 octets] Scan interval
+      le_scan_window: [2 octet] Scan window
+      own_address_type: [1 octet] Range 0x0 - 0x3
+      scanning_filter_policy: [1 octet] Range 0x0 - 0x3
+    """
+    cmd = [LE_OGF, '0x000b']
+
+    cmd.extend(_number_to_le_hex(le_scan_type, octets=1))
+    cmd.extend(_number_to_le_hex(le_scan_interval, octets=2))
+    cmd.extend(_number_to_le_hex(le_scan_window, octets=2))
+    cmd.extend(_number_to_le_hex(own_address_type, octets=1))
+    cmd.extend(_number_to_le_hex(scanning_filter_policy, octets=1))
+
+    return cmd
+
+  @staticmethod
+  def le_set_scan_enable(enable=False, filter_duplicates=False):
+    """LE Set Scan Enable
+
+    Args:
+      enable: [1 octet] Enable scanning
+      filter_duplicates: [1 octet] Filter duplicates
+    """
+    cmd = [LE_OGF, '0x000c']
+
+    cmd.extend(_number_to_le_hex(int(enable), octets=1))
+    cmd.extend(_number_to_le_hex(int(filter_duplicates), octets=1))
+
+    return cmd
+
 
 class HciTool(object):
   """Wrapper for executing hcitool."""

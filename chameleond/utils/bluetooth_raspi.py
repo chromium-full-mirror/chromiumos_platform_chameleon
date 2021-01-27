@@ -41,6 +41,7 @@ from .bluez_service_consts import PERIPHERAL_DEVICE_CLASS, \
     PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
     BTD_CONF_FILE, PERIPHERAL_BTD_FLAGS
 from .bluez_gatt_server import GATTServer
+from .hci_cmd import HciCommands, HciTool
 from six.moves import range
 
 DBUS_BLUEZ_SERVICE_IFACE = 'org.bluez'
@@ -817,9 +818,19 @@ class BluezPeripheral(PeripheralKit):
     """
 
     # Submit LE Set Scan Enable command with filter_duplicates disabled
-    cmd = 'hcitool -i hci0 cmd 0x08 0x000C 0x01 0x00'
+    cmds = [
+        HciCommands.le_set_scan_params(),
+        HciCommands.le_set_scan_enable(enable=True, filter_duplicates=False)
+    ]
 
-    return os.system(cmd) == 0
+    tool = HciTool(sudo=True, wait_time=0.1)
+
+    for cmd in cmds:
+      tool.add_command(cmd)
+
+    tool.run_commands()
+
+    return True
 
 
   def StopUnfilteredDiscovery(self):
@@ -828,10 +839,14 @@ class BluezPeripheral(PeripheralKit):
       Disables a scan started via self.StartUnfilteredDiscovery()
     """
 
-    # Submit LE Set Scan Enable command with LE_Scan_enable set to false
-    cmd = 'hcitool -i hci0 cmd 0x08 0x000C 0x00 0x00'
+    tool = HciTool(sudo=True, wait_time=0.1)
 
-    return os.system(cmd) == 0
+    # Submit LE Set Scan Enable command with LE_Scan_enable set to false
+    tool.add_command(HciCommands.le_set_scan_enable(enable=False))
+
+    tool.run_commands()
+
+    return True
 
 
   def FindAdvertisementWithAttributes(self, attrs=[], timeout=10):
