@@ -246,6 +246,11 @@
 			gpios = <&gpiod 11 GPIO_OUTPUT_LOW>;
 			label = "IT68051P1_DDC_BP_L";
 		};
+
+		gp213_it68051p1_hpd {
+			gpios = <&gpioe 15 GPIO_OUTPUT_LOW>;
+			label = "GP213_IT68051P1_HPD";
+		};
 	};
 };
 
