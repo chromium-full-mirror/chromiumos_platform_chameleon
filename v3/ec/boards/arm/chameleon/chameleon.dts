@@ -239,12 +239,12 @@
 		compatible = "gpio-keys";
 
 		it68051p0_pwr_det {
-			gpios = <&gpiof 0 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiof 0 GPIO_OUTPUT_HIGH>;
 			label = "IT68051P0_PWR_DET";
 		};
 
 		it68051p1_pwr_det {
-			gpios = <&gpiof 1 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiof 1 GPIO_OUTPUT_HIGH>;
 			label = "IT68051P1_PWR_DET";
 		};
 
@@ -266,6 +266,83 @@
 		gp213_it68051p1_hpd {
 			gpios = <&gpioe 15 GPIO_OUTPUT_LOW>;
 			label = "GP213_IT68051P1_HPD";
+		};
+	};
+
+	hotplug {
+		compatible = "gpio-keys";
+
+		dp1_auxp_det {
+			gpios = <&gpioe 5 GPIO_INPUT>;
+			label = "DP1_AUXP_DET";
+		};
+
+		dp1_auxn_det {
+			gpios = <&gpioe 6 GPIO_INPUT>;
+			label = "DP1_AUXN_DET";
+		};
+
+		dp2_auxp_det {
+			gpios = <&gpioe 7 GPIO_INPUT>;
+			label = "DP2_AUXP_DET";
+		};
+
+		dp2_auxn_det {
+			gpios = <&gpioe 8 GPIO_INPUT>;
+			label = "DP2_AUXN_DET";
+		};
+
+		hdmi1_pp3300 {
+			gpios = <&gpioe 9 GPIO_INPUT_PULL_DOWN>;
+			label = "HDMI1_PP3300";
+		};
+
+		hdmi2_pp3300 {
+			gpios = <&gpioe 10 GPIO_INPUT_PULL_DOWN>;
+			label = "HDMI2_PP3300";
+		};
+
+		/*
+		 * DP1 and DP2 HPD can be controlled by PE11 and PE12, or by
+		 * the HPD_SRC signal on the PS8468 demux/redriver, depending
+		 * on which of two optional-load resistors is stuffed. The
+		 * Proto 0 boards have R20 and R141 stuffed, while R22 and
+		 * R143 are not stuffed, so the HPD signals for the DisplayPort
+		 * connecters are controlled by the PS8468 and anything the
+		 * STM32 does will have no effect.
+		 */
+		dp1_mcu_hpd {
+			gpios = <&gpioe 11 GPIO_OUTPUT_LOW>;
+			label = "DP1_MCU_HPD";
+		};
+
+		dp2_mcu_hpd {
+			gpios = <&gpioe 12 GPIO_OUTPUT_LOW>;
+			label = "DP2_MCU_HPD";
+		};
+
+		/*
+		 * HDMI1 and HDMI2 HPD can be controlled by PE13 and PE14,
+		 * or by the HDMI1_RP_HPD/HDMI2_RP_HPD signals on the
+		 * EP91A6SQ redriver, depending on which of two optional-load
+		 * resistors is stuffed. The Proto 0 boards have R41 and R164
+		 * stuffed, while R42 and R164 are not stuffed, so the HPD
+		 * signals for the HDMI connecters are controlled by the
+		 * EP91A6SQ and anything the STM32 does will have no effect.
+		 */
+		hdmi1_mcu_hpd {
+			gpios = <&gpioe 13 GPIO_OUTPUT_LOW>;
+			label = "HDMI1_MCU_HPD";
+		};
+
+		hdmi2_mcu_hpd {
+			gpios = <&gpioe 14 GPIO_OUTPUT_LOW>;
+			label = "HDMI2_MCU_HPD";
+		};
+
+		dp_in_pwr_en {
+			gpios = <&u79 15 GPIO_OUTPUT_HIGH>;
+			label = "DP_IN_PWR_EN";
 		};
 	};
 	dp_cfg {
@@ -411,6 +488,15 @@
 		compatible = "nxp,pca95xx";
 		label = "U78 - PCA95XX";
 		reg = <0x21>;
+		#gpio-cells = <2>;
+		gpio-controller;
+	};
+
+	/* U79 I/O expander DP2 OUT config, HDMI input reset, DP IN power */
+	u79: pca95xx@23 {
+		compatible = "nxp,pca95xx";
+		label = "U79 - PCA95XX";
+		reg = <0x23>;
 		#gpio-cells = <2>;
 		gpio-controller;
 	};
