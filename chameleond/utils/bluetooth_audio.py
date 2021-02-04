@@ -221,9 +221,17 @@ class BluetoothAudio(BluezPeripheral):
       True if it could connect to the remote address successfully.
     """
     remote_device = self.GetDeviceWithAddress(remote_address)
-    if remote_device and remote_device.Connect():
-      return True
-    return False
+    if not remote_device:
+      return False
+
+    try:
+      remote_device.Connect()
+
+    except Exception as e:
+      logging.error('Failed to connect to {}: {}'.format(remote_address, e))
+      return False
+
+    return True
 
   def GetAdvertisedName(self):
     """Get the name advertised by the kit.
