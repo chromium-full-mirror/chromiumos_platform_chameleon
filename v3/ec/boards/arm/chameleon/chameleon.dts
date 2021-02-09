@@ -267,6 +267,94 @@
 			label = "GP213_IT68051P1_HPD";
 		};
 	};
+	dp_cfg {
+		compatible = "gpio-keys";
+
+		/*
+		 * Most of these are GPIO_INPUT to allow the pull-up/pull-down
+		 * resistors to apply the desired level. We only want to actively
+		 * drive the MODE pins to select manual mux control by the SW pin.
+		 */
+		dp1_ps8468_mode {
+			gpios = <&u77 0 GPIO_OUTPUT_LOW>;
+			label = "DP1_PS8468_MODE";
+		};
+
+		dp1_ps8468_cfg0 {
+			gpios = <&u77 1 GPIO_INPUT>;
+			label = "DP1_PS8468_CFG0";
+		};
+
+		dp1_ps8468_cfg1 {
+			gpios = <&u77 2 GPIO_INPUT>;
+			label = "DP1_PS8468_CFG1";
+		};
+
+		dp1_ps8468_cfg2 {
+			gpios = <&u77 3 GPIO_INPUT>;
+			label = "DP1_PS8468_CFG2";
+		};
+
+		dp1_ps8468_cfg3 {
+			gpios = <&u77 4 GPIO_INPUT>;
+			label = "DP1_PS8468_CFG3";
+		};
+
+		dp1_ps8468_cfg4 {
+			gpios = <&u77 5 GPIO_INPUT>;
+			label = "DP1_PS8468_CFG4";
+		};
+
+		dp1_ps8468_eq0  {
+			gpios = <&u77 6 GPIO_INPUT>;
+			label = "DP1_PS8468_EQ0 ";
+		};
+
+		dp1_ps8468_eq1  {
+			gpios = <&u77 7 GPIO_INPUT>;
+			label = "DP1_PS8468_EQ1 ";
+		};
+
+		dp2_ps8468_mode {
+			gpios = <&u77 8 GPIO_OUTPUT_LOW>;
+			label = "DP2_PS8468_MODE";
+		};
+
+		dp2_ps8468_cfg0 {
+			gpios = <&u77 9 GPIO_INPUT>;
+			label = "DP2_PS8468_CFG0";
+		};
+
+		dp2_ps8468_cfg1 {
+			gpios = <&u77 10 GPIO_INPUT>;
+			label = "DP2_PS8468_CFG1";
+		};
+
+		dp2_ps8468_cfg2 {
+			gpios = <&u77 11 GPIO_INPUT>;
+			label = "DP2_PS8468_CFG2";
+		};
+
+		dp2_ps8468_cfg3 {
+			gpios = <&u77 12 GPIO_INPUT>;
+			label = "DP2_PS8468_CFG3";
+		};
+
+		dp2_ps8468_cfg4 {
+			gpios = <&u77 13 GPIO_INPUT>;
+			label = "DP2_PS8468_CFG4";
+		};
+
+		dp2_ps8468_eq0  {
+			gpios = <&u77 14 GPIO_INPUT>;
+			label = "DP2_PS8468_EQ0 ";
+		};
+
+		dp2_ps8468_eq1  {
+			gpios = <&u77 15 GPIO_INPUT>;
+			label = "DP2_PS8468_EQ1 ";
+		};
+	};
 };
 
 &usart1 {
@@ -299,6 +387,15 @@
 
 &i2c2 {
 	status = "okay";
+
+	/* U77 I/O expander, config signals for PS8468 */
+	u77: pca95xx@20 {
+		compatible = "nxp,pca95xx";
+		label = "PCA95XX";
+		reg = <0x20>;
+		#gpio-cells = <2>;
+		gpio-controller;
+	};
 
 	/* U78 I/O expander, DP1 OUT config signals, plus misc I/O */
 	u78: pca95xx@21 {
