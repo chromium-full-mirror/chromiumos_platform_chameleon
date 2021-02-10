@@ -1,0 +1,66 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ *
+ * Graphviz "dot" source for the videomux connections.
+ */
+
+digraph {
+	node [shape=rect];
+	graph [pad="1", ranksep="1", nodesep="1"];
+	edge [color="#aaaaaa" labelangle="0" labeldistance="3"]
+
+	u9 [label="HDMI redriver (U9)"];
+	u10 [label="HDMI 1 demux (U10)\nHDMI1_GP213_CH_SEL"];
+	u3 [label="DP 1 demux (U3)\nDP1_PS8468_SW"];
+	u17 [label="MCDP2900 DP to HDMI (U17)"];
+	u11 [label="Port 1 FPGA mux (U11)\nSOMP1_MODE_SEL"];
+	u18 [label="Port 1 RX mux (U18)\nGP213_IT68051P1_CH_SEL"];
+
+	u28 [label="HDMI redriver (U28)"];
+	u29 [label="HDMI 2 demux (U29)\nHDMI2_GP213_CH_SEL"];
+	u22 [label="DP 2 demux (U22)\nDP2_PS8468_SW"];
+	u30 [label="MCDP2900 DP to HDMI (U30)"];
+	u14 [label="Port 2 FPGA mux (U14)\nSOMP2_MODE_SEL"];
+	u31 [label="Port 2 RX mux (U31)\nGP213_IT68051P0_CH_SEL"];
+
+	fpga [label="FPGA"];
+	u33 [label="IT68051 HDMI receiver (U33)"];
+
+	dp1 [label="DisplayPort 1"]; dp1 -> u3;
+	u3 -> u17 [edgetooltip="DP1_PS8468_OUT1" taillabel="OUT1\nSW=0"];
+	u3 -> u11 [edgetooltip="DP1_PS8468_OUT2" taillabel="OUT2\nSW=1" headlabel="IN1\nSEL=0"];
+	u17 -> u18 [headlabel="IN1\nSEL=0"];
+
+	hdmi1 [label="HDMI 1"]; hdmi1 -> u9;
+	u9 -> u10;
+	u10 -> u18 [edgetooltip="HDMI1_GP213_CH1" taillabel="IN1\nSEL=0" headlabel="IN2\nSEL=1"];
+	u10 -> u11 [edgetooltip="HDMI1_GP213_CH2" taillabel="IN2\nSEL=1" headlabel="IN2\nSEL=1"];
+
+	u18 -> u33 [edgetooltip="GP213_IT68051P1" headlabel="P1"];
+	u11 -> fpga [edgetooltip="DP213_SOMP1" headlabel="MGT"];
+
+
+	dp2 [label="DisplayPort 2"]; dp2 -> u22;
+	u22 -> u30 [edgetooltip="DP2_PS8468_OUT1" taillabel="OUT1\nSW=0"];
+	u22 -> u14 [edgetooltip="DP2_PS8468_OUT2" taillabel="OUT2\nSW=1" headlabel="IN1\nSEL=0"];
+	u30 -> u31 [headlabel="IN1\nSEL=0"];
+
+	hdmi2 [label="HDMI 2"]; hdmi2 -> u28;
+	u28 -> u29;
+	u29 -> u31 [edgetooltip="HDMI2_GP213_CH1" taillabel="IN1\nSEL=0" headlabel="IN2\nSEL=1"];
+	u29 -> u14 [edgetooltip="HDMI2_GP213_CH2" taillabel="IN2\nSEL=1" headlabel="IN2\nSEL=1"];
+
+	u31 -> u33 [edgetooltip="GP213_IT68051P0" headlabel="P0"];
+	u14 -> fpga [edgetooltip="DP213_SOMP2" headlabel="MGT"];
+
+	u33 -> fpga [edgetooltip="IT68051_QD" taillabel="parallel RGB"];
+
+	{rank=min; hdmi1; dp1; dp2; hdmi2}
+	{rank=same; u3; u22; u10; u29}
+	{rank=same; u18; u11; u14; u31}
+	{rank=same; u33}
+	{rank=max; fpga}
+}

@@ -15,29 +15,137 @@
 
 DECLARE_GPIOS_FOR(videomux);
 
-int videomux_select(int port, enum videomux_select_t sel)
+int videomux_select(enum video_source_t src, enum video_dest_t dest)
 {
-	if (port == 1) {
-		gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p1_ch_sel),
-			     sel == HDMI_TO_FPGA_DP_TO_RECEIVER ? 1 : 2);
-		gpio_pin_set(GPIO_LOOKUP(videomux, dp1_ps8468_sw),
-			     sel == HDMI_TO_FPGA_DP_TO_RECEIVER ? 1 : 2);
-		gpio_pin_set(GPIO_LOOKUP(videomux, hdmi1_gp213_ch_sel),
-			     sel == HDMI_TO_FPGA_DP_TO_RECEIVER ? 2 : 1);
-		gpio_pin_set(GPIO_LOOKUP(videomux, somp1_mode_sel),
-			     sel == HDMI_TO_FPGA_DP_TO_RECEIVER ? 2 : 1);
-	} else if (port == 2) {
-		gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p0_ch_sel),
-			     sel == HDMI_TO_FPGA_DP_TO_RECEIVER ? 1 : 2);
-		gpio_pin_set(GPIO_LOOKUP(videomux, dp2_ps8468_sw),
-			     sel == HDMI_TO_FPGA_DP_TO_RECEIVER ? 1 : 2);
-		gpio_pin_set(GPIO_LOOKUP(videomux, hdmi2_gp213_ch_sel),
-			     sel == HDMI_TO_FPGA_DP_TO_RECEIVER ? 2 : 1);
-		gpio_pin_set(GPIO_LOOKUP(videomux, somp2_mode_sel),
-			     sel == HDMI_TO_FPGA_DP_TO_RECEIVER ? 2 : 1);
-	} else {
+	/* Check `sel` for validity. */
+	if ((dest != HDMI_RECEIVER) && (dest != FPGA_MGT)) {
 		return -EINVAL;
 	}
+
+	// clang-format off
+	switch (src) {
+	case DP1:
+		if (dest == HDMI_RECEIVER) {
+			gpio_pin_set(GPIO_LOOKUP(videomux, dp1_ps8468_sw), 0);
+			gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p1_ch_sel), 0);
+		} else {
+			gpio_pin_set(GPIO_LOOKUP(videomux, dp1_ps8468_sw), 1);
+			gpio_pin_set(GPIO_LOOKUP(videomux, somp1_mode_sel), 0);
+		}
+		break;
+	case DP2:
+		if (dest == HDMI_RECEIVER) {
+			gpio_pin_set(GPIO_LOOKUP(videomux, dp2_ps8468_sw), 0);
+			gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p0_ch_sel), 0);
+		} else {
+			gpio_pin_set(GPIO_LOOKUP(videomux, dp2_ps8468_sw), 1);
+			gpio_pin_set(GPIO_LOOKUP(videomux, somp2_mode_sel), 0);
+		}
+		break;
+	case HDMI1:
+		if (dest == HDMI_RECEIVER) {
+			gpio_pin_set(GPIO_LOOKUP(videomux, hdmi1_gp213_ch_sel), 0);
+			gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p1_ch_sel), 1);
+		} else {
+			gpio_pin_set(GPIO_LOOKUP(videomux, hdmi1_gp213_ch_sel), 1);
+			gpio_pin_set(GPIO_LOOKUP(videomux, somp1_mode_sel), 1);
+		}
+		break;
+	case HDMI2:
+		if (dest == HDMI_RECEIVER) {
+			gpio_pin_set(GPIO_LOOKUP(videomux, hdmi2_gp213_ch_sel), 0);
+			gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p0_ch_sel), 1);
+		} else {
+			gpio_pin_set(GPIO_LOOKUP(videomux, hdmi2_gp213_ch_sel), 1);
+			gpio_pin_set(GPIO_LOOKUP(videomux, somp2_mode_sel), 1);
+		}
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+	// clang-format on
+	return 0;
+}
+
+/**
+ * @brief Show status of videomux settings
+ *
+ * Dump out what each mux control line is set to, and then interpret those
+ * values according to the table:
+ *
+ * U3/U22  U18/U31 U11/U14 DP
+ * ------  ------- ------- ----
+ * 0       0       x       IT68051
+ * 1       x       0       FPGA
+ * others                  n/c
+ *
+ * U10/U29 U18/U31 U11/U14 HDMI
+ * ------  ------- ------- ----
+ * 0       1       x       IT68051
+ * 1       x       1       FPGA
+ * others                  n/c
+ *
+ */
+static int cmd_videomux_get(const struct shell *shell, size_t argc, char **argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	// clang-format off
+	uint8_t rx1_mux = gpio_pin_get(GPIO_LOOKUP(videomux, gp213_it68051p1_ch_sel));
+	uint8_t dp1_demux = gpio_pin_get(GPIO_LOOKUP(videomux, dp1_ps8468_sw));
+	uint8_t hdmi1_demux = gpio_pin_get(GPIO_LOOKUP(videomux, hdmi1_gp213_ch_sel));
+	uint8_t fpga1_mux = gpio_pin_get(GPIO_LOOKUP(videomux, somp1_mode_sel));
+
+	uint8_t rx2_mux = gpio_pin_get(GPIO_LOOKUP(videomux, gp213_it68051p0_ch_sel));
+	uint8_t dp2_demux = gpio_pin_get(GPIO_LOOKUP(videomux, dp2_ps8468_sw));
+	uint8_t hdmi2_demux = gpio_pin_get(GPIO_LOOKUP(videomux, hdmi2_gp213_ch_sel));
+	uint8_t fpga2_mux = gpio_pin_get(GPIO_LOOKUP(videomux, somp2_mode_sel));
+	// clang-format on
+
+	shell_fprintf(
+		shell, SHELL_NORMAL,
+		"U3:%d U10:%d U11:%d U18:%d U22:%d U29:%d U31:%d U14:%d\n",
+		dp1_demux, hdmi1_demux, fpga1_mux, rx1_mux, dp2_demux,
+		hdmi2_demux, rx2_mux, fpga2_mux);
+
+	shell_fprintf(shell, SHELL_NORMAL, "DP1: ");
+	if ((dp1_demux == 0) && (rx1_mux == 0)) {
+		shell_fprintf(shell, SHELL_NORMAL, "HDMI RX\n");
+	} else if ((dp1_demux == 1) && (fpga1_mux == 0)) {
+		shell_fprintf(shell, SHELL_NORMAL, "FPGA\n");
+	} else {
+		shell_fprintf(shell, SHELL_NORMAL, "n/c\n");
+	}
+
+	shell_fprintf(shell, SHELL_NORMAL, "DP2: ");
+	if ((dp2_demux == 0) && (rx2_mux == 0)) {
+		shell_fprintf(shell, SHELL_NORMAL, "HDMI RX\n");
+	} else if ((dp2_demux == 1) && (fpga2_mux == 0)) {
+		shell_fprintf(shell, SHELL_NORMAL, "FPGA\n");
+	} else {
+		shell_fprintf(shell, SHELL_NORMAL, "n/c\n");
+	}
+
+	shell_fprintf(shell, SHELL_NORMAL, "HDMI1: ");
+	if ((hdmi1_demux == 0) && (rx1_mux == 1)) {
+		shell_fprintf(shell, SHELL_NORMAL, "HDMI RX\n");
+	} else if ((hdmi1_demux == 1) && (fpga1_mux == 1)) {
+		shell_fprintf(shell, SHELL_NORMAL, "FPGA\n");
+	} else {
+		shell_fprintf(shell, SHELL_NORMAL, "n/c\n");
+	}
+
+	shell_fprintf(shell, SHELL_NORMAL, "HDMI2: ");
+	if ((hdmi2_demux == 0) && (rx2_mux == 1)) {
+		shell_fprintf(shell, SHELL_NORMAL, "HDMI RX\n");
+	} else if ((hdmi2_demux == 1) && (fpga2_mux == 1)) {
+		shell_fprintf(shell, SHELL_NORMAL, "FPGA\n");
+	} else {
+		shell_fprintf(shell, SHELL_NORMAL, "n/c\n");
+	}
+
 	return 0;
 }
 
@@ -82,78 +190,154 @@ static int videomux_init(const struct device *ptr)
 SYS_INIT(videomux_init, APPLICATION, 75);
 
 /**
- * @brief Set port 1 to route HDMI to the FPGA, DisplayPort to the Receiver
+ * @brief Route one of the ports to one of the destinations
+ *
+ * The port name is in argv[-1] and will be "hdmi1", "hdmi2", "dp1", or "dp2".
+ * The destination is in argv[0] and will be "fpga" or "rx".
+ * The shell shouldn't call this function if one of the parameters is incorrect,
+ * but we'll add an extra validity check just in case.
  */
-static int cmd_videomux_set_port1_hdmi_fpga(const struct shell *shell,
-					    size_t argc, char **argv)
+static int cmd_videomux_set(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
 
-	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-		      "Connect HDMI1 to FPGA, DisplayPort1 to receiver\n");
-	return videomux_select(1, HDMI_TO_FPGA_DP_TO_RECEIVER);
+	/*
+	 * Because of how the Zephyr shell stores sub-commands, argv[0] will
+	 * be the last sub-command, so "rx" or "fpga", and argv[-1] will be
+	 * the sub-command before that, so "hdmi1", "hdmi2", "dp1" or "dp2".
+	 * Indexing argv[] by a negative number just feels wrong, but the
+	 * alternative is to have 8 different shell handlers.
+	 */
+	enum video_source_t src;
+	enum video_dest_t dest;
+
+	if (!strcmp(argv[-1], "hdmi1")) {
+		src = HDMI1;
+		shell_fprintf(shell, SHELL_NORMAL, "Connect HDMI1");
+	} else if (!strcmp(argv[-1], "hdmi2")) {
+		src = HDMI2;
+		shell_fprintf(shell, SHELL_NORMAL, "Connect HDMI2");
+	} else if (!strcmp(argv[-1], "dp1")) {
+		src = DP1;
+		shell_fprintf(shell, SHELL_NORMAL, "Connect DP1");
+	} else if (!strcmp(argv[-1], "dp2")) {
+		src = DP2;
+		shell_fprintf(shell, SHELL_NORMAL, "Connect DP2");
+	} else {
+		printk("Invalid source: '%s'\n", argv[-1]);
+		return -EINVAL;
+	}
+
+	if (!strcmp(argv[0], "rx")) {
+		dest = HDMI_RECEIVER;
+		shell_fprintf(shell, SHELL_NORMAL, " to receiver\n");
+	} else if (!strcmp(argv[0], "fpga")) {
+		dest = FPGA_MGT;
+		shell_fprintf(shell, SHELL_NORMAL, " to FPGA\n");
+	} else {
+		printk("Invalid destination: '%s'\n", argv[0]);
+		return -EINVAL;
+	}
+
+	return videomux_select(src, dest);
 }
 
 /**
- * @brief Set port 1 to route HDMI to the Receiver, DisplayPort to the FPGA
+ * @brief Pulse the reset line on DP1_PS8468
  */
-static int cmd_videomux_set_port1_dp_fpga(const struct shell *shell,
-					  size_t argc, char **argv)
+static int cmd_videomux_pulse_dp1_ps8468(const struct shell *shell, size_t argc,
+					 char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-		      "Connect DisplayPort1 to FPGA, HDMI1 to receiver\n");
-	return videomux_select(1, HDMI_TO_RECEIVER_DP_TO_FGPA);
+	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP1_PS8468_RST_L\n");
+	gpio_pin_set(GPIO_LOOKUP(videomux, dp1_ps8468_rst_l), 0);
+	k_msleep(100);
+	gpio_pin_set(GPIO_LOOKUP(videomux, dp1_ps8468_rst_l), 1);
+	return 0;
 }
 
 /**
- * @brief Set port 2 to route HDMI to the FPGA, DisplayPort to the Receiver
+ * @brief Pulse the reset line on DP2_PS8468
  */
-static int cmd_videomux_set_port2_hdmi_fpga(const struct shell *shell,
-					    size_t argc, char **argv)
+static int cmd_videomux_pulse_dp2_ps8468(const struct shell *shell, size_t argc,
+					 char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-		      "Connect HDMI2 to FPGA, DisplayPort2 to receiver\n");
-	return videomux_select(2, HDMI_TO_FPGA_DP_TO_RECEIVER);
+	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP2_PS8468_RST_L\n");
+	gpio_pin_set(GPIO_LOOKUP(videomux, dp2_ps8468_rst_l), 0);
+	k_msleep(100);
+	gpio_pin_set(GPIO_LOOKUP(videomux, dp2_ps8468_rst_l), 1);
+	return 0;
 }
 
 /**
- * @brief Set port 2 to route HDMI to the Receiver, DisplayPort to the FPGA
+ * @brief Pulse the reset line on DP1_HDMI (MCDP2900)
  */
-static int cmd_videomux_set_port2_dp_fpga(const struct shell *shell,
-					  size_t argc, char **argv)
+static int cmd_videomux_pulse_dp1_hdmi(const struct shell *shell, size_t argc,
+				       char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-		      "Connect DisplayPort2 to FPGA, HDMI2 to receiver\n");
-	return videomux_select(2, HDMI_TO_RECEIVER_DP_TO_FGPA);
+	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP1_HDMI_RST_L\n");
+	gpio_pin_set(GPIO_LOOKUP(videomux, dp1_hdmi_rst_l), 0);
+	k_msleep(100);
+	gpio_pin_set(GPIO_LOOKUP(videomux, dp1_hdmi_rst_l), 1);
+	return 0;
 }
 
+/**
+ * @brief Pulse the reset line on DP2_HDMI (MCDP2900)
+ */
+static int cmd_videomux_pulse_dp2_hdmi(const struct shell *shell, size_t argc,
+				       char **argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP2_HDMI_RST_L\n");
+	gpio_pin_set(GPIO_LOOKUP(videomux, dp2_hdmi_rst_l), 0);
+	k_msleep(100);
+	gpio_pin_set(GPIO_LOOKUP(videomux, dp2_hdmi_rst_l), 1);
+	return 0;
+}
+
+// clang-format off
 SHELL_STATIC_SUBCMD_SET_CREATE(
-	port1_cmds,
-	SHELL_CMD(hdmi, NULL, "Route HDMI to FPGA, DisplayPort to receiver",
-		  cmd_videomux_set_port1_hdmi_fpga),
-	SHELL_CMD(dp, NULL, "Route DisplayPort to FPGA, HDMI to receiver",
-		  cmd_videomux_set_port1_dp_fpga),
+	dp1_cmds, SHELL_CMD(fpga, NULL, "Route DP1 to FPGA", cmd_videomux_set),
+	SHELL_CMD(rx, NULL, "Route DP1 to receiver", cmd_videomux_set),
 	SHELL_SUBCMD_SET_END);
 SHELL_STATIC_SUBCMD_SET_CREATE(
-	port2_cmds,
-	SHELL_CMD(hdmi, NULL, "Route HDMI to FPGA, DisplayPort to receiver",
-		  cmd_videomux_set_port2_hdmi_fpga),
-	SHELL_CMD(dp, NULL, "Route DisplayPort to FPGA, HDMI to receiver",
-		  cmd_videomux_set_port2_dp_fpga),
+	dp2_cmds, SHELL_CMD(fpga, NULL, "Route DP2 to FPGA", cmd_videomux_set),
+	SHELL_CMD(rx, NULL, "Route DP2 to receiver", cmd_videomux_set),
 	SHELL_SUBCMD_SET_END);
-SHELL_STATIC_SUBCMD_SET_CREATE(videomux_cmds,
-			       SHELL_CMD(1, &port1_cmds, "Port 1", NULL),
-			       SHELL_CMD(2, &port2_cmds, "Port 2", NULL),
-			       SHELL_SUBCMD_SET_END /* Array terminated. */
+SHELL_STATIC_SUBCMD_SET_CREATE(hdmi1_cmds,
+	SHELL_CMD(fpga, NULL, "Route HDMI1 to FPGA", cmd_videomux_set),
+	SHELL_CMD(rx, NULL, "Route HDMI1 to receiver", cmd_videomux_set),
+	SHELL_SUBCMD_SET_END);
+SHELL_STATIC_SUBCMD_SET_CREATE(hdmi2_cmds,
+	SHELL_CMD(fpga, NULL, "Route HDMI2 to FPGA", cmd_videomux_set),
+	SHELL_CMD(rx, NULL, "Route HDMI2 to receiver", cmd_videomux_set),
+	SHELL_SUBCMD_SET_END);
+SHELL_STATIC_SUBCMD_SET_CREATE(reset_cmds,
+	SHELL_CMD(dp1_ps8468, NULL, "Reset DP1_PS8468 (U3)", cmd_videomux_pulse_dp1_ps8468),
+	SHELL_CMD(dp2_ps8468, NULL, "Reset DP2_PS8468 (U22)", cmd_videomux_pulse_dp2_ps8468),
+	SHELL_CMD(dp1_hdmi, NULL, "Reset DP1_HDMI (U17)", cmd_videomux_pulse_dp1_hdmi),
+	SHELL_CMD(dp2_hdmi, NULL, "Reset DP2_HDMI (U30)", cmd_videomux_pulse_dp2_hdmi),
+	SHELL_SUBCMD_SET_END);
+SHELL_STATIC_SUBCMD_SET_CREATE(
+	videomux_cmds,
+	SHELL_CMD(get, NULL, "Show status of video mux", cmd_videomux_get),
+	SHELL_CMD(dp1, &dp1_cmds, "Route DisplayPort 1", NULL),
+	SHELL_CMD(dp2, &dp2_cmds, "Route DisplayPort 2", NULL),
+	SHELL_CMD(hdmi1, &hdmi1_cmds, "Route HDMI 1", NULL),
+	SHELL_CMD(hdmi2, &hdmi2_cmds, "Route HDMI 2", NULL),
+	SHELL_CMD(reset, &reset_cmds, "Reset chips", NULL),
+	SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 SHELL_CMD_REGISTER(videomux, &videomux_cmds, "Control the video mux", NULL);
+// clang-format on
