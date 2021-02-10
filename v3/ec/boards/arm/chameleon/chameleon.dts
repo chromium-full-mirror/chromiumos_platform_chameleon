@@ -179,7 +179,7 @@
 		 * switches) and 0 (channel 2 on the other switches).
 		 */
 		gp213_it68051p0_ch_sel {
-			/* GPU_SEL on U14 */
+			/* GPU_SEL on U31 */
 			gpios = <&gpiog 3 GPIO_OUTPUT_LOW>;
 			label = "GP213_IT68051P0_CH_SEL";
 		};
@@ -197,7 +197,7 @@
 		};
 
 		somp2_mode_sel {
-			/* GPU_SEL on U31 */
+			/* GPU_SEL on U14 */
 			gpios = <&gpiog 5 GPIO_OUTPUT_HIGH>;
 			label = "SOMP2_MODE_SEL";
 		};
@@ -216,6 +216,21 @@
 			/* RESETN on U22 */
 			gpios = <&gpiof 11 GPIO_OUTPUT_HIGH>;
 			label = "DP2_PS8468_RST_L";
+		};
+
+		/*
+		 * Reset lines for the MCDP2900 DP->HDMI converters.
+		 */
+		dp1_hdmi_rst_l {
+			/* EX_RESETN on U17 */
+			gpios = <&gpiog 10 GPIO_OUTPUT_HIGH>;
+			label = "DP1_HDMI_RST_L";
+		};
+
+		dp2_hdmi_rst_l {
+			/* EX_RESETN on U30 */
+			gpios = <&gpiog 11 GPIO_OUTPUT_HIGH>;
+			label = "DP2_HDMI_RST_L";
 		};
 	};
 

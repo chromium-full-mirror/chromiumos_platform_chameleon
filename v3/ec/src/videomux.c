@@ -42,6 +42,46 @@ int videomux_select(int port, enum videomux_select_t sel)
 }
 
 /**
+ * @brief Initialize the videomux GPIOs
+ *
+ * @note Most of the GPIOs are initialized in the devicetree, but the
+ * RESETN signals for the MCDP2900 need to be configured for open-drain,
+ * which isn't supported in devicetree because it strips off the lower
+ * 8 bits of the pin config.
+ *
+ * @param ptr Unused argument, required by SYS_INIT
+ * @retval 0
+ * No error
+ * @retval Non-zero
+ * Error code
+ */
+static int videomux_init(const struct device *ptr)
+{
+	ARG_UNUSED(ptr);
+
+	int ret;
+
+	ret = gpio_pin_configure(GPIO_LOOKUP(videomux, dp1_hdmi_rst_l),
+				 GPIO_OUTPUT_HIGH | GPIO_OPEN_DRAIN);
+	if (ret != 0) {
+		printk("Error %d: failed to configure dp1_hdmi_rst_l for open-drain\n",
+		       ret);
+		return ret;
+	}
+
+	ret = gpio_pin_configure(GPIO_LOOKUP(videomux, dp2_hdmi_rst_l),
+				 GPIO_OUTPUT_HIGH | GPIO_OPEN_DRAIN);
+	if (ret != 0) {
+		printk("Error %d: failed to configure dp2_hdmi_rst_l for open-drain\n",
+		       ret);
+		return ret;
+	}
+
+	return 0;
+}
+SYS_INIT(videomux_init, APPLICATION, 75);
+
+/**
  * @brief Set port 1 to route HDMI to the FPGA, DisplayPort to the Receiver
  */
 static int cmd_videomux_set_port1_hdmi_fpga(const struct shell *shell,
