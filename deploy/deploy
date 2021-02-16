@@ -300,6 +300,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         fi
 
         eval "cp ${SRC_KBD_CONF} ${DEST_KBD_CONF}"
+        eval "chmod +r ${DEST_KBD_CONF}"
     fi
 
     # No need to install servo packages as servo is not fully supported
