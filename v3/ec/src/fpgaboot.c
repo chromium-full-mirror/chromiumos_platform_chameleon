@@ -112,7 +112,7 @@ K_TIMER_DEFINE(fpgaboot_timer, fpgaboot_timeout, NULL);
  * The LONG_TIME is to wait from releasing reset to seeing DONE.
  */
 #define SHORT_TIMER K_MSEC(500)
-#define LONG_TIMER K_SECONDS(10)
+#define LONG_TIMER K_SECONDS(60)
 
 /**
  * @brief Execute the actions specified by the state machine
