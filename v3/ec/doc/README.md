@@ -57,12 +57,11 @@ west flash --erase --reset-after-load
 ### Serial Bootloader
 
 To use the serial bootloader to update the STM32's firmware, you must install
-`stm32flash` and build `stm32reset`.
+`stm32flash` and build `stm32reset`. For now all of these things have to do be done outside
+the chroot and some commands (eg. stm32reset) might be deprecated beyond proto0. 
 
 ```
-sudo apt-get install stm32flash
-sudo apt-get install gpiod
-sudo apt-get install libgpiod-dev
+sudo apt-get install stm32flash gpiod libgpiod-dev
 cd ~/chromiumos/src/platform/chameleon/utils/stm32reset
 make
 ```
@@ -78,7 +77,7 @@ Connect 12V power to the Chameleon.
 ```
 sudo ~/chromiumos/src/platform/chameleon/utils/stm32reset/stm32reset --bootloader
 stm32flash -o -f /dev/ttyUSB0
-stm32flash -w ~/zephyrproject/zephyr/build/zephyr/zephyr.bin -v -S 0x8000000 -f /dev/ttyUSB0
+stm32flash -w ~/zephyrproject/build/zephyr/zephyr.bin -v -S 0x8000000 -f /dev/ttyUSB0
 sudo ~/chromiumos/src/platform/chameleon/utils/stm32reset/stm32reset --user
 ```
 
