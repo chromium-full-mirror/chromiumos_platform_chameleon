@@ -11,18 +11,16 @@
 #include <drivers/gpio.h>
 #include <shell/shell.h>
 #include <sys/printk.h>
-#include "gpio_signal.h"
+#include "io.h"
 #include "led.h"
-
-DECLARE_GPIOS_FOR(leds);
 
 int led_powergood(bool turn_on)
 {
 	int ret;
 
-	ret = gpio_pin_set(GPIO_LOOKUP(leds, power_good_led), turn_on ? 1 : 0);
+	ret = gpio_set_level(power_good_led, turn_on ? 1 : 0);
 	if (ret < 0) {
-		printk("gpio_pin_configure failed, ret = %d\n", ret);
+		printk("gpio_set_level failed, ret = %d\n", ret);
 		return ret;
 	}
 
@@ -55,8 +53,9 @@ static int cmd_led_off(const struct shell *shell, size_t argc, char **argv)
 	return 0;
 }
 SHELL_STATIC_SUBCMD_SET_CREATE(led_cmds,
-	SHELL_CMD(on, NULL, "turn LED on", cmd_led_on),
-	SHELL_CMD(off, NULL, "turn LED off", cmd_led_off),
-	SHELL_SUBCMD_SET_END /* Array terminated. */
+			       SHELL_CMD(on, NULL, "turn LED on", cmd_led_on),
+			       SHELL_CMD(off, NULL, "turn LED off",
+					 cmd_led_off),
+			       SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 SHELL_CMD_REGISTER(led, &led_cmds, "LED commands", NULL);

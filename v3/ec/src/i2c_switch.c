@@ -14,10 +14,8 @@
 #include <shell/shell.h>
 #include <sys/__assert.h>
 #include <sys/printk.h>
-#include "gpio_signal.h"
+#include "io.h"
 #include "i2c_switch.h"
-
-DECLARE_GPIOS_FOR(i2c_switch);
 
 #define MAX7367_ADDR 0x73
 #define NUM_BUS 4
@@ -60,9 +58,9 @@ int i2c_switch_reset(enum i2c_switch_reset_value val)
 {
 	int ret;
 
-	ret = gpio_pin_set(GPIO_LOOKUP(i2c_switch, exp_reset), val);
+	ret = gpio_set_level(exp_reset, val);
 	if (ret < 0) {
-		printk("gpio_pin_set(exp_reset) failed, ret = %d\n", ret);
+		printk("gpio_set_level(exp_reset) failed, ret = %d\n", ret);
 	}
 	return ret;
 }
@@ -121,18 +119,17 @@ static int init_i2c_switch(const struct device *ptr)
 	i2c_switch_reset(RESET_DEASSERTED);
 	i2c_switch_select_bus(-1);
 
-	ret = gpio_pin_interrupt_configure(GPIO_LOOKUP(i2c_switch, exp_irq),
+	ret = gpio_pin_interrupt_configure(gpio_get_device(exp_irq),
+					   gpio_get_pin(exp_irq),
 					   GPIO_INT_EDGE_FALLING);
 	if (ret != 0) {
 		printk("Error %d: failed to configure interrupt on exp_irq\n",
 		       ret);
 		return ret;
 	}
-	gpio_init_callback(
-		&exp_irq_cb_data, exp_irq_cb,
-		BIT(gpio_pins[GPIO_ENUM(DT_PATH(i2c_switch, exp_irq))]));
-	gpio_add_callback(gpio_devs[GPIO_ENUM(DT_PATH(i2c_switch, exp_irq))],
-			  &exp_irq_cb_data);
+	gpio_init_callback(&exp_irq_cb_data, exp_irq_cb,
+			   BIT(gpio_get_pin(exp_irq)));
+	gpio_add_callback(gpio_get_device(exp_irq), &exp_irq_cb_data);
 
 	return 0;
 }

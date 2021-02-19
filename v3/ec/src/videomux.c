@@ -10,10 +10,8 @@
 #include <devicetree.h>
 #include <drivers/gpio.h>
 #include <shell/shell.h>
-#include "gpio_signal.h"
+#include "io.h"
 #include "videomux.h"
-
-DECLARE_GPIOS_FOR(videomux);
 
 int videomux_select(enum video_source_t src, enum video_dest_t dest)
 {
@@ -22,49 +20,47 @@ int videomux_select(enum video_source_t src, enum video_dest_t dest)
 		return -EINVAL;
 	}
 
-	// clang-format off
 	switch (src) {
 	case DP1:
 		if (dest == HDMI_RECEIVER) {
-			gpio_pin_set(GPIO_LOOKUP(videomux, dp1_ps8468_sw), 0);
-			gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p1_ch_sel), 0);
+			gpio_set_level(dp1_ps8468_sw, 0);
+			gpio_set_level(gp213_it68051p1_ch_sel, 0);
 		} else {
-			gpio_pin_set(GPIO_LOOKUP(videomux, dp1_ps8468_sw), 1);
-			gpio_pin_set(GPIO_LOOKUP(videomux, somp1_mode_sel), 0);
+			gpio_set_level(dp1_ps8468_sw, 1);
+			gpio_set_level(somp1_mode_sel, 0);
 		}
 		break;
 	case DP2:
 		if (dest == HDMI_RECEIVER) {
-			gpio_pin_set(GPIO_LOOKUP(videomux, dp2_ps8468_sw), 0);
-			gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p0_ch_sel), 0);
+			gpio_set_level(dp2_ps8468_sw, 0);
+			gpio_set_level(gp213_it68051p0_ch_sel, 0);
 		} else {
-			gpio_pin_set(GPIO_LOOKUP(videomux, dp2_ps8468_sw), 1);
-			gpio_pin_set(GPIO_LOOKUP(videomux, somp2_mode_sel), 0);
+			gpio_set_level(dp2_ps8468_sw, 1);
+			gpio_set_level(somp2_mode_sel, 0);
 		}
 		break;
 	case HDMI1:
 		if (dest == HDMI_RECEIVER) {
-			gpio_pin_set(GPIO_LOOKUP(videomux, hdmi1_gp213_ch_sel), 0);
-			gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p1_ch_sel), 1);
+			gpio_set_level(hdmi1_gp213_ch_sel, 0);
+			gpio_set_level(gp213_it68051p1_ch_sel, 1);
 		} else {
-			gpio_pin_set(GPIO_LOOKUP(videomux, hdmi1_gp213_ch_sel), 1);
-			gpio_pin_set(GPIO_LOOKUP(videomux, somp1_mode_sel), 1);
+			gpio_set_level(hdmi1_gp213_ch_sel, 1);
+			gpio_set_level(somp1_mode_sel, 1);
 		}
 		break;
 	case HDMI2:
 		if (dest == HDMI_RECEIVER) {
-			gpio_pin_set(GPIO_LOOKUP(videomux, hdmi2_gp213_ch_sel), 0);
-			gpio_pin_set(GPIO_LOOKUP(videomux, gp213_it68051p0_ch_sel), 1);
+			gpio_set_level(hdmi2_gp213_ch_sel, 0);
+			gpio_set_level(gp213_it68051p0_ch_sel, 1);
 		} else {
-			gpio_pin_set(GPIO_LOOKUP(videomux, hdmi2_gp213_ch_sel), 1);
-			gpio_pin_set(GPIO_LOOKUP(videomux, somp2_mode_sel), 1);
+			gpio_set_level(hdmi2_gp213_ch_sel, 1);
+			gpio_set_level(somp2_mode_sel, 1);
 		}
 		break;
 	default:
 		return -EINVAL;
 		break;
 	}
-	// clang-format on
 	return 0;
 }
 
@@ -92,17 +88,15 @@ static int cmd_videomux_get(const struct shell *shell, size_t argc, char **argv)
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	// clang-format off
-	uint8_t rx1_mux = gpio_pin_get(GPIO_LOOKUP(videomux, gp213_it68051p1_ch_sel));
-	uint8_t dp1_demux = gpio_pin_get(GPIO_LOOKUP(videomux, dp1_ps8468_sw));
-	uint8_t hdmi1_demux = gpio_pin_get(GPIO_LOOKUP(videomux, hdmi1_gp213_ch_sel));
-	uint8_t fpga1_mux = gpio_pin_get(GPIO_LOOKUP(videomux, somp1_mode_sel));
+	uint8_t rx1_mux = gpio_get_level(gp213_it68051p1_ch_sel);
+	uint8_t dp1_demux = gpio_get_level(dp1_ps8468_sw);
+	uint8_t hdmi1_demux = gpio_get_level(hdmi1_gp213_ch_sel);
+	uint8_t fpga1_mux = gpio_get_level(somp1_mode_sel);
 
-	uint8_t rx2_mux = gpio_pin_get(GPIO_LOOKUP(videomux, gp213_it68051p0_ch_sel));
-	uint8_t dp2_demux = gpio_pin_get(GPIO_LOOKUP(videomux, dp2_ps8468_sw));
-	uint8_t hdmi2_demux = gpio_pin_get(GPIO_LOOKUP(videomux, hdmi2_gp213_ch_sel));
-	uint8_t fpga2_mux = gpio_pin_get(GPIO_LOOKUP(videomux, somp2_mode_sel));
-	// clang-format on
+	uint8_t rx2_mux = gpio_get_level(gp213_it68051p0_ch_sel);
+	uint8_t dp2_demux = gpio_get_level(dp2_ps8468_sw);
+	uint8_t hdmi2_demux = gpio_get_level(hdmi2_gp213_ch_sel);
+	uint8_t fpga2_mux = gpio_get_level(somp2_mode_sel);
 
 	shell_fprintf(
 		shell, SHELL_NORMAL,
@@ -169,7 +163,8 @@ static int videomux_init(const struct device *ptr)
 
 	int ret;
 
-	ret = gpio_pin_configure(GPIO_LOOKUP(videomux, dp1_hdmi_rst_l),
+	ret = gpio_pin_configure(gpio_get_device(dp1_hdmi_rst_l),
+				 gpio_get_pin(dp1_hdmi_rst_l),
 				 GPIO_OUTPUT_HIGH | GPIO_OPEN_DRAIN);
 	if (ret != 0) {
 		printk("Error %d: failed to configure dp1_hdmi_rst_l for open-drain\n",
@@ -177,7 +172,8 @@ static int videomux_init(const struct device *ptr)
 		return ret;
 	}
 
-	ret = gpio_pin_configure(GPIO_LOOKUP(videomux, dp2_hdmi_rst_l),
+	ret = gpio_pin_configure(gpio_get_device(dp2_hdmi_rst_l),
+				 gpio_get_pin(dp2_hdmi_rst_l),
 				 GPIO_OUTPUT_HIGH | GPIO_OPEN_DRAIN);
 	if (ret != 0) {
 		printk("Error %d: failed to configure dp2_hdmi_rst_l for open-drain\n",
@@ -252,9 +248,9 @@ static int cmd_videomux_pulse_dp1_ps8468(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argv);
 
 	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP1_PS8468_RST_L\n");
-	gpio_pin_set(GPIO_LOOKUP(videomux, dp1_ps8468_rst_l), 0);
+	gpio_set_level(dp1_ps8468_rst_l, 0);
 	k_msleep(100);
-	gpio_pin_set(GPIO_LOOKUP(videomux, dp1_ps8468_rst_l), 1);
+	gpio_set_level(dp1_ps8468_rst_l, 1);
 	return 0;
 }
 
@@ -268,9 +264,9 @@ static int cmd_videomux_pulse_dp2_ps8468(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argv);
 
 	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP2_PS8468_RST_L\n");
-	gpio_pin_set(GPIO_LOOKUP(videomux, dp2_ps8468_rst_l), 0);
+	gpio_set_level(dp2_ps8468_rst_l, 0);
 	k_msleep(100);
-	gpio_pin_set(GPIO_LOOKUP(videomux, dp2_ps8468_rst_l), 1);
+	gpio_set_level(dp2_ps8468_rst_l, 1);
 	return 0;
 }
 
@@ -284,9 +280,9 @@ static int cmd_videomux_pulse_dp1_hdmi(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argv);
 
 	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP1_HDMI_RST_L\n");
-	gpio_pin_set(GPIO_LOOKUP(videomux, dp1_hdmi_rst_l), 0);
+	gpio_set_level(dp1_hdmi_rst_l, 0);
 	k_msleep(100);
-	gpio_pin_set(GPIO_LOOKUP(videomux, dp1_hdmi_rst_l), 1);
+	gpio_set_level(dp1_hdmi_rst_l, 1);
 	return 0;
 }
 
@@ -300,9 +296,9 @@ static int cmd_videomux_pulse_dp2_hdmi(const struct shell *shell, size_t argc,
 	ARG_UNUSED(argv);
 
 	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP2_HDMI_RST_L\n");
-	gpio_pin_set(GPIO_LOOKUP(videomux, dp2_hdmi_rst_l), 0);
+	gpio_set_level(dp2_hdmi_rst_l, 0);
 	k_msleep(100);
-	gpio_pin_set(GPIO_LOOKUP(videomux, dp2_hdmi_rst_l), 1);
+	gpio_set_level(dp2_hdmi_rst_l, 1);
 	return 0;
 }
 

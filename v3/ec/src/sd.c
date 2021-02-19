@@ -12,10 +12,8 @@
 #include <shell/shell.h>
 #include <sys/__assert.h>
 #include <sys/printk.h>
-#include "gpio_signal.h"
+#include "io.h"
 #include "sd.h"
-
-DECLARE_GPIOS_FOR(sd_mux);
 
 enum sd_state mux_state; /**< Currently selected state */
 
@@ -46,27 +44,27 @@ int sd_mux_set(enum sd_state state)
 
 	mux_state = state;
 
-	ret = gpio_pin_set(GPIO_LOOKUP(sd_mux, sd_mux_sel), mux_sel);
+	ret = gpio_set_level(sd_mux_sel, mux_sel);
 	if (ret < 0) {
-		printk("gpio_pin_set(sd_mux_sel) failed, ret = %d\n", ret);
+		printk("gpio_set_level(sd_mux_sel) failed, ret = %d\n", ret);
 		return ret;
 	}
 
-	ret = gpio_pin_set(GPIO_LOOKUP(sd_mux, sd_mux_en_l), mux_en);
+	ret = gpio_set_level(sd_mux_en_l, mux_en);
 	if (ret < 0) {
-		printk("gpio_pin_set(sd_mux_en+l) failed, ret = %d\n", ret);
+		printk("gpio_set_level(sd_mux_en+l) failed, ret = %d\n", ret);
 		return ret;
 	}
 
-	ret = gpio_pin_set(GPIO_LOOKUP(sd_mux, usd_pwr_sel), pwr_sel);
+	ret = gpio_set_level(usd_pwr_sel, pwr_sel);
 	if (ret < 0) {
-		printk("gpio_pin_set(usd_pwr_sel) failed, ret = %d\n", ret);
+		printk("gpio_set_level(usd_pwr_sel) failed, ret = %d\n", ret);
 		return ret;
 	}
 
-	ret = gpio_pin_set(GPIO_LOOKUP(sd_mux, usd_pwr_en), pwr_en);
+	ret = gpio_set_level(usd_pwr_en, pwr_en);
 	if (ret < 0) {
-		printk("gpio_pin_set(usd_pwr_en) failed, ret = %d\n", ret);
+		printk("gpio_set_level(usd_pwr_en) failed, ret = %d\n", ret);
 		return ret;
 	}
 
@@ -80,7 +78,7 @@ enum sd_state sd_mux_get(void)
 
 int sd_get_cd_det(void)
 {
-	return gpio_pin_get(GPIO_LOOKUP(sd_mux, usd_cd_det));
+	return gpio_get_level(usd_cd_det);
 }
 
 /**

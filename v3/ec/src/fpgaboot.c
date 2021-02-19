@@ -12,11 +12,9 @@
 #include <shell/shell.h>
 #include <sys/__assert.h>
 #include <sys/printk.h>
-#include "gpio_signal.h"
+#include "io.h"
 #include "fpgaboot.h"
 #include "fpgaboot_sm.h"
-
-DECLARE_GPIOS_FOR(fpga);
 
 /**
  * FPGA state
@@ -30,16 +28,16 @@ int fpgaboot_set_boot_mode(enum fpga_boot_mode mode)
 	}
 	switch (mode) {
 	case FPGA_BOOT_EMMC:
-		gpio_pin_set(GPIO_LOOKUP(fpga, boot_mode1), 0);
-		gpio_pin_set(GPIO_LOOKUP(fpga, boot_mode0), 0);
+		gpio_set_level(boot_mode1, 0);
+		gpio_set_level(boot_mode0, 0);
 		break;
 	case FPGA_BOOT_QSPI:
-		gpio_pin_set(GPIO_LOOKUP(fpga, boot_mode1), 0);
-		gpio_pin_set(GPIO_LOOKUP(fpga, boot_mode0), 1);
+		gpio_set_level(boot_mode1, 0);
+		gpio_set_level(boot_mode0, 1);
 		break;
 	case FPGA_BOOT_SDIO:
-		gpio_pin_set(GPIO_LOOKUP(fpga, boot_mode1), 1);
-		gpio_pin_set(GPIO_LOOKUP(fpga, boot_mode0), 1);
+		gpio_set_level(boot_mode1, 1);
+		gpio_set_level(boot_mode0, 1);
 		break;
 	default:
 		__ASSERT(false, "Unsupported fpga_boot_mode value");
@@ -70,7 +68,7 @@ static struct gpio_callback pwr_good_cb_data;
 static void pwr_good_cb(const struct device *dev, struct gpio_callback *cb,
 			uint32_t pins)
 {
-	int val = gpio_pin_get(GPIO_LOOKUP(fpga, pwr_good));
+	int val = gpio_get_level(pwr_good);
 	enum fpga_event event = val ? FPGABOOT_SOM_PWR_GOOD_ASSERTED :
 					    FPGABOOT_SOM_PWR_GOOD_DEASSERTED;
 
@@ -82,7 +80,7 @@ static struct gpio_callback fpga_done_cb_data;
 static void fpga_done_cb(const struct device *dev, struct gpio_callback *cb,
 			 uint32_t pins)
 {
-	int val = gpio_pin_get(GPIO_LOOKUP(fpga, fpga_done));
+	int val = gpio_get_level(fpga_done);
 	enum fpga_event event = val ? FPGABOOT_SOM_FPGA_DONE_ASSERTED :
 					    FPGABOOT_SOM_FPGA_DONE_DEASSERTED;
 
@@ -129,26 +127,26 @@ static void fpgaboot_handle_actions(uint32_t actions)
 		__ASSERT(
 			(actions & FPGABOOT_DEASSERT_SOM_PWR_EN) == 0,
 			"Don't assert and de-assert SOM_PWR_EN at the same time!");
-		gpio_pin_set(GPIO_LOOKUP(fpga, pwr_en), 1);
+		gpio_set_level(pwr_en, 1);
 	}
 	if (actions & FPGABOOT_DEASSERT_SOM_PWR_EN) {
 		__ASSERT(
 			(actions & FPGABOOT_ASSERT_SOM_PWR_EN) == 0,
 			"Don't assert and de-assert SOM_PWR_EN at the same time!");
-		gpio_pin_set(GPIO_LOOKUP(fpga, pwr_en), 0);
+		gpio_set_level(pwr_en, 0);
 	}
 	/* NB: SOM_POR_L_LOAD_L is active low, so "assert" == "set to 0V" */
 	if (actions & FPGABOOT_ASSERT_SOM_POR_L_LOAD_L) {
 		__ASSERT(
 			(actions & FPGABOOT_DEASSERT_SOM_POR_L_LOAD_L) == 0,
 			"Don't assert and de-assert SOM_POR_L_LOAD_l at the same time!");
-		gpio_pin_set(GPIO_LOOKUP(fpga, por_l_load_l), 0);
+		gpio_set_level(por_l_load_l, 0);
 	}
 	if (actions & FPGABOOT_DEASSERT_SOM_POR_L_LOAD_L) {
 		__ASSERT(
 			(actions & FPGABOOT_ASSERT_SOM_POR_L_LOAD_L) == 0,
 			"Don't assert and de-assert SOM_POR_L_LOAD_l at the same time!");
-		gpio_pin_set(GPIO_LOOKUP(fpga, por_l_load_l), 1);
+		gpio_set_level(por_l_load_l, 1);
 	}
 	if (actions & FPGABOOT_START_SHORT_TIMER) {
 		k_timer_start(&fpgaboot_timer, SHORT_TIMER, K_NO_WAIT);
@@ -237,7 +235,8 @@ static int fpgaboot_init(const struct device *ptr)
 	fpgaboot_set_boot_mode(FPGA_BOOT_SDIO);
 
 	/* Configure pwr_good interrupt on change. */
-	ret = gpio_pin_interrupt_configure(GPIO_LOOKUP(fpga, pwr_good),
+	ret = gpio_pin_interrupt_configure(gpio_get_device(pwr_good),
+					   gpio_get_pin(pwr_good),
 					   GPIO_INT_EDGE_BOTH);
 	if (ret != 0) {
 		printk("Error %d: failed to configure interrupt on PWR_GOOD\n",
@@ -245,12 +244,12 @@ static int fpgaboot_init(const struct device *ptr)
 		return ret;
 	}
 	gpio_init_callback(&pwr_good_cb_data, pwr_good_cb,
-			   BIT(gpio_pins[GPIO_ENUM(DT_PATH(fpga, pwr_good))]));
-	gpio_add_callback(gpio_devs[GPIO_ENUM(DT_PATH(fpga, pwr_good))],
-			  &pwr_good_cb_data);
+			   BIT(gpio_get_pin(pwr_good)));
+	gpio_add_callback(gpio_get_device(pwr_good), &pwr_good_cb_data);
 
 	/* Configure fpga_done interrupt on change. */
-	ret = gpio_pin_interrupt_configure(GPIO_LOOKUP(fpga, fpga_done),
+	ret = gpio_pin_interrupt_configure(gpio_get_device(fpga_done),
+					   gpio_get_pin(fpga_done),
 					   GPIO_INT_EDGE_BOTH);
 	if (ret != 0) {
 		printk("Error %d: failed to configure interrupt on FPGA_DONE\n",
@@ -258,9 +257,8 @@ static int fpgaboot_init(const struct device *ptr)
 		return ret;
 	}
 	gpio_init_callback(&fpga_done_cb_data, fpga_done_cb,
-			   BIT(gpio_pins[GPIO_ENUM(DT_PATH(fpga, fpga_done))]));
-	gpio_add_callback(gpio_devs[GPIO_ENUM(DT_PATH(fpga, fpga_done))],
-			  &fpga_done_cb_data);
+			   BIT(gpio_get_pin(fpga_done)));
+	gpio_add_callback(gpio_get_device(fpga_done), &fpga_done_cb_data);
 
 	/* Create the fpgaboot task and start it. */
 	k_thread_create(&fpgaboot_thread_data, fpgaboot_stack_area,
@@ -284,16 +282,15 @@ static int cmd_status(const struct shell *shell, size_t argc, char **argv)
 		      "FPGA steady status: %s\n",
 		      fpgaboot_is_steady_state(state) ? "true" : "false");
 	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT, "BOOT_MODE = %d%d\n",
-		      gpio_pin_get(GPIO_LOOKUP(fpga, boot_mode1)),
-		      gpio_pin_get(GPIO_LOOKUP(fpga, boot_mode0)));
+		      gpio_get_level(boot_mode1), gpio_get_level(boot_mode0));
 	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT, "PWR_EN = %d\n",
-		      gpio_pin_get(GPIO_LOOKUP(fpga, pwr_en)));
+		      gpio_get_level(pwr_en));
 	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT, "PWR_GOOD = %d\n",
-		      gpio_pin_get(GPIO_LOOKUP(fpga, pwr_good)));
+		      gpio_get_level(pwr_good));
 	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT, "POR_L_LOAD_L = %d\n",
-		      gpio_pin_get(GPIO_LOOKUP(fpga, por_l_load_l)));
+		      gpio_get_level(por_l_load_l));
 	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT, "FPGA_DONE = %d\n",
-		      gpio_pin_get(GPIO_LOOKUP(fpga, fpga_done)));
+		      gpio_get_level(fpga_done));
 	return 0;
 }
 

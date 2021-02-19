@@ -12,10 +12,8 @@
 #include <drivers/gpio.h>
 #include <shell/shell.h>
 #include <sys/printk.h>
-#include "gpio_signal.h"
+#include "io.h"
 #include "sysmon.h"
-
-DECLARE_GPIOS_FOR(sysmon);
 
 /**
  * Define the interval for the sysmon timer. Every SYSMON_INTERVAL, the
@@ -245,43 +243,6 @@ void sysmon_timer_handler(struct k_timer *dummy)
 }
 K_TIMER_DEFINE(sysmon_timer, sysmon_timer_handler, NULL);
 
-/** @brief Select which set of voltages SYSMON can read
- *
- * There are more voltages to monitor than ADC inputs, so the hardware
- * uses analog switches for the SYSMON1:8 inputs. When SYSMON_SEL is
- * high, the analog switches are set to connect the voltage regulator
- * (or voltage divider) outputs to the SYSMON inputs. When SYSMON_SEL
- * is low, the analog switches connect voltage outputs from the FPGA
- * module to the SYSMON inputs.
- *
- * The TS3A5018 analog switches have a max turn-on time of 9ns, and a max
- * turn-off time of 7ns (table 6.9, 3.3V supply, over full operating free-air
- * temp range). The STM32 is running at 72 MHz, which is a 14ns clock.
- * The switching time for the analog switches is less than a single
- * machine instruction. Therefore we don't need to have any extra delays in
- * the code between setting the analog switches and then using the signals
- * that are routed through the switches.
- *
- * @param sel SYSMON_SEL_REGULATORS to select the voltage regulator/divider,
- * or SYSMON_SEL_SOM to select the FPGA SOM voltages.
- *
- * @retval 0 if successful.
- * @retval error return from gpio_pin_configure if error.
- */
-static int sysmon_sel(enum sysmon_sel sel)
-{
-	int ret;
-
-	ret = gpio_pin_set(GPIO_LOOKUP(sysmon, sysmon_sel),
-			   (sel == SYSMON_SEL_REGULATORS) ? 1 : 0);
-	if (ret < 0) {
-		printk("gpio_pin_set(sysmon_sel) failed, ret = %d\n", ret);
-		return ret;
-	}
-
-	return 0;
-}
-
 /**
  * @brief Store the ADC value for a particular input
  *
@@ -323,6 +284,7 @@ static void sysmon_task(void *unused1, void *unused2, void *unused3)
 
 	uint16_t sample_buffer;
 	int idx = SYSMON_VMON_NUM_INPUTS;
+	int ret;
 
 	k_thread_name_set(NULL, "sysmon_task");
 
@@ -360,7 +322,12 @@ static void sysmon_task(void *unused1, void *unused2, void *unused3)
 			.resolution = STM_ADC_RESOLUTION,
 		};
 
-		if (sysmon_sel(scan_table[idx].sel) < 0) {
+		ret = gpio_set_level(
+			sysmon_sel,
+			(scan_table[idx].sel == SYSMON_SEL_REGULATORS) ? 1 : 0);
+		if (ret < 0) {
+			printk("gpio_set_level(sysmon_sel) failed, ret = %d\n",
+			       ret);
 			continue;
 		}
 		if (adc_read(adc_list[scan_table[idx].adc_num].dev, &seq) < 0) {
@@ -408,12 +375,6 @@ static int sysmon_init(const struct device *ptr)
 	ARG_UNUSED(ptr);
 
 	int ret = 0;
-
-	/* Set the analog switches for the regulator outputs. */
-	ret = sysmon_sel(SYSMON_SEL_REGULATORS);
-	if (ret < 0) {
-		return ret;
-	}
 
 	/* Configure the ADCs. */
 	for (int idx = 0; idx < ARRAY_SIZE(adc_list); ++idx) {
