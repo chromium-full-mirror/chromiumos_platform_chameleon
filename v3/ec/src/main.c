@@ -8,14 +8,14 @@
 #include <zephyr.h>
 #include <sys/printk.h>
 
-#include "led.h"
+#include "io.h"
 
 void main(void)
 {
 	int ret;
 
-	ret = led_powergood(true);
+	ret = gpio_set_level(power_good_led, 1);
 	if (ret < 0) {
-		printk("Failed to turn on POWERGOOD, ret = %d.\n", ret);
+		printk("Failed to turn on POWER_GOOD, ret = %d.\n", ret);
 	}
 }

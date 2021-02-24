@@ -238,70 +238,6 @@ static int cmd_videomux_set(const struct shell *shell, size_t argc, char **argv)
 	return videomux_select(src, dest);
 }
 
-/**
- * @brief Pulse the reset line on DP1_PS8468
- */
-static int cmd_videomux_pulse_dp1_ps8468(const struct shell *shell, size_t argc,
-					 char **argv)
-{
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP1_PS8468_RST_L\n");
-	gpio_set_level(dp1_ps8468_rst_l, 0);
-	k_msleep(100);
-	gpio_set_level(dp1_ps8468_rst_l, 1);
-	return 0;
-}
-
-/**
- * @brief Pulse the reset line on DP2_PS8468
- */
-static int cmd_videomux_pulse_dp2_ps8468(const struct shell *shell, size_t argc,
-					 char **argv)
-{
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP2_PS8468_RST_L\n");
-	gpio_set_level(dp2_ps8468_rst_l, 0);
-	k_msleep(100);
-	gpio_set_level(dp2_ps8468_rst_l, 1);
-	return 0;
-}
-
-/**
- * @brief Pulse the reset line on DP1_HDMI (MCDP2900)
- */
-static int cmd_videomux_pulse_dp1_hdmi(const struct shell *shell, size_t argc,
-				       char **argv)
-{
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP1_HDMI_RST_L\n");
-	gpio_set_level(dp1_hdmi_rst_l, 0);
-	k_msleep(100);
-	gpio_set_level(dp1_hdmi_rst_l, 1);
-	return 0;
-}
-
-/**
- * @brief Pulse the reset line on DP2_HDMI (MCDP2900)
- */
-static int cmd_videomux_pulse_dp2_hdmi(const struct shell *shell, size_t argc,
-				       char **argv)
-{
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	shell_fprintf(shell, SHELL_NORMAL, "Pulse DP2_HDMI_RST_L\n");
-	gpio_set_level(dp2_hdmi_rst_l, 0);
-	k_msleep(100);
-	gpio_set_level(dp2_hdmi_rst_l, 1);
-	return 0;
-}
-
 // clang-format off
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	dp1_cmds, SHELL_CMD(fpga, NULL, "Route DP1 to FPGA", cmd_videomux_set),
@@ -319,12 +255,6 @@ SHELL_STATIC_SUBCMD_SET_CREATE(hdmi2_cmds,
 	SHELL_CMD(fpga, NULL, "Route HDMI2 to FPGA", cmd_videomux_set),
 	SHELL_CMD(rx, NULL, "Route HDMI2 to receiver", cmd_videomux_set),
 	SHELL_SUBCMD_SET_END);
-SHELL_STATIC_SUBCMD_SET_CREATE(reset_cmds,
-	SHELL_CMD(dp1_ps8468, NULL, "Reset DP1_PS8468 (U3)", cmd_videomux_pulse_dp1_ps8468),
-	SHELL_CMD(dp2_ps8468, NULL, "Reset DP2_PS8468 (U22)", cmd_videomux_pulse_dp2_ps8468),
-	SHELL_CMD(dp1_hdmi, NULL, "Reset DP1_HDMI (U17)", cmd_videomux_pulse_dp1_hdmi),
-	SHELL_CMD(dp2_hdmi, NULL, "Reset DP2_HDMI (U30)", cmd_videomux_pulse_dp2_hdmi),
-	SHELL_SUBCMD_SET_END);
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	videomux_cmds,
 	SHELL_CMD(get, NULL, "Show status of video mux", cmd_videomux_get),
@@ -332,7 +262,6 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 	SHELL_CMD(dp2, &dp2_cmds, "Route DisplayPort 2", NULL),
 	SHELL_CMD(hdmi1, &hdmi1_cmds, "Route HDMI 1", NULL),
 	SHELL_CMD(hdmi2, &hdmi2_cmds, "Route HDMI 2", NULL),
-	SHELL_CMD(reset, &reset_cmds, "Reset chips", NULL),
 	SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 SHELL_CMD_REGISTER(videomux, &videomux_cmds, "Control the video mux", NULL);

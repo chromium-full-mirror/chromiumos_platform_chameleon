@@ -85,10 +85,67 @@ static struct gpio_info gpios[] = {
 	GPIO(dp_cfg, dp2_ps8468_eq0),
 	GPIO(dp_cfg, dp2_ps8468_eq1),
 };
+
+/*
+ * Shell commands for reading and setting GPIOs. See README.md for details.
+ *
+ * See also https://docs.zephyrproject.org/latest/reference/shell/index.html#dynamic-commands
+ */
+#define MAX_CMD_LEN (31u)
+
+/* buffer holding dynamicly created user commands */
+static char dynamic_cmd_buffer[ARRAY_SIZE(gpios)][MAX_CMD_LEN + 1];
+/* commands counter */
+static const uint8_t DYNAMIC_CMD_CNT = ARRAY_SIZE(gpios);
+
+typedef int cmp_t(const void *, const void *);
+extern void qsort(void *a, size_t n, size_t es, cmp_t *cmp);
+
+/* function required by qsort */
+static int string_cmp(const void *p_a, const void *p_b)
+{
+	return strcmp((const char *)p_a, (const char *)p_b);
+}
+
+/**
+ * @brief Initialize GPIOs and shell commands to set/get
+ *
+ * Walk the array of GPIOs and look up each device name (e.g. "GPIOB"). Store
+ * the `const struct device *` into the struct for that GPIO. It would be
+ * nice to do this at compile time, but `device_get_binding` is a runtime
+ * call.
+ *
+ * Also copy the GPIO names into another array and sort them alphabetically.
+ * We'll use that array to set up dynamic shell commands to get and set GPIOs.
+ *
+ * As the Zephyr shell sees it, the name ("TP125") of the GPIO in the command
+ * `io get TP125` is actually a sub-command. We can use Zephyr's dynamic shell
+ * command to build up a list of sub-commands that we can re-use with multiple
+ * command handlers. Note that the sub-command list must be in sorted order,
+ * so we first fill the sub-command array and then sort it with `qsort`.
+ *
+ * @note If there were only one command that had all the GPIO names, and the
+ * GPIO name was the last item, we could use SHELL_SUBCMD_DICT_SET_CREATE,
+ * which specifies a list of text names and integer values. A dictionary
+ * command does not offer a way to specify a further sub-command, and the
+ * entries in the dictionary can only be used with a single command; attempts
+ * to declare multiple commands with the same list results in duplicate
+ * symbol errors.
+ *
+ * @param ptr	Required by the API, but not used
+ * @retval 0	Success
+ */
 static int io_init_devices(const struct device *ptr)
 {
 	ARG_UNUSED(ptr);
 	for (int idx = 0; idx < ARRAY_SIZE(gpios); ++idx) {
+		/*
+		 * Store the GPIO name in the list that will be used for
+		 * dynamic shell commands.
+		 */
+		strncpy(dynamic_cmd_buffer[idx], gpios[idx].label, MAX_CMD_LEN);
+
+		/* Look up the device by name. */
 		gpios[idx].dev = device_get_binding(gpios[idx].dev_name);
 		if (!gpios[idx].dev) {
 			printk("io_init_devices: "
@@ -96,6 +153,8 @@ static int io_init_devices(const struct device *ptr)
 			       gpios[idx].dev_name);
 			continue;
 		}
+
+		/* Configure the GPIO pin. */
 		int ret = gpio_pin_configure(gpios[idx].dev, gpios[idx].pin,
 					     gpios[idx].flags);
 		if (ret != 0) {
@@ -107,6 +166,11 @@ static int io_init_devices(const struct device *ptr)
 			       gpios[idx].flags, ret);
                 }
 	}
+
+	/* Zephyr dynamic shell commands require a sorted list. */
+	qsort(dynamic_cmd_buffer, DYNAMIC_CMD_CNT,
+	      sizeof(dynamic_cmd_buffer[0]), string_cmp);
+
 	return 0;
 }
 SYS_INIT(io_init_devices, APPLICATION, 1);
@@ -131,150 +195,161 @@ gpio_pin_t gpio_get_pin(enum gpio_signal signal)
 	return gpios[signal].pin;
 }
 
-/* TODO(pfagerburg) move to another module */
-int misc_io_get_board_version(void)
+/*
+ * @brief Look up an enum by text name
+ *
+ * Search the GPIO names to find a match.
+ *
+ * @note The gpios[] array is *not* sorted, so we have to do a linear search.
+ * This is a known compromise so that we can use the order as written in
+ * the code. Any compiled code that needs to refer to specific GPIOs can use
+ * the enumeration values directly. so this inefficiency only affects shell
+ * commands.
+ *
+ * @param name	The text name of the GPIO
+ * @param pSignal	Pointer to where to store the found value
+ * @retval 0	Found, value is in *pSignal
+ * @retval -EINVAL	Not found
+ */
+static int gpio_find_by_name(const char *name, enum gpio_signal *pSignal)
 {
-	int version;
-	int val;
-
-	val = gpio_get_level(board_version_2);
-	if (val < 0) {
-		return val;
+	__ASSERT(pSignal != NULL, "Passed a NULL pointer to gpio_find_by_name");
+	for (uint8_t idx = 0; idx < ARRAY_SIZE(gpios); idx++) {
+		if (!strcmp(name, gpios[idx].label)) {
+			*pSignal = (enum gpio_signal)idx;
+			return 0;
+		}
 	}
-	version = val << 2;
-
-	val = gpio_get_level(board_version_1);
-	if (val < 0) {
-		return val;
-	}
-	version |= val << 1;
-
-	val = gpio_get_level(board_version_0);
-	if (val < 0) {
-		return val;
-	}
-	version |= val;
-
-	return version;
+	return -EINVAL;
 }
 
-/* Shell commands for debugging/testing use. See README.md for details. */
-/* TODO (pfagerburg) replace with generic "set [IO name] on|off" commands. */
-
-/**
- * @brief Get value of TP126
+/*
+ *
  */
-static int cmd_io_get_tp126(const struct shell *shell, size_t argc, char **argv)
+static int cmd_get(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
 
-	int val = gpio_get_level(tp126);
+	/*
+	 * Initialize `signal` to something so compiler is happy. If
+	 * `gpio_find_by_name` doesn't find the name, it won't set `signal`,
+	 * but it also returns an error code, so we won't use `signal`
+	 * anyway. But the compiler doesn't know that.
+	 */
+	enum gpio_signal signal = power_good_led;
 
-	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT, "TP126 = %d\n", val);
+	if (gpio_find_by_name(argv[1], &signal) != 0) {
+		shell_error(shell, "%s: unknown parameter: %s", argv[0],
+			    argv[1]);
+		return -ENOEXEC;
+	}
+
+	int val = gpio_get_level(signal);
+
+	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT, "%s = %d\n", argv[1],
+		      val);
 	return 0;
 }
 
-/**
- * @brief Get value of TP125
+/*
+ *
  */
-static int cmd_io_get_tp125(const struct shell *shell, size_t argc, char **argv)
+static int cmd_set(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
 
-	int val = gpio_get_level(tp125);
+	enum gpio_signal signal = power_good_led;
 
-	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT, "TP125 = %d\n", val);
+	if (gpio_find_by_name(argv[-1], &signal) != 0) {
+		shell_error(shell, "%s: uknown parameter: %s", argv[-2],
+			    argv[-1]);
+		return -ENOEXEC;
+	}
+
+	int value = 0;
+	if (!strcmp(argv[0], "on")) {
+		value = 1;
+	} else if (!strcmp(argv[0], "1")) {
+		value = 1;
+	} else if (!strcmp(argv[0], "off")) {
+		value = 0;
+	} else if (!strcmp(argv[0], "0")) {
+		value = 0;
+	} else {
+		shell_error(shell, "%s: uknown parameter: %s", argv[-2],
+			    argv[0]);
+		return -ENOEXEC;
+	}
+
+	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT, "set %s to %d\n",
+		      argv[-1], value);
+	int ret = gpio_set_level(signal, value);
+
+	if (ret != 0) {
+		shell_error(shell, "gpio_set_level error %d", ret);
+		return -ENOEXEC;
+	}
 	return 0;
 }
 
-/**
- * @brief Get the board version from BOARD_VERSION[2:0]
- */
-static int cmd_io_get_ver(const struct shell *shell, size_t argc, char **argv)
-{
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	int val = misc_io_get_board_version();
-
-	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-		      "BOARD_VERSION[2:0] = %d\n", val);
-	return 0;
-}
 SHELL_STATIC_SUBCMD_SET_CREATE(
-	get_io, SHELL_CMD(tp126, NULL, "TP126", cmd_io_get_tp126),
-	SHELL_CMD(tp125, NULL, "TP125", cmd_io_get_tp125),
-	SHELL_CMD(ver, NULL, "BOARD_VERSION[2:0]", cmd_io_get_ver),
-	SHELL_SUBCMD_SET_END);
+	on_off, SHELL_CMD_ARG(on, NULL, "turn GPIO on", cmd_set, 1, 0),
+	SHELL_CMD_ARG(off, NULL, "turn GPIO off", cmd_set, 1, 0),
+	SHELL_CMD_ARG(1, NULL, "turn GPIO on", cmd_set, 1, 0),
+	SHELL_CMD_ARG(0, NULL, "turn GPIO off", cmd_set, 1, 0),
+	SHELL_SUBCMD_SET_END /* Array terminated. */
+);
 
-/**
- * @brief Set TP126 to on
+/*
+ * @brief Fill in details for a sub-command on `set`
+ *
+ * The Dictionary shell handler calls this function to get the information
+ * about each sub-command. When we run out of sub-commands, we fill in a
+ * NULL pointer.
+ *
+ * @note This routine fills in the sub-command handler so that every
+ * sub-command that is a GPIO name has a further "on/off" sub-command.
+ *
+ * @param idx	Index into the dynamic command array to get
  */
-static int cmd_io_set_tp126_on(const struct shell *shell, size_t argc,
-			       char **argv)
+static void dynamic_cmd_set(size_t idx, struct shell_static_entry *entry)
 {
-	ARG_UNUSED(shell);
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	return gpio_set_level(tp126, 1);
+	if (idx < DYNAMIC_CMD_CNT) {
+		entry->syntax = dynamic_cmd_buffer[idx];
+		entry->handler = NULL;
+		entry->subcmd = &on_off;
+		entry->help = NULL;
+	} else {
+		entry->syntax = NULL;
+	}
 }
+SHELL_DYNAMIC_CMD_CREATE(set_io, dynamic_cmd_set);
 
-/**
- * @brief Set TP126 to off
+/*
+ * @brief Fill in details for a sub-command on `get`
+ *
+ * The Dictionary shell handler calls this function to get the information
+ * about each sub-command. When we run out of sub-commands, we fill in a
+ * NULL pointer.
+ *
+ * @param idx	Index into the dynamic command array to get
  */
-static int cmd_io_set_tp126_off(const struct shell *shell, size_t argc,
-				char **argv)
+static void dynamic_cmd_get(size_t idx, struct shell_static_entry *entry)
 {
-	ARG_UNUSED(shell);
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	return gpio_set_level(tp126, 0);
+	if (idx < DYNAMIC_CMD_CNT) {
+		entry->syntax = dynamic_cmd_buffer[idx];
+		entry->handler = NULL;
+		entry->subcmd = NULL;
+		entry->help = NULL;
+	} else {
+		entry->syntax = NULL;
+	}
 }
+SHELL_DYNAMIC_CMD_CREATE(get_io, dynamic_cmd_get);
 
-/**
- * @brief Set TP125 to on
- */
-static int cmd_io_set_tp125_on(const struct shell *shell, size_t argc,
-			       char **argv)
-{
-	ARG_UNUSED(shell);
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	return gpio_set_level(tp125, 1);
-}
-
-/**
- * @brief Set TP126 to off
- */
-static int cmd_io_set_tp125_off(const struct shell *shell, size_t argc,
-				char **argv)
-{
-	ARG_UNUSED(shell);
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	return gpio_set_level(tp125, 0);
-}
-SHELL_STATIC_SUBCMD_SET_CREATE(
-	tp126_on_off, SHELL_CMD(on, NULL, "set TP126 on", cmd_io_set_tp126_on),
-	SHELL_CMD(off, NULL, "set TP126 off", cmd_io_set_tp126_off),
-	SHELL_SUBCMD_SET_END);
-SHELL_STATIC_SUBCMD_SET_CREATE(
-	tp125_on_off, SHELL_CMD(on, NULL, "set TP125 on", cmd_io_set_tp125_on),
-	SHELL_CMD(off, NULL, "set TP125 off", cmd_io_set_tp125_off),
-	SHELL_SUBCMD_SET_END);
-SHELL_STATIC_SUBCMD_SET_CREATE(
-	set_io, SHELL_CMD(tp126, &tp126_on_off, "set TP126", NULL),
-	SHELL_CMD(tp125, &tp125_on_off, "set TP125", NULL),
-	SHELL_SUBCMD_SET_END);
 SHELL_STATIC_SUBCMD_SET_CREATE(io_cmds,
-			       SHELL_CMD(get, &get_io, "get IO value", NULL),
-			       SHELL_CMD(set, &set_io, "set IO pin", NULL),
+			       SHELL_CMD(get, &get_io, "get IO value", cmd_get),
+			       SHELL_CMD(set, &set_io, "set IO value", NULL),
 			       SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 SHELL_CMD_REGISTER(io, &io_cmds, "Control IO pins", NULL);

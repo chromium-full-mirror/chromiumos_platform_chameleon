@@ -58,7 +58,7 @@ west flash --erase --reset-after-load
 
 To use the serial bootloader to update the STM32's firmware, you must install
 `stm32flash` and build `stm32reset`. For now all of these things have to do be done outside
-the chroot and some commands (eg. stm32reset) might be deprecated beyond proto0. 
+the chroot and some commands (eg. stm32reset) might be deprecated beyond proto0.
 
 ```
 sudo apt-get install stm32flash gpiod libgpiod-dev
@@ -105,13 +105,13 @@ blink at 0.5 Hz.
 
 Instructions to build and run remain the same.
 
-When the Zephyr kernel boots, the POWERGOOD LED (red LED near the PCIe
+When the Zephyr kernel boots, the POWER_GOOD LED (red LED near the PCIe
 connector, previously the "blinky" LED in the hello, world! app) turns on and
 stays lit. The shell prompt (`uart:~$`) appears after the startup messages.
 
 ## POWERGOOD LED
 
-`led off` and `led on` control the POWERGOOD LED.
+`io set POWER_GOOD off` and `io set POWER_GOOD on` control the POWERGOOD LED.
 
 ## Micro SD Card
 
@@ -352,24 +352,24 @@ After programming the latest firmware, experiment with these commands in the
 shell:
 
 ```
-$ io get ver
+$ board
 ver = 0
-$ io get tp125
-tp125 = 0
-$ io get tp126
-tp126 = 0
-$ io set tp125 on
-$ io get tp125
-tp125 = 1
-$ io set tp126 on
-$ io get tp126
-tp126 = 1
-$ io set tp125 off
-$ io get tp125
-tp125 = 0
-$ io set tp126 off
-$ io get tp126
-tp126 = 0
+$ io get TP125
+TP125 = 0
+$ io get TP126
+TP126 = 0
+$ io set TP125 on
+$ io get TP125
+TP125 = 1
+$ io set TP126 on
+$ io get TP126
+TP126 = 1
+$ io set TP125 off
+$ io get TP125
+TP125 = 0
+$ io set TP126 off
+$ io get TP126
+TP126 = 0
 ```
 
 If you hook up a logic analyzer to I2C2 SCL and SDA, TP125, and TP126, you can

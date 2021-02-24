@@ -23,7 +23,7 @@
 		compatible = "gpio-leds";
 		power_good_led {
 			gpios = <&gpiob 14 GPIO_OUTPUT_HIGH>;
-			label = "PowerGood";
+			label = "POWER_GOOD";
 		};
 	};
 

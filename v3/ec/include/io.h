@@ -9,6 +9,7 @@
 #define __IO_H
 
 #include <zephyr.h>
+#include <drivers/gpio.h>
 
 enum gpio_signal {
 	power_good_led,
@@ -105,16 +106,5 @@ const struct device *gpio_get_device(enum gpio_signal signal);
  * @returns pin number for the GPIO
  */
 gpio_pin_t gpio_get_pin(enum gpio_signal signal);
-
-/**
- * @brief Get the board version number.
- *
- * Three I/Os on an I2C GPIO expander are tied to power or ground to indicate
- * the hardware version number of the board.
- *
- * @retval >=0 board version number
- * @retval <0 error number returned by `gpio_pin_get`
- */
-int misc_io_get_board_version(void);
 
 #endif
