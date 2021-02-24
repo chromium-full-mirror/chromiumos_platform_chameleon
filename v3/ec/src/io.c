@@ -29,7 +29,7 @@ struct gpio_info {
 		   DT_GPIO_PIN(DT_PATH(group, name), gpios),         \
 		   DT_GPIO_FLAGS(DT_PATH(group, name), gpios) }
 
-static struct gpio_info gpios [] = {
+static struct gpio_info gpios[] = {
 	GPIO(leds, power_good_led),
 	GPIO(sd_mux, sd_mux_sel),
 	GPIO(sd_mux, sd_mux_en_l),
@@ -88,16 +88,16 @@ static struct gpio_info gpios [] = {
 static int io_init_devices(const struct device *ptr)
 {
 	ARG_UNUSED(ptr);
-	for (int idx = 0; idx < ARRAY_SIZE(gpios ); ++idx) {
-		gpios [idx].dev = device_get_binding(gpios [idx].dev_name);
-		if (!gpios [idx].dev) {
+	for (int idx = 0; idx < ARRAY_SIZE(gpios); ++idx) {
+		gpios[idx].dev = device_get_binding(gpios[idx].dev_name);
+		if (!gpios[idx].dev) {
 			printk("io_init_devices: "
 			       "device_get_binding(%s) failed!\n",
-			       gpios [idx].dev_name);
+			       gpios[idx].dev_name);
 			continue;
 		}
-		int ret = gpio_pin_configure(gpios [idx].dev, gpios [idx].pin,
-					     gpios [idx].flags);
+		int ret = gpio_pin_configure(gpios[idx].dev, gpios[idx].pin,
+					     gpios[idx].flags);
 		if (ret != 0) {
 			printk("io_init_devices: "
 			       "gpio_pin_configure(%s(*%p), %d(\"%s\"), 0x%x) "
@@ -113,22 +113,22 @@ SYS_INIT(io_init_devices, APPLICATION, 1);
 
 int gpio_get_level(enum gpio_signal signal)
 {
-	return gpio_pin_get(gpios [signal].dev, gpios [signal].pin);
+	return gpio_pin_get(gpios[signal].dev, gpios[signal].pin);
 }
 
 int gpio_set_level(enum gpio_signal signal, int value)
 {
-	return gpio_pin_set(gpios [signal].dev, gpios [signal].pin, value);
+	return gpio_pin_set(gpios[signal].dev, gpios[signal].pin, value);
 }
 
 const struct device *gpio_get_device(enum gpio_signal signal)
 {
-	return gpios [signal].dev;
+	return gpios[signal].dev;
 }
 
 gpio_pin_t gpio_get_pin(enum gpio_signal signal)
 {
-	return gpios [signal].pin;
+	return gpios[signal].pin;
 }
 
 /* TODO(pfagerburg) move to another module */

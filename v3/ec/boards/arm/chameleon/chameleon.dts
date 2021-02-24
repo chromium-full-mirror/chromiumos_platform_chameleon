@@ -308,12 +308,12 @@
 
 		dp1_ps8468_eq0  {
 			gpios = <&u77 6 GPIO_INPUT>;
-			label = "DP1_PS8468_EQ0 ";
+			label = "DP1_PS8468_EQ0";
 		};
 
 		dp1_ps8468_eq1  {
 			gpios = <&u77 7 GPIO_INPUT>;
-			label = "DP1_PS8468_EQ1 ";
+			label = "DP1_PS8468_EQ1";
 		};
 
 		dp2_ps8468_mode {
@@ -348,12 +348,12 @@
 
 		dp2_ps8468_eq0  {
 			gpios = <&u77 14 GPIO_INPUT>;
-			label = "DP2_PS8468_EQ0 ";
+			label = "DP2_PS8468_EQ0";
 		};
 
 		dp2_ps8468_eq1  {
 			gpios = <&u77 15 GPIO_INPUT>;
-			label = "DP2_PS8468_EQ1 ";
+			label = "DP2_PS8468_EQ1";
 		};
 	};
 };
