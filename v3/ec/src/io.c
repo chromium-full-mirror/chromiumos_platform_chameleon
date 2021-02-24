@@ -100,12 +100,12 @@ static int io_init_devices(const struct device *ptr)
 					     gpios [idx].flags);
 		if (ret != 0) {
 			printk("io_init_devices: "
-			       "gpio_pin_configure(%s, %d, %d) "
+			       "gpio_pin_configure(%s(*%p), %d(\"%s\"), 0x%x) "
 			       "failed, ret = %d\n",
-			       gpios [idx].dev_name, gpios [idx].pin,
-			       gpios [idx].flags, ret);
-			continue;
-		}
+			       gpios[idx].dev_name, gpios[idx].dev,
+			       gpios[idx].pin, gpios[idx].label,
+			       gpios[idx].flags, ret);
+                }
 	}
 	return 0;
 }

@@ -400,7 +400,7 @@
 	/* U77 I/O expander, config signals for PS8468 */
 	u77: pca95xx@20 {
 		compatible = "nxp,pca95xx";
-		label = "PCA95XX";
+		label = "U77 - PCA95XX";
 		reg = <0x20>;
 		#gpio-cells = <2>;
 		gpio-controller;
@@ -409,7 +409,7 @@
 	/* U78 I/O expander, DP1 OUT config signals, plus misc I/O */
 	u78: pca95xx@21 {
 		compatible = "nxp,pca95xx";
-		label = "PCA95XX";
+		label = "U78 - PCA95XX";
 		reg = <0x21>;
 		#gpio-cells = <2>;
 		gpio-controller;
