@@ -228,8 +228,6 @@ static int gpio_find_by_name(const char *name, enum gpio_signal *pSignal)
  */
 static int cmd_get(const struct shell *shell, size_t argc, char **argv)
 {
-	ARG_UNUSED(argc);
-
 	/*
 	 * Initialize `signal` to something so compiler is happy. If
 	 * `gpio_find_by_name` doesn't find the name, it won't set `signal`,
@@ -237,6 +235,26 @@ static int cmd_get(const struct shell *shell, size_t argc, char **argv)
 	 * anyway. But the compiler doesn't know that.
 	 */
 	enum gpio_signal signal = power_good_led;
+
+	if (argc == 1) {
+		/* No pin selected, do all */
+		for (enum gpio_signal signal = 0;
+		     signal < sizeof(gpios) / sizeof(gpios[0]);
+		     signal++) {
+			int alignment;
+			shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
+			              "(%s.%d)%n", // %s = %d
+			              gpios[signal].dev_name,
+			              gpios[signal].pin,
+			              &alignment);
+			shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
+			              "%*s = %d\n",
+			              40 - alignment,
+			              gpios[signal].label,
+			              gpio_get_level(signal));
+		}
+		return 0;
+	}
 
 	if (gpio_find_by_name(argv[1], &signal) != 0) {
 		shell_error(shell, "%s: unknown parameter: %s", argv[0],
