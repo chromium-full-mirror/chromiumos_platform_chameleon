@@ -19,10 +19,22 @@ set_time() {
     echo Current chameleon time: $(date --set="$NOW")
 }
 
-install_standard_python_modules() {
-    for file in "${SRC_PYTHON_DIR}"/*; do
-        cp -f "${file}" "${DST_PYTHON_DIR}"
-    done
+validate_package_installation() {
+    PACKAGE_NAME=$1
+
+    # dpkg shows installation by showing "ii" next to the entry
+    if ! dpkg -l ${PACKAGE_NAME} 2>&1 | grep -qE '^ii'; then
+        printf "Installing package %s...\n" "${PACKAGE_NAME}"
+
+        eval "apt-get update > /dev/null 2>&1"
+        eval "apt-get -y install ${PACKAGE_NAME} > /dev/null 2>&1"
+
+        printf "Package %s installed\n" "${PACKAGE_NAME}"
+
+    else
+        printf "Package %s already installed\n" "${PACKAGE_NAME}"
+
+    fi
 }
 
 use_python_version() {
@@ -47,11 +59,19 @@ use_python_version() {
 }
 
 install_pip() {
-    python "${PIP_DIR}/${PIP_BOOTSTRAP}" --no-setuptools
+    if [ "${PY_VERSION}" = python3 ]; then
+        validate_package_installation "python3-pip"
+    else
+        validate_package_installation "python-pip"
+    fi
 }
 
 install_setuptools() {
-    pip install setuptools==24.0.2
+    if [ "${PY_VERSION}" = python3 ]; then
+        pip3 install setuptools==54.1.1
+    else
+        pip install setuptools
+    fi
 }
 
 uninstall_old_chameleond_from_pip() {
@@ -77,14 +97,6 @@ if [ "${PLATFORM}" = "raspberrypi" ] || [ "${PLATFORM}" = "x86-generic" ]; then
     use_python_version "${PY_VERSION}"
 fi
 
-pip -V
-if [ $? -eq 0 ]; then
-    echo PIP is already installed. Skip installing it again.
-    exit 0
-fi
-
-# Install the missing standard python modules needed to install pip.
-install_standard_python_modules
 install_pip
 install_setuptools
 
