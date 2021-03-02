@@ -267,6 +267,51 @@
 			gpios = <&gpioe 15 GPIO_OUTPUT_LOW>;
 			label = "GP213_IT68051P1_HPD";
 		};
+
+		/*
+		 * I2C signals for STM32 to provide the EDID (future use)
+		 * Right now, set them input/pull-up so they don't interfere with
+		 * the IT68051's I2C bus.
+		 */
+		gp213_it68051p0_ddc_scl {
+			gpios = <&gpiod 7 GPIO_INPUT_PULL_UP>;
+			label = "GP213_IT68051P0_DDC_SCL";
+		};
+
+		gp213_it68051p0_ddc_sda {
+			gpios = <&gpiod 8 GPIO_INPUT_PULL_UP>;
+			label = "GP213_IT68051P0_DDC_SDA";
+		};
+
+		stm32_it68051p0_ddc_scl {
+			gpios = <&gpiod 9 GPIO_INPUT_PULL_UP>;
+			label = "STM32_IT68051P0_DDC_SCL";
+		};
+
+		stm32_it68051p0_ddc_sda {
+			gpios = <&gpiod 10 GPIO_INPUT_PULL_UP>;
+			label = "STM32_IT68051P0_DDC_SDA";
+		};
+
+		gp213_it68051p1_ddc_scl {
+			gpios = <&gpiod 12 GPIO_INPUT_PULL_UP>;
+			label = "GP213_IT68051P1_DDC_SCL";
+		};
+
+		gp213_it68051p1_ddc_sda {
+			gpios = <&gpiod 13 GPIO_INPUT_PULL_UP>;
+			label = "GP213_IT68051P1_DDC_SDA";
+		};
+
+		stm32_it68051p1_ddc_scl {
+			gpios = <&gpiod 14 GPIO_INPUT_PULL_UP>;
+			label = "STM32_IT68051P1_DDC_SCL";
+		};
+
+		stm32_it68051p1_ddc_sda {
+			gpios = <&gpiod 15 GPIO_INPUT_PULL_UP>;
+			label = "STM32_IT68051P1_DDC_SDA";
+		};
 	};
 
 	hotplug {
