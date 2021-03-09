@@ -545,6 +545,24 @@
 		#gpio-cells = <2>;
 		gpio-controller;
 	};
+
+	/* I2C address for the IT68051
+	 *
+	 * Note that the IT68051 documentation uses 8-bit addresses
+	 * (ITE docs say that the HDMI block is address 0x90) but all of
+	 * our code uses 7-bit addresses.
+	 */
+	it68051_hdmi: it68051@48 {
+		compatible = "i2c-device";
+		label = "IT68051_HDMI";
+		reg = <0x48>;
+	};
+
+	it68051_edid: it68051@54 {
+		compatible = "i2c-device";
+		label = "IT68051_EDID";
+		reg = <0x54>;
+	};
 };
 
 &adc1 {
