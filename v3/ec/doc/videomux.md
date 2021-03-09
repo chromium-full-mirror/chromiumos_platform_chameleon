@@ -81,3 +81,50 @@ DP2: HDMI RX
 HDMI1: n/c
 HDMI2: FPGA
 ```
+
+## DisplayPort to IT68051
+
+The Proto 0 board can connect either DisplayPort connector to the IT68051
+HDMI receiver IC. By default, DP2 is enabled.
+
+Connect a USB-C DisplayPort adapter to a Chromebook
+
+![USB-C DisplayPort adapter](images/PXL_20210309_192958100_small.png "USB-C DisplayPort adapter")
+
+Connect the DisplayPort cable to DP2 (furthest from the USB-C connectors)
+
+![DisplayPort cable connected to DP2](images/PXL_20210309_193029591_small.png "DisplayPort cable connected to DP2")
+
+The Chromebook will recognizes an external display named "ITE6802" with
+various resolutions available up to 4K.
+
+![ITE6802 'Monitor'](images/Screenshot_20210309_122751_small.png "ITE6802 'Monitor'")
+
+To switch to the other DisplayPort, type the following commands in the
+EC shell:
+```
+videomux dp1 rx
+it68051 select 1
+it68051 hpd 1 1
+```
+
+To switch back to DisplayPort 2, type the following commands:
+```
+videomux dp1 rx
+it68051 select 0
+it68051 hpd 0 1
+```
+**Note**: The IT68051 numbers its ports 0 and 1, while the DisplayPort
+connectors are numbered 1 and 2. DP1 connects to the IT68051's port 1, and
+DP2 connects to the IT68051's port **0**.
+
+To hold the IT68051 in reset (disabling the external display),
+```
+io set IT68051_RST_L 0
+```
+
+To release reset and re-initialize the IT68051,
+```
+io set IT68051_RST_L 1
+it68051 init
+```

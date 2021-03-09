@@ -58,7 +58,7 @@ west flash --erase --reset-after-load
 
 To use the serial bootloader to update the STM32's firmware, you must install
 `stm32flash` and build `stm32reset`. For now all of these things have to do be done outside
-the chroot and some commands (eg. stm32reset) might be deprecated beyond proto0.
+the chroot and some commands (eg. stm32reset) will be deprecated beyond proto0.
 
 ```
 sudo apt-get install stm32flash gpiod libgpiod-dev
@@ -425,8 +425,3 @@ $ i2c scan I2C_1
 70: -- -- -- 73 -- -- -- --
 1 devices found on I2C_1
 ```
-
-If you set the I2C switch to 0 or 1, only the MAX7637 shows up in the scan.
-I don't know why the PS8468, PS8469, and MCDP2900 do not respond to the scan
-right now; they might be held in reset because I haven't gotten to the code
-to manage those chips yet.
