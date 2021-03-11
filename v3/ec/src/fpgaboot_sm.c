@@ -47,14 +47,15 @@ static void run_fpgaboot_pwr_good(enum fpga_event event,
 static void run_fpgaboot_load(enum fpga_event event, enum fpga_state *p_state,
 			      uint32_t *p_actions)
 {
+	// TODO(b/182420309) Revert this CL when SOM_FPGA_DONE works again
 	if (event == FPGABOOT_POWER_OFF_REQ ||
-	    event == FPGABOOT_TIMER_EXPIRED ||
 	    event == FPGABOOT_SOM_PWR_GOOD_DEASSERTED) {
 		*p_state = FPGABOOT_OFF;
 		*p_actions = FPGABOOT_DEASSERT_SOM_PWR_EN |
 			     FPGABOOT_ASSERT_SOM_POR_L_LOAD_L |
 			     FPGABOOT_STOP_TIMER;
-	} else if (event == FPGABOOT_SOM_FPGA_DONE_ASSERTED) {
+	} else if (event == FPGABOOT_TIMER_EXPIRED ||
+		   event == FPGABOOT_SOM_FPGA_DONE_ASSERTED) {
 		*p_state = FPGABOOT_RUNNING;
 		*p_actions = FPGABOOT_STOP_TIMER;
 	}
