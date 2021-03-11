@@ -342,9 +342,8 @@ class BluezPeripheral(PeripheralKit):
     if use_ble:
       state_change_cmds = ['sudo btmgmt power off',
                            'sudo btmgmt le on',
-                           'sudo btmgmt privacy on',
                            'sudo btmgmt bredr off',
-                           'sudo btmgmt ssp on',
+                           'sudo btmgmt sc on',
                            'sudo btmgmt power on']
 
     else:
