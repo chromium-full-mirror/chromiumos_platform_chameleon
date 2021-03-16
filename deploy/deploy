@@ -233,6 +233,28 @@ update-rc.d "${UPDATER_NAME}" defaults 90 10
 
 # Some custom actions if chameleon is for Bluetooth peer.
 if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
+    # Install required pcakges to perfom apt-clone
+    validate_package_installation "apt-clone"
+    APT_CLONE_DIR="${CWD}/../updatable/apt-clone/${PLATFORM}/"
+    if [ -d "$APT_CLONE_DIR" ]; then
+        echo "Start updating the Linux system, and this process may take few" \
+            "minutes"
+        tar -C "$APT_CLONE_DIR" -czf \
+            "${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz" "./"
+        apt-clone restore ${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz > \
+            /dev/null 2>&1
+
+        echo "Listing package difference between archived backup and the" \
+            "system.\nUse this information to help debug test failures and" \
+            "resolve discrepancies."
+        apt-clone show-diff ${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz
+    else
+        echo "apt-clone directory for the target platform: ${PLATFORM} does" \
+            "not exist. Skip updating Linux."
+    fi
+
+    # TODO(b/183116128): Remove the following package installation after
+    # apt-clone proved to be stable.
     # Install required packages
     validate_package_installation "bluetooth"
     validate_package_installation "bluez"
