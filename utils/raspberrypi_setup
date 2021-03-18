@@ -16,7 +16,6 @@
 SSH_KEY_TARBALL="https://chromium.googlesource.com/chromiumos/chromite/+archive/master/ssh_keys.tar.gz"
 
 PI_IP="$1"
-ROOT_PASSWD="$2"
 IF_PI="$3"
 
 prepare_host() {
@@ -30,7 +29,7 @@ prepare_host() {
     fi
 
     echo "Install required packets"
-    apt-get -y install sshpass > /dev/null 2>&1
+    sudo apt-get -y install sshpass > /dev/null 2>&1
 
     ssh-keygen -R pi@${PI_IP} > /dev/null 2>&1
 }
