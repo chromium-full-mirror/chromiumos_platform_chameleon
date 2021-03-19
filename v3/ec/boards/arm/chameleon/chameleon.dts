@@ -233,10 +233,35 @@
 			gpios = <&gpiog 11 GPIO_OUTPUT_HIGH>;
 			label = "DP2_HDMI_RST_L";
 		};
+
+		/*
+		 * Mux signals for selecting which IC drives the HPD signal to
+		 * the HDMI or DisplayPort connectors. See `proto1_hpd` docs for
+		 * more information.
+		 */
+		hdmirx_hpd_sel {
+			gpios = <&gpioa 1 GPIO_OUTPUT_LOW>;
+			label = "HDMIRX_HPD_SEL";
+		};
+
+		hdmi_hpd_sel {
+			gpios = <&gpioa 8 GPIO_OUTPUT_LOW>;
+			label = "HDMI_HPD_SEL";
+		};
+
+		dp_hpd_sel {
+			gpios = <&gpiob 9 GPIO_OUTPUT_HIGH>;
+			label = "DP_HPD_SEL";
+		};
 	};
 
 	it68051 {
 		compatible = "gpio-keys";
+
+		it68051_en {
+			gpios = <&gpiof 3 GPIO_OUTPUT_HIGH>;
+			label = "IT68051_EN";
+		};
 
 		it68051p0_pwr_det {
 			gpios = <&gpiof 0 GPIO_OUTPUT_HIGH>;
@@ -390,6 +415,7 @@
 			label = "DP_IN_PWR_EN";
 		};
 	};
+
 	dp_cfg {
 		compatible = "gpio-keys";
 

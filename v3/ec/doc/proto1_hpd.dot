@@ -1,0 +1,99 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ *
+ * Graphviz "dot" source for the HPD connections.
+ */
+
+digraph {
+	node [shape=rect];
+	graph [pad="1", ranksep="1", nodesep="1"];
+	edge [color="#aaaaaa" labelangle="0" labeldistance="3"]
+
+	dp1 [label="DisplayPort 1"];
+	hdmi1 [label="HDMI 1"];
+
+	dp2 [label="DisplayPort 2"];
+	hdmi2 [label="HDMI 2"];
+
+	u128 [label="DP1 HPD mux (U128)\nDP_HPD_SEL"];
+	u130 [label="HDMI2 HPD mux (U130)\nHDMI_HPD_SEL"];
+	u129 [label="DP2 HPD mux (U129)\nDP_HPD_SEL"];
+	u131 [label="HDMI2 HPD mux (U131)\nHDMI_HPD_SEL"];
+
+	u9 [label="HDMI redriver (U110)"];
+	u10 [label="HDMI 1 demux (U10)\nHDMI1_GP213_CH_SEL"];
+	u3 [label="DP 1 demux (U3)\nDP1_PS8468_SW"];
+	u17 [label="MCDP2900 DP to HDMI (U17)"];
+	u11 [label="Port 1 FPGA mux (U11)\nSOMP1_MODE_SEL"];
+	u18 [label="Port 1 RX mux (U18)\nGP213_IT68051P1_CH_SEL"];
+
+	u28 [label="HDMI redriver (U112)"];
+	u29 [label="HDMI 2 demux (U29)\nHDMI2_GP213_CH_SEL"];
+	u22 [label="DP 2 demux (U22)\nDP2_PS8468_SW"];
+	u30 [label="MCDP2900 DP to HDMI (U30)"];
+	u14 [label="Port 2 FPGA mux (U14)\nSOMP2_MODE_SEL"];
+	u31 [label="Port 2 RX mux (U31)\nGP213_IT68051P0_CH_SEL"];
+
+	u125 [label="HPD mux (U125)\nHDMIRX_HPD_SEL"];
+	u127 [label="HPD mux (U127)\nHDMIRX_HPD_SEL"];
+
+	fpga [label="FPGA"];
+	u33 [label="IT68051 HDMI receiver (U33)"];
+
+	stm32_1 [label="STM32\nHDMI1_MCU_HPD"];
+	stm32_2 [label="STM32\nGP213_IT68051P1_HPD"];
+	stm32_3 [label="STM32\nDP1_MCU_HPD"];
+	stm32_4 [label="STM32\nHDMI2_MCU_HPD"];
+	stm32_5 [label="STM32\nDP2_MCU_HPD"];
+
+	fpga -> u11 [edgetooltip="DP213_SOMP1_HPD"];
+	u11 -> u3 [edgetooltip="DP1_PS8468_OUT2_HPD" taillabel="IN1\nSEL=0" headlabel="OUT2\nSW=1"];
+	u11 -> u10 [edgetooltip="HDMI_GP213_CH2_HPD" taillabel="IN2\nSEL=1" headlabel="IN2\nSEL=1"];
+	u10 -> u9;
+	u9 -> u130 [edgetooltip="HDMI1_RT_HPD" headlabel="S1\nSEL=0"];
+	stm32_1 -> u130 [headlabel="S2\nSEL=1"];
+	u130 -> hdmi1;
+
+	fpga -> u125 [edgetooltip="FPGA_HPD1" headlabel="S2\nSEL=1"];
+	stm32_2 -> u125 [headlabel="S1\nSEL=0"]; /* TODO change headlabel to "S1\nHPD_SEL=0"? */
+	u125 -> u18;
+	u18 -> u10 [edgetooltip="HDMI1_GP213_CH1_HPD" taillabel="IN2\nSEL=1" headlabel="IN1\nSEL=0"];
+	u18 -> u17 [taillabel="IN1\nSEL=0"];
+
+	u17 -> u3 [edgetooltip="DP1_PS8468_OUT1_HPD" headlabel="OUT1\nSW=0"];
+
+	u3 -> u128 [edgetooltip="PS8468 HPD_SRC" headlabel="S2\nSEL=1"];
+	stm32_3 -> u128 [headlabel="S1\nSEL=0"];
+	u128 -> dp1;
+
+
+	fpga -> u14 [edgetooltip="DP213_SOMP2"];
+	u14 -> u22 [edgetooltip="DP2_PS8468_OUT2_HPD" headlabel="OUT2\nSW=1" taillabel="IN1\nSEL=0"];
+	u14 -> u29 [edgetooltip="HDMI2_GP213_CH2_HPD" headlabel="IN2\nSEL=1" taillabel="IN2\nSEL=1"];
+	u29 -> u28;
+	u28 -> u131 [edgetooltop="HDMI2_RT_HPD" headlabel="S1\nSEL=0"];
+	stm32_4 -> u131 [headlabel="S2\nSEL=1"];
+	u131 -> hdmi2;
+
+	fpga -> u127 [edgetooltip="FPGA_HPD2" headlabel="S2\nSEL=1"];
+	u33 -> u127 [edgetooltip="GP213_IT68051P0_HPD" headlabel="S1\nSEL=0"];
+	u127 -> u31;
+	u31 -> u29 [edgetooltip="HDMI1_GP213_CH2_HPD" taillabel="IN2\nSEL=1" headlabel="IN1\nSEL=0"];
+	u31 -> u30 [taillabel="IN1\nSEL=0"];
+
+	u30 -> u22 [edgetooltip="DP2_PS8468_OUT1_HPD" headlabel="OUT1\nSW=0"];
+
+	u22 -> u129 [edgetooltip="PS8468 HPD_SRC" headlabel="S2\nSEL=1"];
+	stm32_5 -> u129 [headlabel="S1\nSEL=0"];
+	u129 -> dp2;
+
+	{rank=min; fpga}
+	{rank=same; u33}
+	{rank=same; u18; u11; u14; u31}
+	{rank=same; u3; u22; u10; u29}
+	{rank=same; u128; u130; u129; u131}
+	{rank=max; hdmi1; dp1; dp2; hdmi2}
+}

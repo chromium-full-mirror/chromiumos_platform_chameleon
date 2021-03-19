@@ -179,75 +179,92 @@ monitors.
 The command `sysmon` prints a list of the various voltages being monitored:
 
 ```
-uart:~$ sysmon
-12V: 12.242871
-CMON_SOM: 0.294067
-CMON_BOARD: 0.235254
-PP1200: 1.217358
-PP1360: 1.372046
-PP1260: 1.280200
-PP1000: 1.005469
-VMON_9V: 9.174902
-VMON_5V: 4.908105
-VMON_3V3: 3.232727
-PP1800: 1.813550
-SOM_VMON: 1.527539
-SOM_VMON_1V2: 1.959375
-SOM_VMON_MGT: 1.735400
-SOM_VMON_1V8A: 1.886865
-SOM_VMON_C8: 1.913452
-SOM_VREF_CS: 0.001611
+$ sysmon
+12V: 12.304102
+CMON_SOM: 0.278760
+CMON_BOARD: 0.479370
+PP1200: 1.205273
+CMON_PP1200: 1.068310
+CMON_PP3300: 0.555103
+VMON_9V: 9.223242
+VMON_5V: 5.169141
+VMON_3V3: 3.325781
+PP1800: 2.239746
+SOM_VMON: 1.458252
+SOM_VMON_1V2: 2.482251
+SOM_VMON_MGT: 1.549292
+SOM_VMON_1V8A: 2.015771
+SOM_VMON_C8: 2.193017
+VREF_CS1: 0.001611
+VREF_CS2: 0.000806
+VREF_CS3: 0.000806
 ```
 
 The SOM_VMON voltages will not be accurate unless the FPGA SOM is installed
 and its power supplies are enabled. In this example, the FPGA SOM is not
 installed.
 
-Note that on proto0, the current monitors (CMON_SOM and CMON_BOARD) are not
-accurate due to a parts issue.
-
 Because of the use of a timer to drive the sampling sequence, you can get
-zero values if you run the `sysmon` command soon after start-up:
+zero values if you run the `sysmon` command soon after start-up. Within a
+few seconds, all of the values are populated.
 ```
-sysmon
-12V: 12.091406
-CMON_SOM: 0.275537
-CMON_BOARD: 0.229614
-PP1200: 1.207690
-PP1360: 1.374463
-PP1260: 1.304370
-PP1000: 1.030444
-VMON_9V: 9.139453
-VMON_5V: 5.017676
-VMON_3V3: 3.295569
-PP1800: 1.774878
+$ sysmon
+12V: 12.294434
+CMON_SOM: 0.274731
+CMON_BOARD: 0.411694
+PP1200: 1.227832
+CMON_PP1200: 0.000000
+CMON_PP3300: 0.000000
+VMON_9V: 0.000000
+VMON_5V: 0.000000
+VMON_3V3: 0.000000
+PP1800: 0.000000
 SOM_VMON: 0.000000
 SOM_VMON_1V2: 0.000000
 SOM_VMON_MGT: 0.000000
 SOM_VMON_1V8A: 0.000000
 SOM_VMON_C8: 0.000000
-SOM_VREF_CS: 0.000000
-```
-Even a second later, all of the values are non-zero:
-```
+VREF_CS1: 0.000000
+VREF_CS2: 0.000000
+VREF_CS3: 0.000000
 $ sysmon
-12V: 12.117188
-CMON_SOM: 0.281177
-CMON_BOARD: 0.248145
-PP1200: 1.200439
-PP1360: 1.374463
-PP1260: 1.304370
-PP1000: 1.030444
-VMON_9V: 9.139453
-VMON_5V: 5.017676
-VMON_3V3: 3.295569
-PP1800: 1.774878
-SOM_VMON: 1.290674
-SOM_VMON_1V2: 1.688672
-SOM_VMON_MGT: 1.513843
-SOM_VMON_1V8A: 1.596020
-SOM_VMON_C8: 1.546875
-SOM_VREF_CS: 0.001611
+12V: 12.294434
+CMON_SOM: 0.274731
+CMON_BOARD: 0.411694
+PP1200: 1.227832
+CMON_PP1200: 0.617139
+CMON_PP3300: 0.509985
+VMON_9V: 9.245801
+VMON_5V: 5.136914
+VMON_3V3: 3.318530
+PP1800: 2.280835
+SOM_VMON: 1.400244
+SOM_VMON_1V2: 2.552344
+SOM_VMON_MGT: 1.494507
+SOM_VMON_1V8A: 1.969849
+SOM_VMON_C8: 0.000000
+VREF_CS1: 0.000000
+VREF_CS2: 0.000000
+VREF_CS3: 0.000000
+$ sysmon
+12V: 12.294434
+CMON_SOM: 0.277148
+CMON_BOARD: 0.512402
+PP1200: 1.198828
+CMON_PP1200: 1.206885
+CMON_PP3300: 0.550269
+VMON_9V: 9.236133
+VMON_5V: 5.136914
+VMON_3V3: 3.318530
+PP1800: 2.280835
+SOM_VMON: 1.400244
+SOM_VMON_1V2: 2.552344
+SOM_VMON_MGT: 1.494507
+SOM_VMON_1V8A: 1.969849
+SOM_VMON_C8: 2.158374
+VREF_CS1: 0.001611
+VREF_CS2: 0.000806
+VREF_CS3: 0.000806
 ```
 
 ## Clock Generator
@@ -272,7 +289,7 @@ output changes to a 100 MHz signal.
 
 The STM32 controls the power enable and power-on-reset for the FPGA, and
 monitors the signals for power good and configuration done. With an FPGA
-module installed, the FPGA module power good LED (on proto0 this is D21,
+module installed, the FPGA module power good LED (D21,
 just to the right and above the PCIe connector) will briefly turn on and
 then off again as the STM32 asserts control over the signal.
 [Chameleon FPGA Power/Boot Sequence State Machine](./fpgaboot_sm.md)
@@ -353,7 +370,7 @@ shell:
 
 ```
 $ board
-ver = 0
+BOARD_VERSION[2:0] = 4
 $ io get TP125
 TP125 = 0
 $ io get TP126
