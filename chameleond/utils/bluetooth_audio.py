@@ -34,7 +34,6 @@ from six.moves import range
 
 
 # The audio test data for various profiles.
-audio_test_dir = os.path.join(os.path.dirname(__file__), 'data/audio')
 audio_record_dir = '/tmp/audio'
 audio_data_dir = '/usr/share/autotest/audio-test-data'
 audio_test_data = {
@@ -43,7 +42,7 @@ audio_test_data = {
         'format': 's16le',
         'rate': 8000,
         'channels': 1,
-        'file': os.path.join(audio_test_dir,
+        'file': os.path.join(audio_data_dir,
                              'sine_3500hz_rate8000_ch1_5secs.wav'),
         'recorded_file': os.path.join(audio_record_dir,
                                       'hfp_nbs_recorded_by_peer.wav'),
@@ -54,7 +53,7 @@ audio_test_data = {
         'format': 's16le',
         'rate': 16000,
         'channels': 1,
-        'file': os.path.join(audio_test_dir,
+        'file': os.path.join(audio_data_dir,
                              'sine_7000hz_rate16000_ch1_5secs.wav'),
         'recorded_file': os.path.join(audio_record_dir,
                                       'hfp_wbs_recorded_by_peer.wav'),
