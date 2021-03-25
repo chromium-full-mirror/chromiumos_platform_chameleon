@@ -509,6 +509,9 @@ class BluezPeripheral(PeripheralKit):
     """Ensures our chip is in the correct state for the tests to be run"""
 
     # Make sure device is powered up and discoverable
+    if not self._get_hci_prop('org.bluez.Adapter1', 'Powered'):
+        logging.info('Init: Adapter not powered')
+        return False
     self._set_hci_prop('org.bluez.Adapter1', 'Discoverable', dbus.Boolean(1))
 
     # Set class based on device we're emulating
