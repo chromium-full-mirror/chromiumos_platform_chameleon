@@ -193,6 +193,63 @@ END
     fi
 }
 
+update_system () {
+    APT_CONFIG_FILE="/etc/apt/apt.conf.d/local"
+    APT_CLONE_DIR="${CWD}/../updatable/apt-clone/${PLATFORM}/"
+
+    # Install required pcakges to perfom apt-clone
+    validate_package_installation "apt-clone"
+
+    if [ ! -d "$APT_CLONE_DIR" ]; then
+        echo "apt-clone directory for the target platform: ${PLATFORM} does" \
+            "not exist. Skip updating Linux."
+        exit
+    fi
+
+    echo "Start updating the Linux system, and this process may take a while"\
+        "depends on the system status."
+    # Make sure trusted.gpg is readable as apt-key may access it as a user.
+    # This step is required as GIT cannot guarantee synchronized permission
+    # other than execution bit.
+    chmod ugo+r -R "${APT_CLONE_DIR}/etc/apt/"
+
+    tar -C "$APT_CLONE_DIR" -czf \
+        "${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz" "./"
+
+    # Set dpkg always to use old(local) configruation file to avoid prompt
+    # windows.
+    if ! grep -q force-confold "${APT_CONFIG_FILE}"; then
+        cat <<END >"${APT_CONFIG_FILE}"
+Dpkg::Options {
+    "--force-confdef";
+    "--force-confold";
+}
+END
+    fi
+
+    # Execute the update
+    if ! DEBIAN_FRONTEND=noninteractive apt-clone restore \
+        ${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz; then
+        echo "Update Linux system failed! Manual update may required!"
+        # Try resolving configuration errors
+        DEBIAN_FRONTEND=noninteractive dpkg --configure -a
+        # Remove the chameleon bundle commit hash info to force retry of
+        # update.
+        sed -i 's/.*BUNDLE_COMMIT_HASH.*/BUNDLE_COMMIT_HASH=""/' \
+            /etc/default/chameleond
+        # Make sure no apt-related process is hanging.
+        killall apt apt-get dpkg > /dev/null 2>&1
+    else
+        echo "Update Linux system succeed"
+        need_reboot=1
+    fi
+
+    echo "Listing package difference between archived backup and the system."\
+        "\nUse this information to help debug test failures and resolve " \
+        "discrepancies."
+    apt-clone show-diff ${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz
+}
+
 # For Bluetooth peer, create symlinks if daemons were installed in
 # /usr/local/bin instead of /usr/bin where chameleond expects them. This seems
 # to be least invasive way to resolve disagreement without either breaking fizz
@@ -233,26 +290,7 @@ update-rc.d "${UPDATER_NAME}" defaults 90 10
 
 # Some custom actions if chameleon is for Bluetooth peer.
 if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
-    # Install required pcakges to perfom apt-clone
-    validate_package_installation "apt-clone"
-    APT_CLONE_DIR="${CWD}/../updatable/apt-clone/${PLATFORM}/"
-    if [ -d "$APT_CLONE_DIR" ]; then
-        echo "Start updating the Linux system, and this process may take few" \
-            "minutes"
-        tar -C "$APT_CLONE_DIR" -czf \
-            "${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz" "./"
-        apt-clone restore ${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz > \
-            /dev/null 2>&1
-
-        echo "Listing package difference between archived backup and the" \
-            "system.\nUse this information to help debug test failures and" \
-            "resolve discrepancies."
-        apt-clone show-diff ${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz
-    else
-        echo "apt-clone directory for the target platform: ${PLATFORM} does" \
-            "not exist. Skip updating Linux."
-    fi
-
+    update_system
     # TODO(b/183116128): Remove the following package installation after
     # apt-clone proved to be stable.
     # Install required packages
