@@ -92,7 +92,7 @@ class ChameleondDriver(ChameleondInterface):
     self._platform = os.environ.get('PLATFORM')
     logging.info('platform: %s', self._platform)
 
-    logging.info('bt_pkg_commit: %s', self.get_bt_commit_hash())
+    self.dump_bt_peer_info()
 
     self._captured_params = {}
     self._process = None
@@ -240,6 +240,15 @@ class ChameleondDriver(ChameleondInterface):
     """Reboots Chameleon board."""
     logging.info('The chameleon board is going to reboot.')
     system_tools.SystemTools.Call('reboot')
+
+  def dump_bt_peer_info(self):
+    """Dump the kernel, BlueZ, chameleon bundle info"""
+    kernel_info = system_tools.SystemTools.Output('uname', '-a').strip()
+    bluez_info = system_tools.SystemTools.Output('bluetoothd', '-v').strip()
+
+    logging.info('kernel_info: %s', kernel_info)
+    logging.info('bluez_version: %s', bluez_info)
+    logging.info('bt_pkg_commit: %s', self.get_bt_commit_hash())
 
   def get_bt_commit_hash(self):
     """Return the last commit hash in chameleon_commits."""
