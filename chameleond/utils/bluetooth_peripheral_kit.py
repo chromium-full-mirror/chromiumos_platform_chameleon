@@ -348,12 +348,11 @@ class PeripheralKit(object):
     """
     raise NotImplementedError('Not Implemented')
 
-  # TODO(alent): check spec about master/slave roles applicable to LE
+  # TODO(alent): check spec about central/peripheral roles applicable to LE
   def GetOperationMode(self):
     """Get the operation mode.
 
-    This is master/slave in Bluetooth BR/EDR; the Bluetooth LE equivalent is
-    central/peripheral. For legacy reasons, we call it MASTER or SLAVE only.
+    This is CENTRAL or PERIPHERAL for both BR/EDR and LE.
     Not all kits may support all modes.
 
     Returns:
@@ -361,25 +360,25 @@ class PeripheralKit(object):
     """
     raise NotImplementedError('Not Implemented')
 
-  def SetMasterMode(self):
-    """Set the kit to master/central mode.
+  def SetCentralMode(self):
+    """Set the kit to central mode.
 
     Returns:
-      True if master/central mode was set successfully.
+      True if central mode was set successfully.
 
     Raises:
-      A kit-specific exception if master/central mode is unsupported.
+      A kit-specific exception if central mode is unsupported.
     """
     raise NotImplementedError('Not Implemented')
 
-  def SetSlaveMode(self):
-    """Set the kit to slave/peripheral mode.
+  def SetPeripheralMode(self):
+    """Set the kit to peripheral mode.
 
     Returns:
-      True if slave/peripheral mode was set successfully.
+      True if peripheral mode was set successfully.
 
     Raises:
-      A kit-specific exception if slave/peripheral mode is unsupported.
+      A kit-specific exception if peripheral mode is unsupported.
     """
     raise NotImplementedError('Not Implemented')
 

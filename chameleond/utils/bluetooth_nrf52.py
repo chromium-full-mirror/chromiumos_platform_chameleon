@@ -191,8 +191,7 @@ class nRF52(PeripheralKit):
   def GetOperationMode(self):
     """Get the operation mode.
 
-    This is master/slave in Bluetooth BR/EDR; the Bluetooth LE equivalent is
-    central/peripheral. For legacy reasons, we call it MASTER or SLAVE only.
+    This is CENTRAL or PERIPHERAL for both BR/EDR and LE.
     Not all kits may support all modes.
 
     nRF52 only supports peripheral role
@@ -201,35 +200,35 @@ class nRF52(PeripheralKit):
       The operation mode of the kit.
     """
     logging.debug('GetOperationMode is a NOP on nRF52')
-    return 'SLAVE'
+    return 'PERIPHERAL'
 
-  def SetMasterMode(self):
-    """Set the kit to master/central mode.
+  def SetCentralMode(self):
+    """Set the kit to central mode.
 
     nRF52 application only acts as a peripheral
 
     Returns:
-      True if master/central mode was set successfully.
+      True if central mode was set successfully.
 
     Raises:
-      A kit-specific exception if master/central mode is unsupported.
+      A kit-specific exception if central mode is unsupported.
     """
-    error_msg = 'Failed to set master/central mode'
+    error_msg = 'Failed to set central mode'
     logging.error(error_msg)
     raise nRF52Exception(error_msg)
 
-  def SetSlaveMode(self):
-    """Set the kit to slave/peripheral mode.
+  def SetPeripheralMode(self):
+    """Set the kit to peripheral mode.
 
     Silently succeeds, because the nRF52 application is always a peripheral
 
     Returns:
-      True if slave/peripheral mode was set successfully.
+      True if peripheral mode was set successfully.
 
     Raises:
-      A kit-specific exception if slave/peripheral mode is unsupported.
+      A kit-specific exception if peripheral mode is unsupported.
     """
-    logging.debug('SetSlaveMode is a NOP on nRF52')
+    logging.debug('SetPeripheralMode is a NOP on nRF52')
     return True
 
   def GetAuthenticationMode(self):

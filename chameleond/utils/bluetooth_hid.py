@@ -118,8 +118,8 @@ class BluetoothHID(object):
         result = self.SetAuthenticationMode(self.authentication_mode)\
           and result
 
-      # Set RN-42 to work as a slave.
-      result = self.SetSlaveMode() and result
+      # Set RN-42 to work as a peripheral.
+      result = self.SetPeripheralMode() and result
 
       # Set a temporary pin code for testing purpose.
       # Only do this when we want to use a pin code.

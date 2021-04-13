@@ -61,7 +61,7 @@ SERVICE_PROFILE_SDP_PATH = {
 }
 
 """
-Both AVRCP and A2DP profiles will try to role switch into master role on any
+Both AVRCP and A2DP profiles will try to role switch into central role on any
 L2CAP connection, which causes unexpected behavior when emulating a HID device.
 Here, we remove the bluetoothd avrcp and a2dp modules if we aren't emulating an
 audio device.

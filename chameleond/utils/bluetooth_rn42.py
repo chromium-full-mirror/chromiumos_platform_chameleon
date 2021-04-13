@@ -71,10 +71,10 @@ class RN42(PeripheralKit):
   CMD_GET_ADVERTISED_NAME = 'GN'
   CMD_GET_FIRMWARE_VERSION = 'V'
 
-  # operation modes: master or slave
+  # operation modes: central or peripheral
   CMD_GET_OPERATION_MODE = 'GM'
-  CMD_SET_MASTER_MODE = 'SM,1'
-  CMD_SET_SLAVE_MODE = 'SM,0'
+  CMD_SET_CENTRAL_MODE = 'SM,1'
+  CMD_SET_PERIPHERAL_MODE = 'SM,0'
 
   # authentication mode
   CMD_GET_AUTHENTICATION_MODE = 'GA'
@@ -255,10 +255,10 @@ class RN42(PeripheralKit):
 
   # the operation mode
   OPERATION_MODE = {
-      'Slav': 'SLAVE',      # slave mode
-      'Mstr': 'MASTER',     # master mode
+      'Slav': 'PERIPHERAL', # peripheral mode
+      'Mstr': 'CENTRAL',    # central mode
       'Trig': 'TRIGGER',    # trigger mode
-      'Auto': 'AUTO',       # auto connect master mode
+      'Auto': 'AUTO',       # auto connect central mode
       'DTR': 'DTR',         # auto connect DTR mode
       'Any': 'ANY',         # auto connect any mode
       'Pair': 'PAIR'        # paring mode
@@ -451,7 +451,7 @@ class RN42(PeripheralKit):
   def GetOperationMode(self):
     """Get the operation mode.
 
-    This is master/slave in Bluetooth BR/EDR.
+    This is CENTRAL or PERIPHERAL in Bluetooth BR/EDR.
 
     Returns:
       The operation mode of the kit.
@@ -460,26 +460,26 @@ class RN42(PeripheralKit):
                                     msg='getting operation mode')
     return self.OPERATION_MODE.get(result)
 
-  def SetMasterMode(self):
-    """Set the kit to master mode.
+  def SetCentralMode(self):
+    """Set the kit to central mode.
 
     Returns:
-      True if master mode was set successfully.
+      True if central mode was set successfully.
     """
-    self.SerialSendReceive(self.CMD_SET_MASTER_MODE,
+    self.SerialSendReceive(self.CMD_SET_CENTRAL_MODE,
                            expect=self.AOK,
-                           msg='setting master mode')
+                           msg='setting central mode')
     return True
 
-  def SetSlaveMode(self):
-    """Set the kit to slave mode.
+  def SetPeripheralMode(self):
+    """Set the kit to peripheral mode.
 
     Returns:
-      True if slave mode was set successfully.
+      True if peripheral mode was set successfully.
     """
-    self.SerialSendReceive(self.CMD_SET_SLAVE_MODE,
+    self.SerialSendReceive(self.CMD_SET_PERIPHERAL_MODE,
                            expect=self.AOK,
-                           msg='setting slave mode')
+                           msg='setting peripheral mode')
     return True
 
   def GetAuthenticationMode(self):
