@@ -31,13 +31,13 @@ prepare_host() {
     echo "Install required packets"
     sudo apt-get -y install sshpass > /dev/null 2>&1
 
-    ssh-keygen -R pi@${PI_IP} > /dev/null 2>&1
+    ssh-keygen -R pi@"${PI_IP}" > /dev/null 2>&1
 }
 
 prepare_pi() {
     echo "Copy setup files to the target Raspberry Pi"
     if ! sshpass -p 'raspberry' scp -o StrictHostKeyChecking=no \
-        ~/.ssh/ssh_keys.tar.gz $0 pi@"${PI_IP}":/tmp; then
+        ~/.ssh/ssh_keys.tar.gz "$0" pi@"${PI_IP}":/tmp; then
         echo "Failed copy setup files to the target Raspberry Pi"
         exit 1
     fi
@@ -82,7 +82,7 @@ setup_pi() {
         /etc/ssh/sshd_config
 
     echo "Updating root password"
-    echo "${PI_ROOT_PASSWORD}\n${PI_ROOT_PASSWORD}" | passwd
+    printf "%s\n%s" "${PI_ROOT_PASSWORD}" "${PI_ROOT_PASSWORD}" | passwd
 
     echo "Setup Raspberry Pi (remote) SSH keys"
     mkdir -p ~/.ssh
@@ -96,12 +96,12 @@ setup_pi() {
     service ssh restart
 }
 
-if [ -z "$IF_PI" ]; then
+if [ -z "${IF_PI}" ]; then
     prepare_host
     setup_host
     prepare_pi
     sshpass -p "raspberry" ssh pi@"${PI_IP}" \
-        "sudo sh /tmp/raspberrypi_setup "${1}" "${2}" yes"
+        "sudo sh /tmp/raspberrypi_setup ${1} ${2} yes"
     echo "Raspberry Pi Setup Finished"
 else
     setup_pi "$2"

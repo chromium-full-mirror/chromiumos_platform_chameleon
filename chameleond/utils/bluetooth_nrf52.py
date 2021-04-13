@@ -2,30 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""
-This module provides an abstraction of the Nordic nRF52 bluetooth low energy
-kit.
-"""
+"""This module provides an abstraction of the Nordic nRF52 BLE kit."""
 
 from __future__ import print_function
 
-import logging
+# TODO: to port chromite.lib.cros_logging to replace legacy logging
+import logging  # pylint: disable=cros-logging-import
 import time
 
-from . import common
-from . import serial_utils
 from .bluetooth_peripheral_kit import PeripheralKit
 from .bluetooth_peripheral_kit import PeripheralKitException
 
 
 class nRF52Exception(PeripheralKitException):
   """A dummy exception class for nRF52 class."""
-  pass
 
 
 class nRF52(PeripheralKit):
-  """This is an abstraction of Nordic's nRF52 Dongle and the C application
-     that implements BLE mouse and keyboard functionality.
+  """This is an abstraction of Nordic's nRF52 Dongle
+
+     It is used to emulate BLE mouse and keyboard functionality.
 
      SDK: https://www.nordicsemi.com/Software-and-Tools/Software/nRF5-SDK
 
@@ -61,41 +57,41 @@ class nRF52(PeripheralKit):
 
   # Specific Commands
   # Reboot the nRF52
-  CMD_REBOOT = "RBT"
+  CMD_REBOOT = 'RBT'
   # Reset the nRF52 and erase all previous bonds
-  CMD_FACTORY_RESET = "FRST"
+  CMD_FACTORY_RESET = 'FRST'
   # Return the name that is sent in advertisement packets
-  CMD_GET_ADVERTISED_NAME = "GN"
+  CMD_GET_ADVERTISED_NAME = 'GN'
   # Return the nRF52 firmware version
-  CMD_GET_FIRMWARE_VERSION = "GV"
+  CMD_GET_FIRMWARE_VERSION = 'GV'
   # Return the Bluetooth address of the nRF52
-  CMD_GET_NRF52_MAC = "GM"
+  CMD_GET_NRF52_MAC = 'GM'
   # Return the address of the device connected (if there exists a connection)
-  CMD_GET_REMOTE_CONNECTION_MAC = "GC"
+  CMD_GET_REMOTE_CONNECTION_MAC = 'GC'
   # Return the status of the nRF52's connection with a central device
-  CMD_GET_CONNECTION_STATUS = "GS"
+  CMD_GET_CONNECTION_STATUS = 'GS'
 
   # Return the type of device the HID service is set
-  CMD_GET_DEVICE_TYPE = "GD"
+  CMD_GET_DEVICE_TYPE = 'GD'
   # Set the nRF52 HID service to mouse
-  CMD_SET_MOUSE = "SM"
+  CMD_SET_MOUSE = 'SM'
   # Set the nRF52 HID service to keyboard
-  CMD_SET_KEYBOARD = "SK"
+  CMD_SET_KEYBOARD = 'SK'
   # Start HID service emulation
-  CMD_START_HID_EM = "START"
+  CMD_START_HID_EM = 'START'
   # Start HID service emulation
-  CMD_STOP_HID_EM = "STOP"
+  CMD_STOP_HID_EM = 'STOP'
   # Start advertising with the current settings (HID type)
-  CMD_START_ADVERTISING = "ADV"
+  CMD_START_ADVERTISING = 'ADV'
 
   # Press (or clear) one or more buttons (left/right)
-  CMD_MOUSE_BUTTON = "B"
+  CMD_MOUSE_BUTTON = 'B'
   # Click the left and/or right button of the mouse
-  CMD_MOUSE_CLICK = "C"
+  CMD_MOUSE_CLICK = 'C'
   # Move the mouse along x and/or y axis
-  CMD_MOUSE_MOVE = "M"
+  CMD_MOUSE_MOVE = 'M'
   # Scrolling the mouse wheel up/down
-  CMD_MOUSE_SCROLL = "S"
+  CMD_MOUSE_SCROLL = 'S'
 
   def GetCapabilities(self):
     """What can this kit do/not do that tests need to adjust for?
@@ -205,7 +201,7 @@ class nRF52(PeripheralKit):
       The operation mode of the kit.
     """
     logging.debug('GetOperationMode is a NOP on nRF52')
-    return "SLAVE"
+    return 'SLAVE'
 
   def SetMasterMode(self):
     """Set the kit to master/central mode.
@@ -248,7 +244,7 @@ class nRF52(PeripheralKit):
       None as the nRF52 does not support an Authentication mode.
     """
     logging.debug('GetAuthenticationMode is a NOP on nRF52')
-    return None
+
 
   def SetAuthenticationMode(self, mode):
     """Set the authentication mode to the specified mode.
@@ -279,8 +275,8 @@ class nRF52(PeripheralKit):
       None if there is no pin code stored.
     """
     warn_msg = 'nRF52 does not support PIN code mode, no PIN exists'
-    logging.warn(warn_msg)
-    return None
+    logging.warning(warn_msg)
+
 
   def SetPinCode(self, pin):
     """Set the pin code.
@@ -306,7 +302,7 @@ class nRF52(PeripheralKit):
       The service profile currently in use (as per constant in PeripheralKit)
     """
     logging.debug('GetServiceProfile is a NOP on nRF52')
-    return "HID"
+    return 'HID'
 
   def SetServiceProfileSPP(self):
     """Set SPP as the service profile.
@@ -361,7 +357,7 @@ class nRF52(PeripheralKit):
     if len(address) == 17:
       return address
     else:
-      logging.error('remote connection address is invalid: %s', raw_address)
+      logging.error('remote connection address is invalid: %s', address)
       return None
 
   def GetConnectionStatus(self):
@@ -432,7 +428,7 @@ class nRF52(PeripheralKit):
       self.SerialSendReceive(self.CMD_SET_KEYBOARD,
                              msg='setting keyboard as HID type')
     else:
-      msg = "Failed to set HID type, not supported: %s" % device_type
+      msg = 'Failed to set HID type, not supported: %s' % device_type
       logging.error(msg)
       raise nRF52Exception(msg)
     return True
@@ -446,7 +442,7 @@ class nRF52(PeripheralKit):
       None, the only reasonable value for BLE-only devices
     """
     logging.debug('GetClassOfService is a NOP on nRF52')
-    return None
+
 
   def SetClassOfService(self, class_of_service):
     """Set the class of service, if supported.
@@ -479,7 +475,7 @@ class nRF52(PeripheralKit):
       None, the only reasonable value for BLE-only devices.
     """
     logging.debug('GetClassOfDevice is a NOP on nRF52')
-    return None
+
 
   def SetClassOfDevice(self, device_type):
     """Set the class of device, if supported.
@@ -550,6 +546,23 @@ class nRF52(PeripheralKit):
                            msg='disconnect')
     return True
 
+  def Discover(self, remote_address):
+    """Discover the remote address.
+
+    Not supported on nRF52 HID application.
+
+    Args:
+      remote_address: the remote Bluetooth address, which must be given as 12
+                      hex digits with colons between each pair.
+                      For reference: '00:29:95:1A:D4:6F'
+
+    Returns:
+      True if discovering the remote address succeeded
+    """
+    error_msg = 'nRF52 does not support discovery'
+    logging.error(error_msg)
+    raise nRF52Exception(error_msg)
+
   def StartAdvertising(self):
     """Command the nRF52 to begin advertising with its current settings.
 
@@ -578,8 +591,8 @@ class nRF52(PeripheralKit):
     """
     command = self.CMD_MOUSE_MOVE + self.CMD_FS
     command += str(delta_x) + self.CMD_FS + str(delta_y)
-    message = 'moving BLE mouse ' + str(delta_x) + " " + str(delta_y)
-    result = self.SerialSendReceive(command, msg=message)
+    message = 'moving BLE mouse ' + str(delta_x) + ' ' + str(delta_y)
+    self.SerialSendReceive(command, msg=message)
     return True
 
   def MouseScroll(self, steps):
@@ -601,7 +614,7 @@ class nRF52(PeripheralKit):
     command += self.CMD_FS
     command += str(steps) + self.CMD_FS
     message = 'scrolling BLE mouse'
-    result = self.SerialSendReceive(command, msg=message)
+    self.SerialSendReceive(command, msg=message)
     return True
 
   def MouseHorizontalScroll(self, steps):
@@ -613,7 +626,9 @@ class nRF52(PeripheralKit):
     There is no nRF52 limitation for implementation. If we can program
     the correct HID event report to emulate horizontal scrolling, this
     can be supported.
+
     **** Not implemented ****
+
     Args:
       steps: The number of steps to scroll the wheel.
              With traditional scrolling:
@@ -623,6 +638,8 @@ class nRF52(PeripheralKit):
     Returns:
       True if successful.
     """
+
+    del steps # to silent linter warning
     return True
 
   def _MouseButtonCodes(self):
@@ -638,7 +655,7 @@ class nRF52(PeripheralKit):
       elif button == PeripheralKit.MOUSE_BUTTON_RIGHT:
         currently_pressed += self.MOUSE_BUTTON_RIGHT_BIT
       else:
-        error = "Unknown mouse button in state: %s" % button
+        error = 'Unknown mouse button in state: %s' % button
         logging.error(error)
         raise nRF52Exception(error)
     return currently_pressed
@@ -661,7 +678,7 @@ class nRF52(PeripheralKit):
     command = self.CMD_MOUSE_BUTTON + self.CMD_FS
     command += str(button_codes)
     message = 'pressing BLE mouse buttons'
-    result = self.SerialSendReceive(command, msg=message)
+    self.SerialSendReceive(command, msg=message)
     return True
 
   def MouseReleaseAllButtons(self):
@@ -674,16 +691,28 @@ class nRF52(PeripheralKit):
     command = self.CMD_MOUSE_BUTTON + self.CMD_FS
     command += '0'
     message = 'releasing all BLE HOG mouse buttons'
-    result = self.SerialSendReceive(command, msg=message)
+    self.SerialSendReceive(command, msg=message)
     return True
 
+  def SetDiscoverable(self, discoverable):
+    """Sets the discoverability of the device.
+
+    Not supported on nRF52 application.
+
+    Args:
+      discoverable: Whether device is discoverable/advertising.
+    """
+    error_msg = 'nRF52 does not support discoverable'
+    logging.error(error_msg)
+    raise nRF52Exception(error_msg)
+
   def Reset(self):
-    result = self.SerialSendReceive(nRF52.CMD_REBOOT, msg='reset nRF52')
+    self.SerialSendReceive(nRF52.CMD_REBOOT, msg='reset nRF52')
     return True
 
   def SetModeMouse(self):
     self.EnterCommandMode()
-    result = self.SerialSendReceive(nRF52.CMD_SET_MOUSE, msg='set nRF52 mouse')
+    self.SerialSendReceive(nRF52.CMD_SET_MOUSE, msg='set nRF52 mouse')
     return True
 
   def GetKitInfo(self, connect_separately=False, test_reset=False):

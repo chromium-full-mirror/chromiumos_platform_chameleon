@@ -10,20 +10,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import logging
+# TODO: to port chromite.lib.cros_logging to replace legacy logging
+import logging  # pylint: disable=cros-logging-import
 import time
 
-from . import common
 import sys
+from six.moves import map
+from six.moves import range
+from . import common
 from .bluetooth_peripheral_kit import PeripheralKit
 from .bluetooth_peripheral_kit import PeripheralKitException
 from .ids import RN42_SET
-from six.moves import map
-from six.moves import range
 
 class RN42Exception(PeripheralKitException):
   """A dummpy exception class for RN42 class."""
-  pass
 
 
 class RN42(PeripheralKit):
@@ -546,7 +546,7 @@ class RN42(PeripheralKit):
     if len(pin) > self.MAX_PIN_LEN:
       vals = (pin, self.MAX_PIN_LEN)
       msg = 'The pin code "%s" is longer than max length (%d).' % vals
-      logging.warn(msg)
+      logging.warning(msg)
       raise RN42Exception(msg)
 
     result = self.SerialSendReceive(self.CMD_SET_PIN_CODE + pin,
@@ -559,7 +559,7 @@ class RN42(PeripheralKit):
       logging.info("Got return '%s' in SetPinCode", result)
       actual_pin = self.GetPinCode()
       if actual_pin != pin:
-        logging.error("Pincode set %s does not match returned %s",
+        logging.error('Pincode set %s does not match returned %s',
                       pin, actual_pin)
         return False
       else:
@@ -738,7 +738,7 @@ class RN42(PeripheralKit):
                              expect=self.AOK,
                              msg='setting joystick as HID type')
     else:
-      msg = "Failed to set HID type, not supported: %s" % device_type
+      msg = 'Failed to set HID type, not supported: %s' % device_type
       logging.error(msg)
       raise RN42Exception(msg)
     return True
@@ -918,6 +918,23 @@ class RN42(PeripheralKit):
                            msg='disconnecting from the remote device')
     return True
 
+  def Discover(self, remote_address):
+    """Discover the remote address.
+
+    Not supported.
+
+    Args:
+      remote_address: the remote Bluetooth address, which must be given as 12
+                      hex digits with colons between each pair.
+                      For reference: '00:29:95:1A:D4:6F'
+
+    Returns:
+      True if discovering the remote address succeeded
+    """
+    error_msg = 'RN42 does not support discovery'
+    logging.error(error_msg)
+    raise RN42Exception(error_msg)
+
   # TODO(alent): Refactor this part of the API, it's too RN-42-specific!
 
   def _CheckValidModifiers(self, modifiers):
@@ -993,7 +1010,7 @@ class RN42(PeripheralKit):
       elif button == PeripheralKit.MOUSE_BUTTON_RIGHT:
         currently_pressed |= self.RAW_HID_RIGHT_BUTTON
       else:
-        error = "Unknown mouse button in state: %s" % button
+        error = 'Unknown mouse button in state: %s' % button
         logging.error(error)
         raise RN42Exception(error)
     return currently_pressed
@@ -1055,6 +1072,18 @@ class RN42(PeripheralKit):
     self._MouseButtonStateClear()
     mouse_codes = self._RawMouseCodes(buttons=self.RAW_HID_BUTTONS_RELEASED)
     self.SerialSendReceive(mouse_codes, msg='RN42: MouseReleaseAllButtons')
+
+  def SetDiscoverable(self, discoverable):
+    """Sets the discoverability of the device.
+
+    Not supported on RN42 application.
+
+    Args:
+      discoverable: Whether device is discoverable/advertising.
+    """
+    error_msg = 'RN42 does not support discoverable'
+    logging.error(error_msg)
+    raise RN42Exception(error_msg)
 
   def _RawMouseCodes(self, buttons=0, x_stop=0, y_stop=0, wheel=0):
     """Generate the codes in mouse raw report format.
@@ -1181,6 +1210,6 @@ if __name__ == '__main__':
   kit_instance = RN42()
   kit_instance.GetKitInfo()
   if len(sys.argv) > 1 and sys.argv[1] == '--list':
-    print("\nKnown device serial numbers:")
+    print('\nKnown device serial numbers:')
     for device in kit_instance.KNOWN_DEVICE_SET:
-      print(("%s" % device))
+      print(('%s' % device))

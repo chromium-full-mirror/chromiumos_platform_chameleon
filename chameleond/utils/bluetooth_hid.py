@@ -10,19 +10,19 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
-import logging
+# TODO: to port chromite.lib.cros_logging to replace legacy logging
+import logging  # pylint: disable=cros-logging-import
 import sys
 import time
 
+from six.moves import range
+from chameleond.utils.bluetooth_nrf52 import nRF52
 from .bluetooth_peripheral_kit import PeripheralKit
 from .bluetooth_rn42 import RN42
 from .bluetooth_rn42 import RN42Exception
-from chameleond.utils.bluetooth_nrf52 import nRF52
-from six.moves import range
 
 class BluetoothHIDException(Exception):
   """A dummpy exception class for Bluetooth HID class."""
-  pass
 
 
 class BluetoothHID(object):
@@ -74,8 +74,8 @@ class BluetoothHID(object):
       AttributeError if the attribute is not found.
       (This is the default behavior and kits should follow it.)
     """
-    if name.startswith("Mouse"):
-      error = "Kit API is not public. Use public API from BluetoothHIDMouse."
+    if name.startswith('Mouse'):
+      error = 'Kit API is not public. Use public API from BluetoothHIDMouse.'
       raise AttributeError(error)
     return getattr(self._kit, name)
 
@@ -184,7 +184,8 @@ class BluetoothHIDKeyboard(BluetoothHID):
       self.Send(press_codes)
       self.Send(release_codes)
     else:
-      logging.warn('modifers: %s and keys: %s are not valid', modifiers, keys)
+      logging.warning('modifers: %s and keys: %s are not valid',
+                      modifiers, keys)
       return None
 
 
@@ -215,7 +216,7 @@ class BluetoothHIDMouse(BluetoothHID):
       BluetoothHIDException if value is outside of the acceptable range.
     """
     if value < self.HID_MIN_REPORT_VALUE or value > self.HID_MAX_REPORT_VALUE:
-      error = "Value %s is outside of acceptable range [-127,127]." % value
+      error = 'Value %s is outside of acceptable range [-127,127].' % value
       logging.error(error)
       raise BluetoothHIDException(error)
 
@@ -452,7 +453,7 @@ def _Parse():
 
   if len(args.remote_host_address.replace(':', '')) != 12:
     print(('"%s" is not a valid bluetooth address.' % args.remote_host_address))
-    exit(1)
+    sys.exit(1)
 
   print(('Emulate a %s and connect to remote host at %s' %
         (args.device, args.remote_host_address)))

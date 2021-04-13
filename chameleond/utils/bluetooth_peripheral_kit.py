@@ -10,17 +10,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import logging
-import serial
+# TODO: to port chromite.lib.cros_logging to replace legacy logging
+import logging  # pylint: disable=cros-logging-import
 import time
+from six.moves import range
+import serial   # pylint: disable=import-error
 
 from . import serial_utils
 from . import usb_powercycle_util
-from six.moves import range
 
 class PeripheralKitException(Exception):
   """A dummpy exception class for the PeripheralKit class."""
-  pass
 
 
 class PeripheralKit(object):
@@ -79,15 +79,15 @@ class PeripheralKit(object):
   # Capability strings
   # NOTE: Strings updated here must be kept in sync with Autotest.
   # A list of supported transports, from TRANSPORT_* below.
-  CAP_TRANSPORTS = "CAP_TRANSPORTS"
+  CAP_TRANSPORTS = 'CAP_TRANSPORTS'
   # Strings representing supported transports.
-  # A dual device would have ["TRANSPORT_LE","TRANSPORT_BREDR"]
-  TRANSPORT_LE = "TRANSPORT_LE"
-  TRANSPORT_BREDR = "TRANSPORT_BREDR"
+  # A dual device would have ['TRANSPORT_LE','TRANSPORT_BREDR']
+  TRANSPORT_LE = 'TRANSPORT_LE'
+  TRANSPORT_BREDR = 'TRANSPORT_BREDR'
   # True if gettigng a PIN code is allowed & meaningful.
-  CAP_HAS_PIN = "CAP_HAS_PIN"
+  CAP_HAS_PIN = 'CAP_HAS_PIN'
   # True if the kit can initiate a connection (esp. to a paired device)
-  CAP_INIT_CONNECT = "CAP_INIT_CONNECT"
+  CAP_INIT_CONNECT = 'CAP_INIT_CONNECT'
 
   # Kit implementations should set these values if the generic methods that
   # use them are a desired part of the implementation
@@ -99,8 +99,8 @@ class PeripheralKit(object):
   # Mouse constants
   MOUSE_VALUE_MIN = -127
   MOUSE_VALUE_MAX = 127
-  MOUSE_BUTTON_LEFT = "MOUSE_BUTTON_LEFT"
-  MOUSE_BUTTON_RIGHT = "MOUSE_BUTTON_RIGHT"
+  MOUSE_BUTTON_LEFT = 'MOUSE_BUTTON_LEFT'
+  MOUSE_BUTTON_RIGHT = 'MOUSE_BUTTON_RIGHT'
 
   def __init__(self):
     self._command_mode = False
@@ -210,7 +210,7 @@ class PeripheralKit(object):
         # Ensure serial port is re-created on next run
         self._serial = None
       except Exception as e:
-        logging.warn('The serial device was probably already closed: %s', e)
+        logging.warning('The serial device was probably already closed: %s', e)
       self._closed = True
     return True
 
@@ -229,8 +229,8 @@ class PeripheralKit(object):
                                             driver_name=self.DRIVER)
     logging.info('CheckSerialConnection: port is %s', tty)
     if tty != self._tty:
-      logging.warn('CheckSerialConnection: Port %s is not current port %s',
-                   tty, self._tty)
+      logging.warning('CheckSerialConnection: Port %s is not current port %s',
+                      tty, self._tty)
     return bool(tty)
 
   def GetPort(self):
@@ -248,7 +248,7 @@ class PeripheralKit(object):
       A dictionary from PeripheralKit.CAP_* strings to an appropriate value.
       See above (CAP_*) for details.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def EnterCommandMode(self):
     """Make the kit enter command mode.
@@ -270,7 +270,7 @@ class PeripheralKit(object):
       if the kit gives an unexpected response.
       A kit-specific Exception if something else goes wrong.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def LeaveCommandMode(self, force=False):
     """Make the kit leave command mode.
@@ -287,7 +287,7 @@ class PeripheralKit(object):
     Returns:
       True if the kit left command mode successfully.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def Reboot(self):
     """Reboot (or partially reset) the kit.
@@ -302,7 +302,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specifc exception if something goes wrong.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def FactoryReset(self):
     """Factory reset the kit.
@@ -315,7 +315,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specifc exception if something goes wrong.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def PowerCycle(self):
     """Power cycle the USB port where kit is attached.
@@ -335,7 +335,7 @@ class PeripheralKit(object):
     Returns:
       The name that the kit advertises to other Bluetooth devices.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def GetFirmwareVersion(self):
     """Get the firmware version of the kit.
@@ -346,7 +346,7 @@ class PeripheralKit(object):
     Returns:
       The firmware version of the kit.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   # TODO(alent): check spec about master/slave roles applicable to LE
   def GetOperationMode(self):
@@ -359,7 +359,7 @@ class PeripheralKit(object):
     Returns:
       The operation mode of the kit.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetMasterMode(self):
     """Set the kit to master/central mode.
@@ -370,7 +370,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specific exception if master/central mode is unsupported.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetSlaveMode(self):
     """Set the kit to slave/peripheral mode.
@@ -381,7 +381,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specific exception if slave/peripheral mode is unsupported.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   # TODO(alent): check spec about authentication modes applicable to LE
   def GetAuthenticationMode(self):
@@ -393,7 +393,7 @@ class PeripheralKit(object):
     Returns:
       The authentication mode of the kit (from the choices in PeripheralKit).
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetAuthenticationMode(self, mode):
     """Set the authentication mode to the specified mode.
@@ -410,7 +410,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specific exception if given mode is not supported.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def GetPinCode(self):
     """Get the pin code.
@@ -419,7 +419,7 @@ class PeripheralKit(object):
       A string representing the pin code,
       None if there is no pin code stored.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetPinCode(self, pin):
     """Set the pin code.
@@ -430,7 +430,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specifc exception if the pin code is invalid.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def _SetDefaultPinCode(self):
     """Set the default pin code.
@@ -447,7 +447,7 @@ class PeripheralKit(object):
       The service profile currently in use (as per constant in PeripheralKit)
     """
     # TODO(alent): Is the assetion above about constants and PeripheralKit true?
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetServiceProfileSPP(self):
     """Set SPP as the service profile.
@@ -458,7 +458,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specifc exception if unsuppported.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetServiceProfileHID(self):
     """Set HID as the service profile.
@@ -466,7 +466,7 @@ class PeripheralKit(object):
     Returns:
       True if the service profile was set to HID successfully.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def GetLocalBluetoothAddress(self):
     """Get the local (kit's) Bluetooth MAC address.
@@ -477,7 +477,7 @@ class PeripheralKit(object):
     Returns:
       The Bluetooth MAC address of the kit, None if the kit has no MAC address
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def GetConnectionStatus(self):
     """Get the connection status.
@@ -488,7 +488,7 @@ class PeripheralKit(object):
     Returns:
       True if the kit is connected to a remote device.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   # TODO(alent): Figure out a better API for such kit-specific actions?
   def EnableConnectionStatusMessage(self):
@@ -499,7 +499,7 @@ class PeripheralKit(object):
     Returns:
       True if enabling the connection status message successfully.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def DisableConnectionStatusMessage(self):
     """Disable the connection status message.
@@ -507,7 +507,7 @@ class PeripheralKit(object):
     Returns:
       True if disabling the connection status message successfully.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def GetRemoteConnectedBluetoothAddress(self):
     """Get the Bluetooth MAC address of the current connected remote host.
@@ -517,7 +517,7 @@ class PeripheralKit(object):
       or None if there is no remote connected device. If not None, this will
       be properly formatted as a 12-digit MAC address with colons.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def GetDeviceType(self):
     """Get the device type.
@@ -525,7 +525,7 @@ class PeripheralKit(object):
     Returns:
       A string representing the HID type (from PeripheralKit)
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetHIDType(self, device_type):
     """Set HID type to the specified device type.
@@ -539,7 +539,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specific exception if that device type is not supported.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   # TODO(alent): Figure out how to better indicate BR/EDR-only functionality
   # The reason for the None result is that that is what the autotest API
@@ -556,7 +556,7 @@ class PeripheralKit(object):
       A decimal integer representing the class of service, unless unsupported,
       then None.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetClassOfService(self, class_of_service):
     """Set the class of service, if supported.
@@ -574,7 +574,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specific expection if the class of service is not supported.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetDefaultClassOfService(self):
     """Set the default class of service, if supported.
@@ -599,7 +599,7 @@ class PeripheralKit(object):
       A decimal integer representing the class of device, unless unsupported,
       then None.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetClassOfDevice(self, device_type):
     """Set the class of device, if supported.
@@ -617,7 +617,7 @@ class PeripheralKit(object):
     Raises:
       A kit-specific expection if the class of device is not supported.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   # TODO(alent): How to handle not supported by kit in the API?
   # TODO(alent): Implement/require validation logic?
@@ -638,7 +638,7 @@ class PeripheralKit(object):
     Raises:
       PeripheralKitException if the given address was malformed.
     """
-    raise NotImplementedError("Not Implemented")
+    raise NotImplementedError('Not Implemented')
 
   # TODO(alent): API consistency with False vs exception
   def Connect(self):
@@ -651,7 +651,7 @@ class PeripheralKit(object):
       True if connecting to the stored remote address succeeded, or
       False if a timeout occurs.
     """
-    raise NotImplementedError("Not implemented")
+    raise NotImplementedError('Not Implemented')
 
   def ConnectToRemoteAddress(self, remote_address):
     """Connect to the remote address.
@@ -679,7 +679,7 @@ class PeripheralKit(object):
     Returns:
       True if disconnecting from the remote device succeeded.
     """
-    raise NotImplementedError("Not implemented")
+    raise NotImplementedError('Not Implemented')
 
   def Discover(self, remote_address):
     """Discover the remote address.
@@ -692,7 +692,7 @@ class PeripheralKit(object):
     Returns:
       True if discovering the remote address succeeded
     """
-    raise NotImplementedError("Not implemented")
+    raise NotImplementedError('Not Implemented')
 
   # Helper methods for implementing a system that remembers button state
   def _MouseButtonStateUnion(self, buttons_to_press):
@@ -732,7 +732,7 @@ class PeripheralKit(object):
       delta_y: The number of steps to move vertically.
                Negative values move up, positive values move down.
     """
-    raise NotImplementedError("Not implemented")
+    raise NotImplementedError('Not Implemented')
 
   def MouseScroll(self, steps):
     """Scroll the mouse wheel steps number of steps.
@@ -746,7 +746,7 @@ class PeripheralKit(object):
                Negative values scroll down, positive values scroll up.
              With reversed (formerly "Australian") scrolling this is reversed.
     """
-    raise NotImplementedError("Not implemented")
+    raise NotImplementedError('Not Implemented')
 
   def MousePressButtons(self, buttons):
     """Press the specified mouse buttons.
@@ -758,11 +758,11 @@ class PeripheralKit(object):
       buttons: A set of buttons, as PeripheralKit MOUSE_BUTTON_* values, that
                will be pressed (and held down).
     """
-    raise NotImplementedError("Not implemented")
+    raise NotImplementedError('Not Implemented')
 
   def MouseReleaseAllButtons(self):
     """Release all mouse buttons."""
-    raise NotImplementedError("Not implemented")
+    raise NotImplementedError('Not Implemented')
 
   def SetDiscoverable(self, discoverable):
     """Sets the discoverability of the device.
@@ -770,4 +770,4 @@ class PeripheralKit(object):
     Args:
       discoverable: Whether device is discoverable/advertising.
     """
-    raise NotImplementedError("Not implemented")
+    raise NotImplementedError('Not Implemented')
