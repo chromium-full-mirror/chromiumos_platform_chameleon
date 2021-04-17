@@ -10,6 +10,7 @@ from __future__ import print_function
 # TODO: to port chromite.lib.cros_logging to replace legacy logging
 import logging  # pylint: disable=cros-logging-import
 import os
+import re
 
 from . import chameleon_common  # pylint: disable=W0611
 # pylint: disable=C0411
@@ -20,8 +21,6 @@ from chameleond.utils import system_tools
 
 class Servod(object):
   """A simple object that performs Servod operations."""
-
-  CONFIG_PATH = '/usr/local/lib64/python2.7/site-packages/servo/data'
 
   # TODO: We had better figure out a way to auto detect the config path to use.
   CONFIG = {
@@ -36,10 +35,24 @@ class Servod(object):
     self._start_servod_cmd_list = []
     self._servod = None
     self._measure_power_cmd_list = ['dut-control', 'pp3300_wlan_mw', '-t', '3']
+    self._config_path = self.FindConfigPath()
+
+  def FindConfigPath(self):
+    """Find the path where all servo config files are located.
+
+    The config path is something like
+      /usr/local/lib/python3.6/site-packages/servo/data
+    """
+    for root, _, _ in os.walk('/usr'):
+      if re.search('python3.*servo.*data', root):
+        return root
+
+    logging.error('Failed to find the servod config path.')
+    return ''
 
   def SetBoard(self, board):
     self._board = board
-    self._config = os.path.join(self.CONFIG_PATH, self.CONFIG.get(board, ''))
+    self._config = os.path.join(self._config_path, self.CONFIG.get(board, ''))
 
     if not os.path.isfile(self._config):
       logging.error('The servod config path does not exist: %s', self._config)
