@@ -13,6 +13,5 @@ include deploy/init.d/stream_server
 include deploy/init.d/chameleon-updater
 graft deploy/network
 include dist/commit
-include updatable/python2.7/*.py
 include updatable/pip/*
 recursive-include updatable boot-partition.img fpga.rbf socfpga.dtb zImage modules.tgz
