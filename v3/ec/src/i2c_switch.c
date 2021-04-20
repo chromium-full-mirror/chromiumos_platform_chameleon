@@ -11,11 +11,13 @@
 #include <stdlib.h>
 #include <drivers/gpio.h>
 #include <drivers/i2c.h>
+#include <logging/log.h>
 #include <shell/shell.h>
 #include <sys/__assert.h>
-#include <sys/printk.h>
 #include "io.h"
 #include "i2c_switch.h"
+
+LOG_MODULE_REGISTER(i2c_switch);
 
 #define MAX7367_ADDR 0x73
 #define NUM_BUS 4
@@ -60,7 +62,7 @@ int i2c_switch_reset(enum i2c_switch_reset_value val)
 
 	ret = gpio_set_level(exp_reset, val);
 	if (ret < 0) {
-		printk("gpio_set_level(exp_reset) failed, ret = %d\n", ret);
+		LOG_ERR("gpio_set_level(exp_reset) failed, ret = %d\n", ret);
 	}
 	return ret;
 }
@@ -112,7 +114,7 @@ static int init_i2c_switch(const struct device *ptr)
 	i2c_dev = device_get_binding("I2C_1");
 
 	if (!i2c_dev) {
-		printk("%s: I2C_1 device not found.\n", __func__);
+		LOG_ERR("%s: I2C_1 device not found.\n", __func__);
 		return -ENODEV;
 	}
 
@@ -123,8 +125,8 @@ static int init_i2c_switch(const struct device *ptr)
 					   gpio_get_pin(exp_irq),
 					   GPIO_INT_EDGE_FALLING);
 	if (ret != 0) {
-		printk("Error %d: failed to configure interrupt on exp_irq\n",
-		       ret);
+		LOG_ERR("Error %d: failed to configure interrupt on exp_irq\n",
+			ret);
 		return ret;
 	}
 	gpio_init_callback(&exp_irq_cb_data, exp_irq_cb,

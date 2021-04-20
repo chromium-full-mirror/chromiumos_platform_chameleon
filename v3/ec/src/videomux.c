@@ -9,9 +9,12 @@
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>
+#include <logging/log.h>
 #include <shell/shell.h>
 #include "io.h"
 #include "videomux.h"
+
+LOG_MODULE_REGISTER(videomux);
 
 int videomux_select(enum video_source_t src, enum video_dest_t dest)
 {
@@ -167,8 +170,8 @@ static int videomux_init(const struct device *ptr)
 				 gpio_get_pin(dp1_hdmi_rst_l),
 				 GPIO_OUTPUT_HIGH | GPIO_OPEN_DRAIN);
 	if (ret != 0) {
-		printk("Error %d: failed to configure dp1_hdmi_rst_l for open-drain\n",
-		       ret);
+		LOG_ERR("Error %d: failed to configure dp1_hdmi_rst_l for open-drain\n",
+			ret);
 		return ret;
 	}
 
@@ -176,8 +179,8 @@ static int videomux_init(const struct device *ptr)
 				 gpio_get_pin(dp2_hdmi_rst_l),
 				 GPIO_OUTPUT_HIGH | GPIO_OPEN_DRAIN);
 	if (ret != 0) {
-		printk("Error %d: failed to configure dp2_hdmi_rst_l for open-drain\n",
-		       ret);
+		LOG_ERR("Error %d: failed to configure dp2_hdmi_rst_l for open-drain\n",
+			ret);
 		return ret;
 	}
 
@@ -220,7 +223,8 @@ static int cmd_videomux_set(const struct shell *shell, size_t argc, char **argv)
 		src = DP2;
 		shell_fprintf(shell, SHELL_NORMAL, "Connect DP2");
 	} else {
-		printk("Invalid source: '%s'\n", argv[-1]);
+		shell_fprintf(shell, SHELL_NORMAL, "Invalid source: '%s'\n",
+			      argv[-1]);
 		return -EINVAL;
 	}
 
@@ -231,7 +235,8 @@ static int cmd_videomux_set(const struct shell *shell, size_t argc, char **argv)
 		dest = FPGA_MGT;
 		shell_fprintf(shell, SHELL_NORMAL, " to FPGA\n");
 	} else {
-		printk("Invalid destination: '%s'\n", argv[0]);
+		shell_fprintf(shell, SHELL_NORMAL,
+			      "Invalid destination: '%s'\n", argv[0]);
 		return -EINVAL;
 	}
 

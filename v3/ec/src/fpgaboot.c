@@ -9,12 +9,14 @@
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>
+#include <logging/log.h>
 #include <shell/shell.h>
 #include <sys/__assert.h>
-#include <sys/printk.h>
 #include "io.h"
 #include "fpgaboot.h"
 #include "fpgaboot_sm.h"
+
+LOG_MODULE_REGISTER(fpgaboot);
 
 /**
  * FPGA state
@@ -239,8 +241,8 @@ static int fpgaboot_init(const struct device *ptr)
 					   gpio_get_pin(pwr_good),
 					   GPIO_INT_EDGE_BOTH);
 	if (ret != 0) {
-		printk("Error %d: failed to configure interrupt on PWR_GOOD\n",
-		       ret);
+		LOG_ERR("Error %d: failed to configure interrupt on PWR_GOOD\n",
+			ret);
 		return ret;
 	}
 	gpio_init_callback(&pwr_good_cb_data, pwr_good_cb,
@@ -252,8 +254,8 @@ static int fpgaboot_init(const struct device *ptr)
 					   gpio_get_pin(fpga_done),
 					   GPIO_INT_EDGE_BOTH);
 	if (ret != 0) {
-		printk("Error %d: failed to configure interrupt on FPGA_DONE\n",
-		       ret);
+		LOG_ERR("Error %d: failed to configure interrupt on FPGA_DONE\n",
+			ret);
 		return ret;
 	}
 	gpio_init_callback(&fpga_done_cb_data, fpga_done_cb,

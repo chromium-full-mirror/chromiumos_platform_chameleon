@@ -13,7 +13,6 @@
 #include <drivers/i2c.h>
 #include <shell/shell.h>
 #include <sys/__assert.h>
-#include <sys/printk.h>
 #include "io.h"
 
 static int cmd_get(const struct shell *shell, size_t argc, char **argv)

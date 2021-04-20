@@ -10,10 +10,12 @@
 #include <devicetree.h>
 #include <drivers/adc.h>
 #include <drivers/gpio.h>
+#include <logging/log.h>
 #include <shell/shell.h>
-#include <sys/printk.h>
 #include "io.h"
 #include "sysmon.h"
+
+LOG_MODULE_REGISTER(sysmon);
 
 /**
  * Define the interval for the sysmon timer. Every SYSMON_INTERVAL, the
@@ -187,20 +189,20 @@ static struct sysmon_adc_input scan_table[SYSMON_VMON_NUM_INPUTS] = {
 				 .scale_factor = 1.0,
 				 .name = "SOM_VMON_C8" },
 	[SYSMON_SOM_VREF_CS1] = { .sel = SYSMON_SEL_SOM,
-				 .adc_num = 1,
-				 .channel = 6,
-				 .scale_factor = 1.0,
-				 .name = "VREF_CS1" },
+				  .adc_num = 1,
+				  .channel = 6,
+				  .scale_factor = 1.0,
+				  .name = "VREF_CS1" },
 	[SYSMON_SOM_VREF_CS2] = { .sel = SYSMON_SEL_SOM,
-				 .adc_num = 1,
-				 .channel = 7,
-				 .scale_factor = 1.0,
-				 .name = "VREF_CS2" },
+				  .adc_num = 1,
+				  .channel = 7,
+				  .scale_factor = 1.0,
+				  .name = "VREF_CS2" },
 	[SYSMON_SOM_VREF_CS3] = { .sel = SYSMON_SEL_SOM,
-				 .adc_num = 1,
-				 .channel = 8,
-				 .scale_factor = 1.0,
-				 .name = "VREF_CS3" },
+				  .adc_num = 1,
+				  .channel = 8,
+				  .scale_factor = 1.0,
+				  .name = "VREF_CS3" },
 
 };
 
@@ -331,8 +333,8 @@ static void sysmon_task(void *unused1, void *unused2, void *unused3)
 			sysmon_sel,
 			(scan_table[idx].sel == SYSMON_SEL_REGULATORS) ? 1 : 0);
 		if (ret < 0) {
-			printk("gpio_set_level(sysmon_sel) failed, ret = %d\n",
-			       ret);
+			LOG_ERR("gpio_set_level(sysmon_sel) failed, ret = %d\n",
+				ret);
 			continue;
 		}
 		if (adc_read(adc_list[scan_table[idx].adc_num].dev, &seq) < 0) {
@@ -386,15 +388,15 @@ static int sysmon_init(const struct device *ptr)
 		adc_list[idx].dev =
 			device_get_binding(adc_list[idx].device_name);
 		if (adc_list[idx].dev == NULL) {
-			printk("Cannot get device %s\n",
-			       adc_list[idx].device_name);
+			LOG_ERR("Cannot get device %s\n",
+				adc_list[idx].device_name);
 			return -ENODEV;
 		}
 
 		ret = adc_channel_setup(adc_list[idx].dev,
 					&adc_list[idx].channel_config);
 		if (ret < 0) {
-			printk("adc_channel_setup failed, ret = %d\n", ret);
+			LOG_ERR("adc_channel_setup failed, ret = %d\n", ret);
 			return ret;
 		}
 	}

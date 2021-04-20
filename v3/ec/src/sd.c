@@ -9,11 +9,13 @@
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>
+#include <logging/log.h>
 #include <shell/shell.h>
 #include <sys/__assert.h>
-#include <sys/printk.h>
 #include "io.h"
 #include "sd.h"
+
+LOG_MODULE_REGISTER(sd);
 
 enum sd_state mux_state; /**< Currently selected state */
 
@@ -46,25 +48,25 @@ int sd_mux_set(enum sd_state state)
 
 	ret = gpio_set_level(sd_mux_sel, mux_sel);
 	if (ret < 0) {
-		printk("gpio_set_level(sd_mux_sel) failed, ret = %d\n", ret);
+		LOG_ERR("gpio_set_level(sd_mux_sel) failed, ret = %d\n", ret);
 		return ret;
 	}
 
 	ret = gpio_set_level(sd_mux_en_l, mux_en);
 	if (ret < 0) {
-		printk("gpio_set_level(sd_mux_en+l) failed, ret = %d\n", ret);
+		LOG_ERR("gpio_set_level(sd_mux_en+l) failed, ret = %d\n", ret);
 		return ret;
 	}
 
 	ret = gpio_set_level(usd_pwr_sel, pwr_sel);
 	if (ret < 0) {
-		printk("gpio_set_level(usd_pwr_sel) failed, ret = %d\n", ret);
+		LOG_ERR("gpio_set_level(usd_pwr_sel) failed, ret = %d\n", ret);
 		return ret;
 	}
 
 	ret = gpio_set_level(usd_pwr_en, pwr_en);
 	if (ret < 0) {
-		printk("gpio_set_level(usd_pwr_en) failed, ret = %d\n", ret);
+		LOG_ERR("gpio_set_level(usd_pwr_en) failed, ret = %d\n", ret);
 		return ret;
 	}
 
@@ -140,22 +142,23 @@ static int cmd_sd_status(const struct shell *shell, size_t argc, char **argv)
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	printk("The SD mux is set to ");
+	shell_fprintf(shell, SHELL_NORMAL, "The SD mux is set to ");
 	switch (sd_mux_get()) {
 	case SD_MUX_OFF:
-		printk("disconnected\n");
+		shell_fprintf(shell, SHELL_NORMAL, "disconnected\n");
 		break;
 	case SD_MUX_FPGA:
-		printk("FPGA\n");
+		shell_fprintf(shell, SHELL_NORMAL, "FPGA\n");
 		break;
 	case SD_MUX_USB:
-		printk("USB\n");
+		shell_fprintf(shell, SHELL_NORMAL, "USB\n");
 		break;
 	default:
-		printk("invalid value, %d\n", (int)mux_state);
+		shell_fprintf(shell, SHELL_NORMAL, "invalid value, %d\n",
+			      (int)mux_state);
 	}
 
-	printk("CD_DET = %d\n", sd_get_cd_det());
+	shell_fprintf(shell, SHELL_NORMAL, "CD_DET = %d\n", sd_get_cd_det());
 
 	return 0;
 }

@@ -9,11 +9,13 @@
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>
+#include <logging/log.h>
 #include <shell/shell.h>
 #include <sys/__assert.h>
-#include <sys/printk.h>
 
 #include "io.h"
+
+LOG_MODULE_REGISTER(io);
 
 struct gpio_info {
 	const char *const label;
@@ -171,9 +173,9 @@ static int io_init_devices(const struct device *ptr)
 		/* Look up the device by name. */
 		gpios[idx].dev = device_get_binding(gpios[idx].dev_name);
 		if (!gpios[idx].dev) {
-			printk("io_init_devices: "
-			       "device_get_binding(%s) failed!\n",
-			       gpios[idx].dev_name);
+			LOG_ERR("io_init_devices: "
+				"device_get_binding(%s) failed!\n",
+				gpios[idx].dev_name);
 			continue;
 		}
 
@@ -181,13 +183,13 @@ static int io_init_devices(const struct device *ptr)
 		int ret = gpio_pin_configure(gpios[idx].dev, gpios[idx].pin,
 					     gpios[idx].flags);
 		if (ret != 0) {
-			printk("io_init_devices: "
-			       "gpio_pin_configure(%s(*%p), %d(\"%s\"), 0x%x) "
-			       "failed, ret = %d\n",
-			       gpios[idx].dev_name, gpios[idx].dev,
-			       gpios[idx].pin, gpios[idx].label,
-			       gpios[idx].flags, ret);
-                }
+			LOG_ERR("io_init_devices: "
+				"gpio_pin_configure(%s(*%p), %d(\"%s\"), 0x%x) "
+				"failed, ret = %d\n",
+				gpios[idx].dev_name, gpios[idx].dev,
+				gpios[idx].pin, gpios[idx].label,
+				gpios[idx].flags, ret);
+		}
 	}
 
 	/* Zephyr dynamic shell commands require a sorted list. */
@@ -262,19 +264,16 @@ static int cmd_get(const struct shell *shell, size_t argc, char **argv)
 	if (argc == 1) {
 		/* No pin selected, do all */
 		for (enum gpio_signal signal = 0;
-		     signal < sizeof(gpios) / sizeof(gpios[0]);
-		     signal++) {
+		     signal < sizeof(gpios) / sizeof(gpios[0]); signal++) {
 			int alignment;
 			shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-			              "(%s.%d)%n", // %s = %d
-			              gpios[signal].dev_name,
-			              gpios[signal].pin,
-			              &alignment);
+				      "(%s.%d)%n", // %s = %d
+				      gpios[signal].dev_name, gpios[signal].pin,
+				      &alignment);
 			shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-			              "%*s = %d\n",
-			              40 - alignment,
-			              gpios[signal].label,
-			              gpio_get_level(signal));
+				      "%*s = %d\n", 40 - alignment,
+				      gpios[signal].label,
+				      gpio_get_level(signal));
 		}
 		return 0;
 	}

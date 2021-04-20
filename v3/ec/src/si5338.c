@@ -11,7 +11,9 @@
 #include <zephyr.h>
 #include <device.h>
 #include <drivers/i2c.h>
-#include <sys/printk.h>
+#include <logging/log.h>
+
+LOG_MODULE_REGISTER(si5338);
 
 /*
  * The generated header uses a non-standard keyword "code" to place the
@@ -99,7 +101,7 @@ static int init_si5338(const struct device *ptr)
 	const struct device *i2c_dev = device_get_binding("I2C_2");
 
 	if (!i2c_dev) {
-		printk("%s: I2C_2 device not found.\n", __func__);
+		LOG_ERR("%s: I2C_2 device not found.\n", __func__);
 		return -ENODEV;
 	}
 

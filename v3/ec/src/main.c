@@ -6,9 +6,11 @@
  */
 
 #include <zephyr.h>
-#include <sys/printk.h>
+#include <logging/log.h>
 
 #include "io.h"
+
+LOG_MODULE_REGISTER(main);
 
 void main(void)
 {
@@ -16,6 +18,6 @@ void main(void)
 
 	ret = gpio_set_level(power_good_led, 1);
 	if (ret < 0) {
-		printk("Failed to turn on POWER_GOOD, ret = %d.\n", ret);
+		LOG_ERR("Failed to turn on POWER_GOOD, ret = %d.\n", ret);
 	}
 }
