@@ -20,9 +20,7 @@ setup(
     license='Chromium',
     description='Server to communicate and control Chameleon board.',
     long_description='Server to communicate and control Chameleon board.',
-    # Uses pyserial version 2.7. The newer 3.x version is not compatible
-    # with chameleond/utils/serial_utils.py
-    install_requires=['pyserial==2.7', 'schedule', 'future'],
+    install_requires=['schedule', 'future'],
     scripts=['utils/lock_u_boot_console', 'utils/run_chameleond',
              'utils/run_displayd', 'utils/run_stream_server',
              'chameleond/utils/server_time', 'utils/run_scheduler',
