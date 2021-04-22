@@ -152,25 +152,28 @@ $(shell ssh -o StrictHostKeyChecking=no \
       "cat /etc/hostname")
 endef
 
+ifdef CHAMELEON_HOST
+	CHAMELEON_HOSTNAME := $(call get_chameleon_hostname)
+endif
+
 .PHONY: check_pi_make
 check_pi_make:
-	$(eval CHAMELEON_HOSTNAME := $(call get_chameleon_hostname))
-	@if [ $(CHAMELEON_HOSTNAME) == raspberrypi ]; then \
-	    $(eval PY_VERSION := python3) \
-	    if [ $(shell cat $(PY_VERSION_FILE)) != $(PY_VERSION) ]; then \
-		echo "Raspberry Pi has switched to python3."; \
-		echo "You need to explicitly make with python3 for Raspberry" \
-		 "Pi now until all other platforms have switched to python3" \
-		 "as well."; \
-		echo; \
-		echo "Please make with python3 and then install as"; \
-		echo "(cr) $$ make PY_VERSION=python3"; \
-		echo '(cr) $$ make remote-install' \
-		    'CHAMELEON_HOST=$$RASPBERRY_IP'; \
-		echo; \
-		exit 1; \
-	    fi; \
-	fi
+ifeq ($(CHAMELEON_HOSTNAME), raspberrypi)
+	$(eval PY_VERSION := python3)
+	@if [ $(shell cat $(PY_VERSION_FILE)) != $(PY_VERSION) ]; then \
+	    echo "Raspberry Pi has switched to python3."; \
+	    echo "You need to explicitly make with python3 for Raspberry" \
+	     "Pi now until all other platforms have switched to python3" \
+	     "as well."; \
+	    echo; \
+	    echo "Please make with python3 and then install as"; \
+	    echo "(cr) $$ make PY_VERSION=python3"; \
+	    echo '(cr) $$ make remote-install' \
+	        'CHAMELEON_HOST=$$RASPBERRY_IP'; \
+	    echo; \
+	    exit 1; \
+	fi;
+endif
 
 .PHONY: remote-install
 remote-install: check_git_tree_clean check_git_commit_HEAD check_pi_make
