@@ -54,25 +54,92 @@ cd ~/zephyrproject
 west flash --erase --reset-after-load
 ```
 
+### FTDI Provisioning
+
+Starting with proto1, the FTDI connected to the STM32 has control over its
+reset line (as RTS# + boot0 as DTR#). By default this is the wrong polarity
+(default RTS state from serial emulators will prevent the EC from booting).
+It's recommented to provision the FTDI to have the right polarity.
+
+One of the most straightforward tools for this is
+[ft232r_prog](http://rtr.ca/ft232r/). A copy is also available at
+http://b/186062038#comment4
+
+After running `make` one can provision their FTDI using:
+
+```
+sudo ./ft232r_prog --manufacturer "Google" --product "Chameleon V3 $version FTDI" --new-serial-number $serial --invert_rts
+```
+
+Don't forget to update the board version and serial number depending on the
+particular board. Here's what an example eeprom looks like after the update:
+
+```
+amstan@amstan-glaptop:/tmp/ft232r_prog-1.25% ./ft232r_prog --dump
+
+ft232r_prog: version 1.25, by Mark Lord.
+       eeprom_size = 128
+         vendor_id = 0x0403
+        product_id = 0x6001
+      self_powered = 0
+     remote_wakeup = 1
+suspend_pull_downs = 0
+     max_bus_power = 90 mA
+      manufacturer = Google
+           product = Chameleon V3 Proto 1 FTDI
+         serialnum = 3
+   high_current_io = 0
+  load_d2xx_driver = 0
+      txd_inverted = 0
+      rxd_inverted = 0
+      rts_inverted = 1
+      cts_inverted = 0
+      dtr_inverted = 0
+      dsr_inverted = 0
+      dcd_inverted = 0
+       ri_inverted = 0
+           cbus[0] = TxLED
+           cbus[1] = RxLED
+           cbus[2] = TxDEN
+           cbus[3] = PwrEn
+           cbus[4] = Sleep
+No change from existing eeprom contents.
+```
+
 ### Serial Bootloader
 
 To use the serial bootloader to update the STM32's firmware, you must install
-`stm32flash` and build `stm32reset`. For now all of these things have to do be done outside
-the chroot and some commands (eg. stm32reset) will be deprecated beyond proto0.
+`stm32flash`. For now all of these things have to do be done outside
+the chroot.
 
 ```
-sudo apt-get install stm32flash gpiod libgpiod-dev
-cd ~/chromiumos/src/platform/chameleon/utils/stm32reset
-make
+sudo apt-get install stm32flash
 ```
 
 This section assumes that the chromiumos chroot environment is set up in
 ~/chromiumos, and that zephyr is set up in ~/zephyrproject.
 
 Connect the USB-C cable to the USB-C port closest to the HDMI/DisplayPort
-connectors.
+connectors. Note: cable orientation is important before Proto 2.
 
 Connect 12V power to the Chameleon.
+
+```
+killall your_terminal; sleep 0.5 # to avoid interference
+stm32flash -f /dev/serial/by-id/*Chameleon*FTDI* -w ~/zephyrproject/build/zephyr/zephyr.bin -v -S 0x8000000 -i '-rts,-dtr,rts,' -b 1000000
+```
+
+#### Proto 0 (deprecated instructions)
+
+Installing:
+
+```
+sudo apt-get install gpiod libgpiod-dev
+cd ~/chromiumos/src/platform/chameleon/utils/stm32reset
+make
+```
+
+Flashing:
 
 ```
 sudo ~/chromiumos/src/platform/chameleon/utils/stm32reset/stm32reset --bootloader
