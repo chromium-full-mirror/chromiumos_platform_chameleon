@@ -39,13 +39,10 @@ to program the firmware, or you can use the serial bootloader.
 
 ### Jlink
 
-As of Proto 0, you can program via the JTAG interface only if the FPGA board
-is not installed.
+As of Proto 1, there is a separate programming connector for the STM32.
 
-
-Connect your JLink to the JTAG, using either an
-[Altera FPGA adapter](https://www.segger.com/products/debug-probes/j-link/accessories/adapters/intel-fpga-adapter/)
-or a [Xilinx FPGA adapter](https://www.segger.com/products/debug-probes/j-link/accessories/adapters/xilinx-adapter/).
+Connect your JLink to the JTAG, using a
+[9-pin Cortex-M adapter](https://www.segger.com/products/debug-probes/j-link/accessories/adapters/9-pin-cortex-m-adapter/)
 
 Connect 12V power to the Chameleon.
 
