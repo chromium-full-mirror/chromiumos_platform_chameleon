@@ -146,13 +146,12 @@
 		compatible = "gpio-keys";
 
 		/*
-		 * I/Os are initially set to connect HDMI signals to the FPGA
-		 * MGTs and DisplayPort signals through the DP->HDMI converter
-		 * to the HDMI Receiver.
+		 * I/Os are initially set to so that none of the signals are
+		 * connected to either the FPGA MGTs or the HDMI Receiver.
 		 */
 		gp213_it68051p1_ch_sel {
 			/* GPU_SEL on U18 */
-			gpios = <&gpiog 1 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiog 1 GPIO_OUTPUT_HIGH>;
 			label = "GP213_IT68051P1_CH_SEL";
 		};
 
@@ -170,7 +169,7 @@
 
 		somp1_mode_sel {
 			/* GPU_SEL on U11 */
-			gpios = <&gpiog 4 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiog 4 GPIO_OUTPUT_LOW>;
 			label = "SOMP1_MODE_SEL";
 		};
 
@@ -181,7 +180,7 @@
 		 */
 		gp213_it68051p0_ch_sel {
 			/* GPU_SEL on U31 */
-			gpios = <&gpiog 3 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiog 3 GPIO_OUTPUT_HIGH>;
 			label = "GP213_IT68051P0_CH_SEL";
 		};
 
@@ -199,7 +198,7 @@
 
 		somp2_mode_sel {
 			/* GPU_SEL on U14 */
-			gpios = <&gpiog 5 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiog 5 GPIO_OUTPUT_LOW>;
 			label = "SOMP2_MODE_SEL";
 		};
 

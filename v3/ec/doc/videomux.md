@@ -82,6 +82,32 @@ HDMI1: n/c
 HDMI2: FPGA
 ```
 
+## Disabling all video inputs
+
+To disable all video inputs, use `videomux off`. This command configures the
+muxes so that the inputs are not connected to either the FPGA or the HDMI
+receiver. The demux and mux control signals are set so that the demux's
+**active** output is connected to the **inactive** input on the mux.
+
+For example, the DisplayPort1 demux (U3) is selected to route the signal into
+the MCDP2900 protocol converter, but the HDMI receiver mux (U18) is set to
+its other input, so the converted HDMI stream from DisplayPort1 is never
+connected to the HDMI Receiver.
+
+Borrowing
+the tables from earlier, the demuxes and muxes are configured as follows:
+
+```
+U3/U22      U10/U29     U18/U31     U11/U14     DP1/DP2 connection  HDMI1/HDMI2 connection
+------      ------      -------     -------     ------------------  ----------------------
+0           1           1           0           n/c                 n/c
+```
+
+Or, for a visual representation, refer to the diagram showing the selections
+on each demux and mux.
+
+![videomux off Routing](images/videomux_off.png "videomux off Routing")
+
 ## DisplayPort to IT68051
 
 The Proto 0 board can connect either DisplayPort connector to the IT68051

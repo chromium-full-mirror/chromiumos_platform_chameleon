@@ -243,6 +243,41 @@ static int cmd_videomux_set(const struct shell *shell, size_t argc, char **argv)
 	return videomux_select(src, dest);
 }
 
+/**
+ * @brief Disconnect all inputs from destinations
+ *
+ * Configure the muxes so that all of the video inputs are not connected
+ * to any of the destinations.
+ *
+ * Refer to doc/videomux.md for a discussion of how this works.
+ *
+ * @param shell Our shell data struct; needed for some shell APIs.
+ * @param argc Count of arguments passed to this shell command. Unused.
+ * @param argv Arguments for this shell command. Unused.
+ *
+ * @retval 0 Everything's fine
+ */
+static int cmd_videomux_off(const struct shell *shell, size_t argc, char **argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	gpio_set_level(dp1_ps8468_sw, 0);
+	gpio_set_level(gp213_it68051p1_ch_sel, 1);
+
+	gpio_set_level(somp1_mode_sel, 0);
+	gpio_set_level(hdmi1_gp213_ch_sel, 1);
+
+	gpio_set_level(dp2_ps8468_sw, 0);
+	gpio_set_level(gp213_it68051p0_ch_sel, 1);
+
+	gpio_set_level(somp2_mode_sel, 0);
+	gpio_set_level(hdmi2_gp213_ch_sel, 1);
+
+	shell_fprintf(shell, SHELL_NORMAL, "Disconnect all HDMI and DP\n");
+	return 0;
+}
+
 // clang-format off
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	dp1_cmds, SHELL_CMD(fpga, NULL, "Route DP1 to FPGA", cmd_videomux_set),
@@ -267,6 +302,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 	SHELL_CMD(dp2, &dp2_cmds, "Route DisplayPort 2", NULL),
 	SHELL_CMD(hdmi1, &hdmi1_cmds, "Route HDMI 1", NULL),
 	SHELL_CMD(hdmi2, &hdmi2_cmds, "Route HDMI 2", NULL),
+	SHELL_CMD(off, NULL, "Disconnect all signals", cmd_videomux_off),
 	SHELL_SUBCMD_SET_END /* Array terminated. */
 );
 SHELL_CMD_REGISTER(videomux, &videomux_cmds, "Control the video mux", NULL);
