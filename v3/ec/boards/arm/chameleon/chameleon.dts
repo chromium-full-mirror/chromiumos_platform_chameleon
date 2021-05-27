@@ -336,6 +336,11 @@
 			gpios = <&gpiod 15 GPIO_INPUT_PULL_UP>;
 			label = "STM32_IT68051P1_DDC_SDA";
 		};
+
+		i2c2_int_l {
+			gpios = <&gpiob 12 GPIO_INPUT_PULL_UP>;
+			label = "I2C2_INT_L";
+		};
 	};
 
 	hotplug {

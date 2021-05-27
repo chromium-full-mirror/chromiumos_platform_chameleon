@@ -62,6 +62,7 @@ enum gpio_signal {
 	gp213_it68051p1_ddc_sda,
 	stm32_it68051p1_ddc_scl,
 	stm32_it68051p1_ddc_sda,
+	i2c2_int_l,
 	dp1_auxp_det,
 	dp1_auxn_det,
 	dp2_auxp_det,

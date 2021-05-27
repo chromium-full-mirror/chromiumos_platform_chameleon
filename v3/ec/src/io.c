@@ -82,6 +82,7 @@ static struct gpio_info gpios[] = {
 	GPIO(it68051, gp213_it68051p1_ddc_sda),
 	GPIO(it68051, stm32_it68051p1_ddc_scl),
 	GPIO(it68051, stm32_it68051p1_ddc_sda),
+	GPIO(it68051, i2c2_int_l),
 	GPIO(hotplug, dp1_auxp_det),
 	GPIO(hotplug, dp1_auxn_det),
 	GPIO(hotplug, dp2_auxp_det),
