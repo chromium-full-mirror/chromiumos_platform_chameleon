@@ -5,4 +5,4 @@
 
 config BOARD_GOOGLE_CHAMELEON
 	bool "Google Chameleon"
-	depends on SOC_STM32F103XE
+	depends on SOC_STM32H743XX

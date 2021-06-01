@@ -4,13 +4,13 @@
  */
 
 /dts-v1/;
-#include <st/f1/stm32f103Xg.dtsi>
-#include <st/f1/stm32f103z(f-g)hx-pinctrl.dtsi>
+#include <st/h7/stm32h743Xi.dtsi>
+#include <st/h7/stm32h743zitx-pinctrl.dtsi>
 #include "gpio_defines.h"
 
 / {
 	model = "Google Chameleon";
-	compatible = "st,stm32f103zg", "st,stm32f103";
+	compatible = "st,stm32h743zi", "st,stm32h743";
 
 	chosen {
 		zephyr,console = &usart1;
@@ -510,6 +510,32 @@
 	};
 };
 
+&clk_hse {
+	clock-frequency = <DT_FREQ_M(8)>;
+	status = "okay";
+};
+
+&pll {
+	div-m = <1>;
+	mul-n = <24>;
+	div-p = <2>;
+	div-q = <4>;
+	div-r = <2>;
+	clocks = <&clk_hse>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(96)>;
+	d1cpre = <1>;
+	hpre = <1>;
+	d1ppre = <2>;
+	d2ppre1 = <2>;
+	d2ppre2 = <2>;
+	d3ppre = <2>;
+};
+
 &usart1 {
 	pinctrl-0 = <&usart1_tx_pa9 &usart1_rx_pa10>;
 	current-speed = <115200>;
@@ -535,8 +561,7 @@
 };
 
 &spi1 {
-	pinctrl-0 = <&spi1_nss_master_pa4 &spi1_sck_master_pa5
-		     &spi1_miso_master_pa6 &spi1_mosi_master_pa7>;
+	pinctrl-0 = <&spi1_nss_pa4 &spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pa7>;
 	status = "okay";
 };
 
@@ -596,20 +621,16 @@
 };
 
 &adc1 {
-	pinctrl-0 = <&adc1_in10_pc0 &adc1_in11_pc1 &adc1_in12_pc2
-		     &adc1_in13_pc3 &adc1_in14_pc4 &adc1_in15_pc5>;
+	pinctrl-0 = <&adc1_inp10_pc0 &adc1_inp11_pc1 &adc1_inp4_pc4
+		     &adc1_inp8_pc5>;
 	status = "okay";
 };
 
 &adc3 {
 	/* These ADC inputs are only available on ADC3 */
-	pinctrl-0 = <&adc3_in4_pf6 &adc3_in5_pf7 &adc3_in6_pf8
-		     &adc3_in7_pf9 &adc3_in8_pf10>;
-	status = "okay";
-};
-
-&usb {
-	pinctrl-0 = <&usb_dm_pa11 &usb_dp_pa12>;
+	pinctrl-0 = <&adc3_inp0_pc2 &adc3_inp1_pc3 &adc3_inp8_pf6
+		     &adc3_inp3_pf7 &adc3_inp7_pf8 &adc3_inp2_pf9
+		     &adc3_inp6_pf10>;
 	status = "okay";
 };
 
