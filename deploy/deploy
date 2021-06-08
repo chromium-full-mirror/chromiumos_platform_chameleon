@@ -332,6 +332,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     # Update bluetooth rules in service config files
     BT_ADMIN_CONF="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"
     BT_SRC_CONF="/lib/systemd/system/bluetooth.service"
+    BT_HELPER_CONF="/lib/systemd/system/bthelper@.service"
     EXEC_START="ExecStart"
     EXEC_OPTS="-d -P input"
 
@@ -347,6 +348,11 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         eval "sed -ie 's/${EXEC_START}.*/& ${EXEC_OPTS}/g' ${BT_SRC_CONF}"
         eval "systemctl daemon-reload"
         eval "service bluetooth restart"
+    fi
+
+    # Make sure the bthelper tool will not interact with bluetoothd
+    if [ -f "$BT_HELPER_CONF" ]; then
+        rm -f "${BT_HELPER_CONF}"
     fi
 
     # Create new dbus service conf if it doesn't exist
