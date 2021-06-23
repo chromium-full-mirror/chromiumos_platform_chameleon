@@ -20,7 +20,7 @@ setup(
     license='Chromium',
     description='Server to communicate and control Chameleon board.',
     long_description='Server to communicate and control Chameleon board.',
-    install_requires=['schedule', 'future'],
+    install_requires=['pyserial', 'schedule', 'future'],
     scripts=['utils/lock_u_boot_console', 'utils/run_chameleond',
              'utils/run_displayd', 'utils/run_stream_server',
              'chameleond/utils/server_time', 'utils/run_scheduler',
