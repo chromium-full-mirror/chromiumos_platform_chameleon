@@ -1,16 +1,14 @@
 set noparent
+include /BLUETOOTH_OWNERS
 
 # Google contributors
 cychiang@chromium.org
-josephsih@chromium.org
 kalin@chromium.org
 shijinabraham@chromium.org
 shijinabraham@google.com
 waihong@google.com
 yuhsuan@chromium.org
 danielwinkler@google.com
-howardchung@google.com
-yshavit@google.com
 pfagerburg@google.com
 twawrzynczak@google.com
 quasisec@google.com
