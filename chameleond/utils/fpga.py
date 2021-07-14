@@ -497,7 +497,6 @@ class EdidController(object):
 
 class AudioDumperError(Exception):
   """Exception raised when any error on AudioDumper."""
-  pass
 
 
 class AudioDumper(object):
@@ -549,9 +548,9 @@ class AudioDumper(object):
   # So default area which contains 0x2000 4K pages can dump
   # 32 MBytes / 1500 KBytes = 21 sec of data.
   MAX_DUMP_PAGES = (
-      (_DEFAULT_END_ADDRESS - _DEFAULT_START_ADDRESS) / PAGE_SIZE)
+      (_DEFAULT_END_ADDRESS - _DEFAULT_START_ADDRESS) // PAGE_SIZE)
   MAX_DUMP_TIME_SECS = (
-      (_DEFAULT_END_ADDRESS - _DEFAULT_START_ADDRESS) / (8 * 4 * 48000))
+      (_DEFAULT_END_ADDRESS - _DEFAULT_START_ADDRESS) // (8 * 4 * 48000))
 
   # Set loop to 1 so page count will increase over 0x2000 and we can detect the
   # case where page count exceeds the limit.
@@ -699,7 +698,6 @@ class AudioDestination(object):
 
 class AudioRouteControllerError(Exception):
   """Exception raised when any error on AudioRouteController."""
-  pass
 
 
 class AudioRouteController(object):
@@ -801,7 +799,6 @@ class AudioRouteController(object):
 
 class AudioStreamControllerError(Exception):
   """Exception raised when any error on AudioStreamController."""
-  pass
 
 
 class AudioStreamController(object):

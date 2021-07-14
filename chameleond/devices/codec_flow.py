@@ -16,7 +16,6 @@ from chameleond.utils import ids
 
 class CodecFlowError(Exception):
   """Exception raised when any error on CodecFlow."""
-  pass
 
 
 class CodecFlow(chameleon_device.Flow):
@@ -30,7 +29,7 @@ class CodecFlow(chameleon_device.Flow):
     input: LINEIN, MIC
     output: LINEOUT.
 
-  Properties:
+  Attributes:
     _port_id: The ID of the input/output connector. Check the value in ids.py.
     _fpga: An FpgaController object.
     _audio_codec: A codec.AudioCodec object.
@@ -118,13 +117,12 @@ class CodecFlow(chameleon_device.Flow):
 
   def DoFSM(self):
     """fpga_tio calls DoFSM after a flow is selected. Do nothing for codec."""
-    pass
 
 
 class InputCodecFlow(CodecFlow):
   """CodecFlow for input port.
 
-  Properties:
+  Attributes:
     _audio_capture_manager: An AudioCaptureManager object which controls audio
       data capturing using AudioDumper in FPGAController.
   """
@@ -215,7 +213,7 @@ class InputCodecFlow(CodecFlow):
 class OutputCodecFlow(CodecFlow):
   """CodecFlow for output port.
 
-  Properties:
+  Attributes:
     _audio_stream_manager: An AudioStreamManager object which controls audio
       data streaming using AudioStreamController in FPGAController.
   """
@@ -266,7 +264,7 @@ class OutputCodecFlow(CodecFlow):
     """
     self._audio_route_manager.SetupRouteFromMemoryToI2S()
     self._fpga.aiis.Enable()
-    audio_data = (open(path, 'r').read(), data_format)
+    audio_data = (open(path, 'rb').read(), data_format)
     self._audio_stream_manager.StartPlayingAudioData(audio_data)
 
   @property

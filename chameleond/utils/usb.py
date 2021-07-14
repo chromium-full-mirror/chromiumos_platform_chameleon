@@ -16,13 +16,12 @@ from chameleond.utils import usb_audio_configs
 
 class USBControllerError(Exception):
   """Exception raised when any error occurs in USBController."""
-  pass
 
 
 class USBController(object):
   """Provides interface to control USB driver.
 
-  Properties:
+  Attributes:
     _module: Module name of USB driver.
   """
   # Enumeration of modprobe status.
@@ -125,7 +124,7 @@ class USBController(object):
         was not successfully enabled by modprobe.
     """
     return_code, out, err = process_output
-    error_message = ('ERROR: could not insert \'%s\': Module already in '
+    error_message = ('ERROR: could not insert "%s": Module already in '
                      'kernel\n' % self._module)
     if return_code == 0:
       if 'insmod' in out and err == '':
@@ -236,7 +235,7 @@ class USBController(object):
 class USBAudioController(USBController):
   """Provides interface to control USB audio driver.
 
-  Properties:
+  Attributes:
     _driver_configs_to_set: A USBAudioDriverConfigs object used to store user-
                             set changes.
     _driver_configs_in_use: A USBAudioDriverConfigs object representing the
@@ -311,13 +310,13 @@ class USBAudioController(USBController):
     p_chmask = self._TransformChannelNumberToChannelMask(p_configs.channel)
     p_srate = p_configs.rate
     p_ssize_in_bits = self._ExtractBitsFromSampleFormat(p_configs.sample_format)
-    p_ssize_in_bytes = p_ssize_in_bits / 8
+    p_ssize_in_bytes = p_ssize_in_bits // 8
 
     c_configs = driver_configs.GetCaptureConfigs()
     c_chmask = self._TransformChannelNumberToChannelMask(c_configs.channel)
     c_srate = c_configs.rate
     c_ssize_in_bits = self._ExtractBitsFromSampleFormat(c_configs.sample_format)
-    c_ssize_in_bytes = c_ssize_in_bits / 8
+    c_ssize_in_bytes = c_ssize_in_bits // 8
 
     device_info = driver_configs.GetDeviceInfoDict()
 

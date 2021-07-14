@@ -11,7 +11,6 @@ from chameleond.utils import system_tools
 
 class MemoryDumperError(Exception):
   """Exception in MemoryDumper."""
-  pass
 
 
 class MemoryDumper(multiprocessing.Process):
@@ -79,11 +78,12 @@ class MemoryDumper(multiprocessing.Process):
     difference = (current_physical_page_count -
                   (self._last_page_count % self._adump.PAGE_COUNT_WRAP_SIZE))
     if difference < 0:
-        logging.info('Handle page count wrapping for physical current page '
-                     'count 0x%x, logical last page count 0x%x',
-                     current_physical_page_count, self._last_page_count)
+      logging.info(
+          'Handle page count wrapping for physical current page '
+          'count 0x%x, logical last page count 0x%x',
+          current_physical_page_count, self._last_page_count)
 
-        difference += self._adump.PAGE_COUNT_WRAP_SIZE
+      difference += self._adump.PAGE_COUNT_WRAP_SIZE
 
     if difference < 0:
       raise MemoryDumperError('Failed to handle wrapping. Difference = 0x%x' %
@@ -229,7 +229,7 @@ class MemoryDumper(multiprocessing.Process):
       logging.error('Dump return %d, error: %s', return_code, err)
       raise MemoryDumperError(err)
 
-    with open(self._file_path, 'a') as f:
+    with open(self._file_path, 'ab') as f:
       f.write(out)
 
   def _UpdateOnePeriod(self):

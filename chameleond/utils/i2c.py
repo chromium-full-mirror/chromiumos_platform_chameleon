@@ -23,7 +23,6 @@ from six.moves import range
 
 class I2cBusError(Exception):
   """Exception raise when any unexpected behavior happened on I2C access."""
-  pass
 
 
 class I2cBus(object):
@@ -182,7 +181,7 @@ class I2cSlave(object):
     # Set LSB for read.
     self._memory.Write(self._base_addr + self._REG_SLAVE_ADDR_DIR,
                        self._slave * 2 + 1)
-    data = []
+    data = b''
     for i in range(0, size, 8):
       size_to_read = min(8, size - i)
       self._memory.Write(self._base_addr + self._REG_SLAVE_OFFSET, offset + i)
@@ -191,12 +190,12 @@ class I2cSlave(object):
       self._WaitForReady()
       word0 = self._memory.Read(self._base_addr + self._REG_RX_BUFFER_0)
       word1 = self._memory.Read(self._base_addr + self._REG_RX_BUFFER_1)
-      data.append(struct.pack('>2I', word0, word1)[:size_to_read])
+      data += struct.pack('>2I', word0, word1)[:size_to_read]
 
     if size == 1:
-      return ord(data[0][0])
+      return data[0]
     else:
-      return ''.join(data)
+      return data
 
   def Set(self, data, offset=0):
     """Sets the given I2C content to the given offset address.
@@ -205,8 +204,10 @@ class I2cSlave(object):
       data: A byte or a byte-array of content to set.
       offset: The offset which the data starts from this address.
     """
-    if not isinstance(data, str):
-      data = chr(data)
+    if isinstance(data, str):
+      data = data.encode()
+    elif isinstance(data, int):
+      data = bytes([data])
 
     # Clear LSB for write.
     self._memory.Write(self._base_addr + self._REG_SLAVE_ADDR_DIR,
@@ -219,7 +220,7 @@ class I2cSlave(object):
       data_to_write = data[i:i + size_to_write]
       # Padding
       if size_to_write < 8:
-        data_to_write += '\0' * (8 - size_to_write)
+        data_to_write += b'\0' * (8 - size_to_write)
       (word0, word1) = struct.unpack('>2I', data_to_write)
       self._memory.Write(self._base_addr + self._REG_TX_BUFFER_0, word0)
       self._memory.Write(self._base_addr + self._REG_TX_BUFFER_1, word1)

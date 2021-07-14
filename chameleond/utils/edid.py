@@ -11,11 +11,11 @@ from __future__ import print_function
 import time
 
 from . import chameleon_common  # pylint: disable=W0611
+
 from chameleond.utils import i2c
 from chameleond.utils import ids
 from chameleond.utils import chameleon_io as io
 from chameleond.utils import rx
-from six.moves import map
 from six.moves import range
 
 
@@ -195,7 +195,7 @@ class HdmiEdid(object):
     """
     for block in (0, 1):
       # Skip the last byte, i.e. checksum.
-      checksum = ((-sum(map(ord, data[128 * block:128 * (block + 1) - 1])))
+      checksum = (-sum(data[128 * block:128 * (block + 1) - 1])
                   & 0xff)
       self._rx.UpdateEdidChecksum(block, checksum)
 

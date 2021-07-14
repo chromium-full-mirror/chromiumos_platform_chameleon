@@ -43,7 +43,7 @@ class _Memory(object):
     libc = ctypes.cdll.LoadLibrary('libc.so.6')
     O_RDWR = 0o0000002
     O_SYNC = 0o4000000 | 0o0010000
-    fd = libc.open('/dev/mem', O_RDWR | O_SYNC)
+    fd = libc.open(b'/dev/mem', O_RDWR | O_SYNC)
     if fd == -1:
       raise IOError('Failed to open /dev/mem')
     PROT_READ = 0x1
