@@ -475,6 +475,13 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     exit
 fi
 
+
+if [ "${PLATFORM}" = "cyclone5" ]; then
+    validate_python_package_installation "schedule"
+    validate_python_package_installation "six"
+    validate_python_package_installation "pyserial"
+fi
+
 FPGA_DIR="$(dirname "${SCRIPT}")/../updatable/${CHAMELEON_BOARD}"
 FPGA_BOOT_PART=$(fdisk -l /dev/mmcblk0 | grep 'Unknown' | cut -f1 -d' ')
 FPGA_FAT_PART=$(fdisk -l /dev/mmcblk0 | grep 'FAT32' | cut -f1 -d' ')

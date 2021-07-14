@@ -91,11 +91,8 @@ uninstall_old_chameleond_from_pip() {
 # Set the correct time. Otherwise, installation of pip may fail.
 set_time
 
-# Switch python version for Raspberry Pi.
-if [ "${PLATFORM}" = "raspberrypi" ] || [ "${PLATFORM}" = "x86-generic" ]; then
-    echo deploy_pip: use PY_VERSION "${PY_VERSION}"
-    use_python_version "${PY_VERSION}"
-fi
+echo deploy_pip: use PY_VERSION "${PY_VERSION}" on PLATFORM "${PLATFORM}"
+use_python_version "${PY_VERSION}"
 
 install_pip
 install_setuptools

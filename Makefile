@@ -26,7 +26,7 @@ PY_VERSION_FILE := $(DISTDIR)/py_version
 
 # Set python3 as default after all teams using chameleon finish switching
 # to python3.
-PY_VERSION := python2
+PY_VERSION := python3
 
 TARGETS = check_git_tree_clean directories chameleond
 
