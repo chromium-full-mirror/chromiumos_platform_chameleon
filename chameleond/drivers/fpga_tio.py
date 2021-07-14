@@ -11,6 +11,7 @@ import glob
 import logging
 import os
 import time
+import traceback
 import xmlrpc.client
 
 from . import chameleon_common  # pylint: disable=W0611
@@ -49,7 +50,6 @@ if os.environ.get('PLATFORM') == 'RASPI':
 
 class DriverError(Exception):
   """Exception raised when any error on FPGA driver."""
-  pass
 
 
 def _DeviceMethod(device_id):
@@ -157,6 +157,20 @@ class ChameleondDriver(ChameleondInterface):
 
     self.Reset()
 
+  def _dispatch(self, method, params):
+    try:
+      logging.info('Receive method %s', method)
+      attrs = method.split('.')
+      func = self
+      for attr in attrs:
+        if attr.startswith('_') or not hasattr(func, attr):
+            raise Exception('method "%s" is not supported' % method)
+        func = getattr(func, attr)
+      return func(*params)
+    except:
+      logging.error('Failed to run method %s,  %s', method,
+                    traceback.format_exc())
+      raise
 
   def get_platform(self):
     return self._platform
