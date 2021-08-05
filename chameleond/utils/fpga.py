@@ -24,7 +24,7 @@ from __future__ import print_function
 import logging
 import struct
 
-from . import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611, C0411
 from chameleond.utils import audio
 from chameleond.utils import ids
 from chameleond.utils import mem

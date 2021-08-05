@@ -11,7 +11,7 @@ For now, only HPS LCM module is connected to SPIM1 as TX-only SPI.
 
 import logging
 
-from . import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611, C0411
 from chameleond.utils import common
 from chameleond.utils import mem
 

@@ -7,7 +7,7 @@
 
 from __future__ import print_function
 
-from . import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611, C0411
 from .bluetooth_peripheral_kit import PeripheralKit
 
 

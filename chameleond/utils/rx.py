@@ -11,7 +11,7 @@ from __future__ import print_function
 import logging
 import time
 
-from . import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611, C0411
 from chameleond.utils import common
 from chameleond.utils import i2c
 from six.moves import range

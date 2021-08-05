@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 """This module specifies the configuration needed for USB audio driver"""
 
-from . import chameleon_common #pylint: disable=W0611
+from . import chameleon_common #pylint: disable=W0611, C0411
 from chameleond.utils import audio
 
 class USBAudioDriverConfigs(object):

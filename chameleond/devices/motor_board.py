@@ -13,7 +13,7 @@ import logging
 import os
 import time
 
-from . import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611, C0411
 from chameleond.utils import chameleon_io as io
 from six.moves import range
 

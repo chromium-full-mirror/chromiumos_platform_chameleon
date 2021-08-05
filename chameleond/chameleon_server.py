@@ -15,7 +15,7 @@ except ImportError:
   from six.moves.xmlrpc_server import SimpleXMLRPCServer  # Python 2.x
   from six.moves.xmlrpc_server import SimpleXMLRPCRequestHandler
 
-from . import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611, C0411
 from chameleond.utils.caching_server import CachingServer
 
 

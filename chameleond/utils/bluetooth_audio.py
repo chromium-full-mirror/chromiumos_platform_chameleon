@@ -19,7 +19,7 @@ import wave
 
 import numpy as np
 
-from . import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611, C0411
 
 from chameleond.utils import common
 from chameleond.utils.bluetooth_raspi import (

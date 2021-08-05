@@ -12,7 +12,7 @@ import logging
 import os
 import tempfile
 
-from . import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611, C0411
 from chameleond.devices import chameleon_device
 from chameleond.utils import audio
 from chameleond.utils import serial_utils

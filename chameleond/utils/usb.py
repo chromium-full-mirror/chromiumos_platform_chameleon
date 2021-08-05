@@ -9,7 +9,7 @@ import logging
 import re
 import subprocess
 
-from . import chameleon_common  # pylint: disable=W0611
+from . import chameleon_common  # pylint: disable=W0611, C0411
 from chameleond.utils import system_tools
 from chameleond.utils import usb_audio_configs
 
