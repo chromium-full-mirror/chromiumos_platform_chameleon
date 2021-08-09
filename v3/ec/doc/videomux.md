@@ -136,7 +136,7 @@ it68051 hpd 1 1
 
 To switch back to DisplayPort 2, type the following commands:
 ```
-videomux dp1 rx
+videomux dp2 rx
 it68051 select 0
 it68051 hpd 0 1
 ```

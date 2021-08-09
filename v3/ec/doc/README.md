@@ -506,3 +506,14 @@ $ i2c scan I2C_1
 70: -- -- -- 73 -- -- -- --
 1 devices found on I2C_1
 ```
+
+## Video Mux Routing
+
+[Video Mux Routing](./videomux.md) describes how the video signals are routed
+to either the HDMI Receiver IC or to the FPGA, plus how to test the EDID portion
+of the video path even without an FPGA module.
+
+# Unit Tests
+
+[Chameleon Unit Tests](./unittest.md) describes how to build and run unit
+tests for code modules that do not rely on hardware.
