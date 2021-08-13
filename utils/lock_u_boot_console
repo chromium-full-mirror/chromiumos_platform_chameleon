@@ -15,8 +15,8 @@ import struct
 SD_PATH = '/dev/mmcblk0'
 BOOTDELAY = 'bootdelay'
 ENV_OFFSET = 0x200
-LOCK = '0'
-UNLOCK = '5'
+LOCK = ord('0')
+UNLOCK = ord('5')
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
   verbosity_map = {0: logging.INFO, 1: logging.DEBUG}
   verbosity = verbosity_map.get(options.verbose or 0, logging.NOTSET)
   log_format = '%(asctime)s %(levelname)s '
-  if options.verbose > 0:
+  if verbosity == logging.DEBUG:
     log_format += '(%(filename)s:%(lineno)d) '
   log_format += '%(message)s'
 
@@ -54,7 +54,7 @@ def main():
 
   # Find bootdelay, i.e. how long to wait to skip u-boot console.
   pattern = BOOTDELAY + '='
-  index = mm.find(pattern, ENV_OFFSET)
+  index = mm.find(pattern.encode(), ENV_OFFSET)
   logging.debug('index found: %d', index)
   if index == -1:
     logging.error('Pattern %s not found', pattern)
