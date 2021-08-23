@@ -1,4 +1,4 @@
 hostname: raspberrypi
-kernel: 5.10.17-v7l+
+kernel: 5.10.52-v7l+
 uname_arch: armv7l
 arch: armhf
