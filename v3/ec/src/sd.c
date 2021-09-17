@@ -46,6 +46,23 @@ int sd_mux_set(enum sd_state state)
 
 	mux_state = state;
 
+	/*
+	 * If we are turning the mux off, force CD_DET high to make the SD
+	 * controller recognize a disconnect/eject.
+	 * If we are selecting the FPGA or the USB hub, change CD_DET to an
+	 * input with pull-up so the SD controller can recognize if a card
+	 * is inserted.
+	 */
+	if (state == SD_MUX_OFF) {
+		ret = gpio_pin_configure(gpio_get_device(usd_cd_det),
+			 gpio_get_pin(usd_cd_det),
+			 GPIO_OUTPUT_HIGH);
+	} else {
+		ret = gpio_pin_configure(gpio_get_device(usd_cd_det),
+			 gpio_get_pin(usd_cd_det),
+			 GPIO_INPUT | GPIO_PULL_UP);
+	}
+
 	ret = gpio_set_level(sd_mux_sel, mux_sel);
 	if (ret < 0) {
 		LOG_ERR("gpio_set_level(sd_mux_sel) failed, ret = %d\n", ret);
