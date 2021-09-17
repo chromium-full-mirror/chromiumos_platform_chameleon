@@ -97,6 +97,16 @@
 			gpios = <&gpiob 0 GPIO_INPUT_PULL_UP>;
 			label = "SOM_FPGA_DONE";
 		};
+
+		fpga_prot {
+			gpios = <&gpioe 13 GPIO_INPUT>;
+			label = "FPGA_PROT";
+		};
+
+		fpga_comm0 {
+			gpios = <&gpioe 14 GPIO_INPUT>;
+			label = "FPGA_COMM0";
+		};
 	};
 
 	misc {
@@ -113,7 +123,7 @@
 		};
 
 		board_version_2 {
-			gpios = <&u78 13 GPIO_INPUT>;
+			gpios = <&u78 15 GPIO_INPUT>;
 			label = "BOARD_VERSION_2";
 		};
 
@@ -123,7 +133,7 @@
 		};
 
 		board_version_0 {
-			gpios = <&u78 15 GPIO_INPUT>;
+			gpios = <&u78 13 GPIO_INPUT>;
 			label = "BOARD_VERSION_0";
 		};
 	};
@@ -203,8 +213,7 @@
 		};
 
 		/*
-		 * Reset lines for the PS8468 demuxes. All of the other
-		 * mux/demux chips do not have reset lines.
+		 * Reset lines for the PS8468 demuxes.
 		 */
 		dp1_ps8468_rst_l {
 			/* RESETN on U3 */
@@ -232,26 +241,6 @@
 			gpios = <&gpiog 11 GPIO_OUTPUT_HIGH>;
 			label = "DP2_HDMI_RST_L";
 		};
-
-		/*
-		 * Mux signals for selecting which IC drives the HPD signal to
-		 * the HDMI or DisplayPort connectors. See `proto1_hpd` docs for
-		 * more information.
-		 */
-		hdmirx_hpd_sel {
-			gpios = <&gpioa 1 GPIO_OUTPUT_LOW>;
-			label = "HDMIRX_HPD_SEL";
-		};
-
-		hdmi_hpd_sel {
-			gpios = <&gpioa 8 GPIO_OUTPUT_LOW>;
-			label = "HDMI_HPD_SEL";
-		};
-
-		dp_hpd_sel {
-			gpios = <&gpiob 9 GPIO_OUTPUT_HIGH>;
-			label = "DP_HPD_SEL";
-		};
 	};
 
 	it68051 {
@@ -277,64 +266,9 @@
 			label = "IT68051_RST_L";
 		};
 
-		it68051p0_ddc_bp_l {
-			gpios = <&gpiod 6 GPIO_OUTPUT_LOW>;
-			label = "IT68051P0_DDC_BP_L";
-		};
-
-		it68051p1_ddc_bp_l {
-			gpios = <&gpiod 11 GPIO_OUTPUT_LOW>;
-			label = "IT68051P1_DDC_BP_L";
-		};
-
 		gp213_it68051p1_hpd {
 			gpios = <&gpioe 15 GPIO_OUTPUT_LOW>;
 			label = "GP213_IT68051P1_HPD";
-		};
-
-		/*
-		 * I2C signals for STM32 to provide the EDID (future use)
-		 * Right now, set them input/pull-up so they don't interfere with
-		 * the IT68051's I2C bus.
-		 */
-		gp213_it68051p0_ddc_scl {
-			gpios = <&gpiod 7 GPIO_INPUT_PULL_UP>;
-			label = "GP213_IT68051P0_DDC_SCL";
-		};
-
-		gp213_it68051p0_ddc_sda {
-			gpios = <&gpiod 8 GPIO_INPUT_PULL_UP>;
-			label = "GP213_IT68051P0_DDC_SDA";
-		};
-
-		stm32_it68051p0_ddc_scl {
-			gpios = <&gpiod 9 GPIO_INPUT_PULL_UP>;
-			label = "STM32_IT68051P0_DDC_SCL";
-		};
-
-		stm32_it68051p0_ddc_sda {
-			gpios = <&gpiod 10 GPIO_INPUT_PULL_UP>;
-			label = "STM32_IT68051P0_DDC_SDA";
-		};
-
-		gp213_it68051p1_ddc_scl {
-			gpios = <&gpiod 12 GPIO_INPUT_PULL_UP>;
-			label = "GP213_IT68051P1_DDC_SCL";
-		};
-
-		gp213_it68051p1_ddc_sda {
-			gpios = <&gpiod 13 GPIO_INPUT_PULL_UP>;
-			label = "GP213_IT68051P1_DDC_SDA";
-		};
-
-		stm32_it68051p1_ddc_scl {
-			gpios = <&gpiod 14 GPIO_INPUT_PULL_UP>;
-			label = "STM32_IT68051P1_DDC_SCL";
-		};
-
-		stm32_it68051p1_ddc_sda {
-			gpios = <&gpiod 15 GPIO_INPUT_PULL_UP>;
-			label = "STM32_IT68051P1_DDC_SDA";
 		};
 
 		i2c2_int_l {
@@ -377,41 +311,20 @@
 		};
 
 		/*
-		 * DP1 and DP2 HPD can be controlled by PE11 and PE12, or by
-		 * the HPD_SRC signal on the PS8468 demux/redriver, depending
-		 * on which of two optional-load resistors is stuffed. The
-		 * Proto 0 boards have R20 and R141 stuffed, while R22 and
-		 * R143 are not stuffed, so the HPD signals for the DisplayPort
-		 * connecters are controlled by the PS8468 and anything the
-		 * STM32 does will have no effect.
+		 * DP1 and DP2 HPD sense lines. There are two downstream HPD
+		 * signals for the PS8468. When either one is asserted, the
+		 * PS8468 wakes up and asserts its HPD_SRC. These GPIOs are
+		 * connected to HPD_SRC, and let us know that the PS8468 is
+		 * awake and we can configure the 8468 over the I2C bus.
 		 */
 		dp1_mcu_hpd {
-			gpios = <&gpioe 11 GPIO_OUTPUT_LOW>;
+			gpios = <&gpioe 11 GPIO_INPUT_PULL_DOWN>;
 			label = "DP1_MCU_HPD";
 		};
 
 		dp2_mcu_hpd {
-			gpios = <&gpioe 12 GPIO_OUTPUT_LOW>;
+			gpios = <&gpioe 12 GPIO_INPUT_PULL_DOWN>;
 			label = "DP2_MCU_HPD";
-		};
-
-		/*
-		 * HDMI1 and HDMI2 HPD can be controlled by PE13 and PE14,
-		 * or by the HDMI1_RP_HPD/HDMI2_RP_HPD signals on the
-		 * EP91A6SQ redriver, depending on which of two optional-load
-		 * resistors is stuffed. The Proto 0 boards have R41 and R164
-		 * stuffed, while R42 and R164 are not stuffed, so the HPD
-		 * signals for the HDMI connecters are controlled by the
-		 * EP91A6SQ and anything the STM32 does will have no effect.
-		 */
-		hdmi1_mcu_hpd {
-			gpios = <&gpioe 13 GPIO_OUTPUT_LOW>;
-			label = "HDMI1_MCU_HPD";
-		};
-
-		hdmi2_mcu_hpd {
-			gpios = <&gpioe 14 GPIO_OUTPUT_LOW>;
-			label = "HDMI2_MCU_HPD";
 		};
 
 		dp_in_pwr_en {

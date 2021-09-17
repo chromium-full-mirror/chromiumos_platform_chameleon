@@ -84,22 +84,6 @@ int sd_get_cd_det(void)
 }
 
 /**
- * @brief Initialize the SD mux GPIOs to the FPGA.
- *
- * The SD mux controls whether the SD card signals are connected, and
- * if they are connected, whether to the FPGA or the USB controller.
- * Set up the GPIOs and then set the mux to the FPGA so that we can
- * boot the FPGA by default.
- */
-static int sd_mux_init(const struct device *ptr)
-{
-	ARG_UNUSED(ptr);
-
-	return sd_mux_set(SD_MUX_FPGA);
-}
-SYS_INIT(sd_mux_init, APPLICATION, 50);
-
-/**
  * @brief Handle the "sd off" shell command.
  */
 static int cmd_sd_off(const struct shell *shell, size_t argc, char **argv)
