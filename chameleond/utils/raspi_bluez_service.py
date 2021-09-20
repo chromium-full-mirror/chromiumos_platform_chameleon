@@ -1,6 +1,6 @@
 # Lint as: python2, python3
 # -*- coding: utf-8 -*-
-# pylint: disable=cros-logging-import,import-error
+# pylint: disable=import-error
 
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be

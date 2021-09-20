@@ -6,7 +6,7 @@
 
 from __future__ import print_function
 
-import logging  # pylint: disable=cros-logging-import
+import logging
 import time
 
 

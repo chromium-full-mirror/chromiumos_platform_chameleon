@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Lint as: python3
-# pylint: disable=dangerous-default-value,cros-logging-import,logging-format-interpolation
+# pylint: disable=dangerous-default-value,logging-format-interpolation
 
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be

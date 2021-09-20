@@ -10,8 +10,7 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
-# TODO: to port chromite.lib.cros_logging to replace legacy logging
-import logging  # pylint: disable=cros-logging-import
+import logging
 import sys
 import time
 

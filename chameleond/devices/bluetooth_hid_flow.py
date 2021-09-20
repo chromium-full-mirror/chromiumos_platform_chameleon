@@ -6,8 +6,7 @@
 
 from __future__ import print_function
 
-# TODO: to port chromite.lib.cros_logging to replace legacy logging
-import logging  # pylint: disable=cros-logging-import
+import logging
 import subprocess
 
 from chameleond.devices import chameleon_device

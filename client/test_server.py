@@ -8,7 +8,7 @@
 import atexit
 import argparse
 import code
-import logging # pylint: disable=cros-logging-import
+import logging
 import os
 import readline
 import rlcompleter

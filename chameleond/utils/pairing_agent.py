@@ -7,7 +7,7 @@
 
 from __future__ import print_function
 
-import logging              # pylint: disable=cros-logging-import
+import logging
 
 import dbus                 # pylint: disable=import-error
 import dbus.service         # pylint: disable=import-error
