@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+
+service board_service {
+    // Request the BOARD_VERSION[2:0] GPIOs
+    rpc get_board_version (Empty) returns (board_service_version_response);
+
+    // Get the readings for the voltage and current monitors
+    rpc get_sysmon (Empty) returns (sysmon_msg);
+
+    // Get the values for the state of the DisplayPort AUX pins and
+    // the HDMI power pins, indicating whether cables are connected
+    // or not.
+    rpc get_hpd (Empty) returns (hpd_response);
+}
+
+service videomux_service {
+    // Get the current settings for the videomux
+    rpc get (Empty) returns (videomux_get_response);
+
+    // Set the videomux to desired values.
+    // This returns true if they are successfully applied, or false if
+    // the requested settings are invalid (like trying to route both HDMI
+    // and DisplayPort to the same destination).
+    rpc set (videomux_set_request) returns (videomux_service_set_response);
+
+    // Disconnect all videomux signals.
+    rpc all_off (Empty) returns (Empty);
+}
+
+service it68051_service {
+    // Select an input port on the IT68051
+    rpc select_port (it68051_port_num_request) returns (Empty);
+
+    // Control the HPD output from the IT68051
+    rpc set_hpd (it68051_port_num_request, it68051_hpd_response) returns (Empty);
+
+    // Select one of the pre-defined EDIDs
+    rpc set_edid_idx (it68051_edid_idx_request) returns (Empty);
+
+    // Write a block of 256 bytes to the EDID RAM
+    rpx write_edid (it68051_raw_edid_request) returns (Empty);
+}
+
+message board_service_version_response {
+    fixed32 version = 0;
+}
+
+message hpd_response {
+    fixed32 hdmi2_pp3300 = 0;
+    fixed32 hdmi1_pp3300 = 1;
+    fixed32 dp2_auxn_det = 2;
+    fixed32 dp2_auxp_det = 3;
+    fixed32 dp1_auxn_det = 4;
+    fixed32 dp1_auxp_det = 5;
+}
+
+message sysmon_msg {
+    float vmon_12v = 0;         // 12V
+    float cmon_som = 1;         // CMON_SOM, current monitor for the FPGA module
+    float cmon_board = 2;       // CMON_BOARD, current monitor for the whole board
+    float vmon_1v2 = 3;         // PP1200
+    float cmon_pp1200 = 4;      // CMON_PP1200
+    float cmon_pp3300 = 5;      // CMON_PP3300
+    float vmon_9v = 6;          // VMON_9V
+    float vmon_5v = 7;          // VMON_5V
+    float vmon_3v3 = 8;         // VMON_3V3
+    float vmon_1v8 = 9;         // PP1800
+    float som_vmon = 10;        // SOM_VMON
+    float som_vmon_1v2 = 11;    //  SOM_VMON_1V2
+    float som_vmon_mgt = 12;    //  SOM_VMON_MGT
+    float som_vmon_1v8a = 13;   //  SOM_VMON_1V8A
+    float som_vmon_c8 = 14;     //  SOM_VMON_C8
+    float vref_cs1 = 15;        //  VREF_CS1
+    float vref_cs2 = 16;        //  VREF_CS2
+    float vref_cs3 = 17;        //  VREF_CS3
+}
+
+message videomux_get_response {
+    enum videomux_dest {
+        DISCONNECTED = 0;
+        FPGA = 1;
+        RX = 2;
+    }
+
+    // For each of the ports - HDMI1, HDMI2, DP1, DP2 - where is it routed?
+    videomux_dest hdmi1 = 0;
+    videomux_dest hdmi2 = 1;
+    videomux_dest dp1 = 2;
+    videomux_dest dp2 = 3;
+}
+
+message videomux_set_request {
+    enum videomux_dest {
+        NO_CHANGE = 0;
+        FPGA = 1;
+        RX = 2;
+    }
+
+    // For each of the ports - HDMI1, HDMI2, DP1, DP2 - where do we want
+    // them routed?
+    // Default value is "NO_CHANGE" which is exactly what we want.
+    videomux_dest hdmi1 = 0;
+    videomux_dest hdmi2 = 1;
+    videomux_dest dp1 = 2;
+    videomux_dest dp2 = 3;
+}
+
+message videomux_service_set_response {
+    bool result = 0;
+}
+
+message it68051_port_num_request {
+    // Wrap up the port number so it can be a parameter in RPCs
+    enum it68051_port_num {
+        // Note that HDMI2 and DP2 are routed to port 0 on the IT68051,
+        // and HDMI1 and DP1 are routed to port 1.
+        PORT2 = 0;
+        PORT1 = 1;
+    }
+
+    it68051_port_num port = 0;
+}
+
+message it68051_hpd_response {
+    // Set to zero to de-assert HPD, non-zero to assert
+    fixed32 on_off = 0;
+}
+
+message it68051_edid_idx_request {
+    fixed32 edid_idx = 0;
+}
+
+message it68051_raw_edid_request {
+    // RAW_EDID gives 256 bytes for the EDID RAM
+    bytes raw_edid = 0;
+}
