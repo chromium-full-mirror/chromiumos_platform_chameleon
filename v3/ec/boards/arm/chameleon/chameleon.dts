@@ -36,17 +36,17 @@
 		};
 
 		sd_mux_en_l {
-			gpios = <&gpioe 1 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpioe 1 GPIO_OUTPUT_LOW>;
 			label = "SD_MUX_EN_L";
 		};
 
 		usd_pwr_sel {
-			gpios = <&gpiob 13 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiob 13 GPIO_OUTPUT_HIGH>;
 			label = "USD_PWR_SEL";
 		};
 
 		usd_pwr_en {
-			gpios = <&gpioe 4 GPIO_OUTPUT_LOW>;
+			gpios = <&gpioe 4 GPIO_OUTPUT_HIGH>;
 			label = "USD_PWR_EN";
 		};
 
@@ -69,12 +69,12 @@
 		compatible = "gpio-keys";
 
 		pwr_en {
-			gpios = <&gpioc 7 GPIO_OUTPUT_LOW>;
+			gpios = <&gpioc 7 GPIO_OUTPUT_HIGH>;
 			label = "SOM_PWR_EN";
 		};
 
 		pwr_good {
-			gpios = <&gpioc 8 GPIO_INPUT_PULL_UP>;
+			gpios = <&gpioc 8 GPIO_INPUT>;
 			label = "SOM_PWR_GOOD";
 		};
 
@@ -89,7 +89,7 @@
 		};
 
 		por_l_load_l {
-			gpios = <&gpiob 1 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiob 1 GPIO_OUTPUT_HIGH>;
 			label = "SOM_POR_L_LOAD_L";
 		};
 

@@ -81,3 +81,14 @@ be exposed to the unit tests (since it is part of the struct), the tests
 will not read the state to determine if a test passed. The only writing of
 the state will be in test case setup, to reset the state machine to a known
 initialization state.
+
+## Initialization State
+
+`SOM_PWR_EN` and `SOM_POR_L_LOAD_L` are pulled high on the PCB to allow the
+FPGA to run without the EC's intervention. The EC also drives these signals
+high by default. If the EC is held in reset at board power-up, or if the
+EC gets a reset pulse while the FPGA is running, the EC needs to recognize
+that the FPGA could already be fully configured. The `INIT` state checks
+`SOM_PWR_GOOD` and `SOM_FPGA_DONE` to determine whether the FPGA is powered
+off, powering up, configuring itself, or is already configured, and the
+state machine move to the appropriate state.

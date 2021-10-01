@@ -7,16 +7,11 @@
 
 #include <stdbool.h>
 #include <zephyr.h>
+#include <logging/log.h>
 #include <sys/__assert.h>
 #include "fpgaboot_sm.h"
 
-static void run_fpgaboot_init(enum fpga_event event, enum fpga_state *p_state,
-			      uint32_t *p_actions)
-{
-	*p_state = FPGABOOT_OFF;
-	*p_actions = FPGABOOT_DEASSERT_SOM_PWR_EN |
-		     FPGABOOT_ASSERT_SOM_POR_L_LOAD_L;
-}
+LOG_MODULE_DECLARE(fpgaboot);
 
 static void run_fpgaboot_off(enum fpga_event event, enum fpga_state *p_state,
 			     uint32_t *p_actions)
@@ -31,6 +26,9 @@ static void run_fpgaboot_off(enum fpga_event event, enum fpga_state *p_state,
 static void run_fpgaboot_pwr_good(enum fpga_event event,
 				  enum fpga_state *p_state, uint32_t *p_actions)
 {
+	if (event == FPGABOOT_TIMER_EXPIRED) {
+		LOG_ERR("FPGA boot timer expired while waiting for PWR_GOOD");
+	}
 	if (event == FPGABOOT_POWER_OFF_REQ ||
 	    event == FPGABOOT_TIMER_EXPIRED) {
 		*p_state = FPGABOOT_OFF;
@@ -47,7 +45,10 @@ static void run_fpgaboot_pwr_good(enum fpga_event event,
 static void run_fpgaboot_load(enum fpga_event event, enum fpga_state *p_state,
 			      uint32_t *p_actions)
 {
-	// TODO(b/182420309) Revert this CL when SOM_FPGA_DONE works again
+	if (event == FPGABOOT_TIMER_EXPIRED) {
+		LOG_ERR("FPGA boot timer expired while waiting for DONE");
+	}
+	// TODO(b/182420309)
 	if (event == FPGABOOT_POWER_OFF_REQ ||
 	    event == FPGABOOT_SOM_PWR_GOOD_DEASSERTED) {
 		*p_state = FPGABOOT_OFF;
@@ -72,14 +73,25 @@ static void run_fpgaboot_running(enum fpga_event event,
 	}
 }
 
-void fpgaboot_init_state_machine(enum fpga_state *p_state, uint32_t *p_actions)
+void fpgaboot_init_state_machine(int pwr_en, int pwr_good, int fpga_done,
+                                 enum fpga_state *p_state, uint32_t *p_actions)
 {
 	__ASSERT(p_state != NULL, "NULL pointer");
 	__ASSERT(p_actions != NULL, "NULL pointer");
 
-	*p_state = FPGABOOT_INIT;
-	/* Run the state machine to get from INIT to OFF. */
-	fpgaboot_run_state_machine(FPGABOOT_EVENT_NONE, p_state, p_actions);
+	if (pwr_en == 0) {
+		*p_state = FPGABOOT_OFF;
+		*p_actions = 0;
+	} else if (pwr_good == 0) {
+		*p_state = FPGABOOT_PWR_GOOD;
+		*p_actions = FPGABOOT_START_SHORT_TIMER;
+	} else if (fpga_done == 0) {
+		*p_state = FPGABOOT_LOAD;
+		*p_actions = FPGABOOT_START_LONG_TIMER;
+	} else {
+		*p_state = FPGABOOT_RUNNING;
+		*p_actions = 0;
+	}
 }
 
 void fpgaboot_run_state_machine(enum fpga_event event, enum fpga_state *p_state,
@@ -90,9 +102,6 @@ void fpgaboot_run_state_machine(enum fpga_event event, enum fpga_state *p_state,
 
 	*p_actions = 0;
 	switch (*p_state) {
-	case FPGABOOT_INIT:
-		run_fpgaboot_init(event, p_state, p_actions);
-		break;
 	case FPGABOOT_OFF:
 		run_fpgaboot_off(event, p_state, p_actions);
 		break;

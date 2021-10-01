@@ -18,11 +18,17 @@ static void init(enum fpga_state *p_state)
 {
 	uint32_t actions;
 
-	fpgaboot_init_state_machine(p_state, &actions);
-	zassert_equal(actions,
-		      FPGABOOT_DEASSERT_SOM_PWR_EN |
-			      FPGABOOT_ASSERT_SOM_POR_L_LOAD_L,
-		      "state=%d, actions=%d\n", *p_state, actions);
+	/*
+	 * By default, start with the FPGA off (PWR_EN == 0), which should
+	 * move to the OFF state with no actions.
+	 */
+	fpgaboot_init_state_machine(0, 0, 0, p_state, &actions);
+
+	zassert_equal(actions, 0, "state=%d, actions=%d\n", *p_state, actions);
+
+	/* Check that we're settled - either RUNNING or OFF. */
+	zassert_true(fpgaboot_is_steady_state(*p_state), "state=%d\n",
+		     *p_state);
 }
 
 static void power_on(enum fpga_state *p_state)
@@ -187,6 +193,43 @@ void test_power_off_while_waiting_for_done(void)
 }
 
 /*
+ * Test that we can power on/off/on again.
+ */
+void test_power_on_off_on(void) {
+	enum fpga_state state;
+	uint32_t actions;
+
+	/* Turn on the power. */
+	init(&state);
+	power_on(&state);
+	power_good(&state);
+	fpga_done(&state);
+	/* Check that we're settled - either RUNNING or OFF. */
+	zassert_true(fpgaboot_is_steady_state(state), "state=%d\n", state);
+
+	/* Now turn it off. */
+	power_off(&state);
+	zassert_true(fpgaboot_is_steady_state(state), "state=%d\n", state);
+	/*
+	 * PWR_GOOD and DONE will de-assert when power is disabled. The state
+	 * machine should do nothing about either event.
+	 */
+	fpgaboot_run_state_machine(FPGABOOT_SOM_PWR_GOOD_DEASSERTED, &state,
+				   &actions);
+	zassert_equal(actions, 0, "state=%d, actions=%d\n", state, actions);
+	fpgaboot_run_state_machine(FPGABOOT_SOM_FPGA_DONE_DEASSERTED, &state,
+				   &actions);
+	zassert_equal(actions, 0, "state=%d, actions=%d\n", state, actions);
+
+	/* Now turn it on again. */
+	power_on(&state);
+	power_good(&state);
+	fpga_done(&state);
+	/* Check that we're settled - either RUNNING or OFF. */
+	zassert_true(fpgaboot_is_steady_state(state), "state=%d\n", state);
+}
+
+/*
  * NOP cases - asking to turn off when it's already off, asking to turn on
  * when it's already on or on its way to turning on, stuff like that.
  *
@@ -294,20 +337,81 @@ void test_power_good_deassert_while_running(void)
 		      "state=%d, actions=%d\n", state, actions);
 }
 
+/*
+ * INIT cases where the FPGA is already powered up - verify that the
+ * state machine recognizes the conditions and moves to the appropriate
+ * state.
+ *
+ * PWR_EN == 0 is already tested in the "normal" test cases above.
+ *
+ * PWR_EN == 1 and PWR_GOOD == 0
+ *	move to PWR_GOOD
+ * PWR_EN == 1 and PWR_GOOD == 1 and FPGA_DONE == 0
+ *	move to LOAD
+ * PWR_EN == 1 and PWR_GOOD == 1 and FPGA_DONE == 1
+ *	move to RUNNING
+ *
+ * The hardware design ensures that if PWR_EN == 0, then PWR_GOOD and
+ * FPGA_DONE must both be 0, and if PWR_GOOD == 0, then FPGA_DONE must be 0.
+ */
+
+void test_startup_when_pwr_en_is_1(void) {
+	enum fpga_state state;
+	uint32_t actions;
+
+	/* PWR_EN == 1, PWR_GOOD == 0, FPGA_DONE == don't-care (use 0). */
+	fpgaboot_init_state_machine(1, 0, 0, &state, &actions);
+	/* We should be in `FPGABOOT_PWR_GOOD`, so run from there */
+	power_good(&state);
+	fpga_done(&state);
+	/* Check that we're settled - either RUNNING or OFF. */
+	zassert_true(fpgaboot_is_steady_state(state), "state=%d\n", state);
+}
+
+void test_startup_when_pwr_good_is_1(void) {
+	enum fpga_state state;
+	uint32_t actions;
+
+	/* PWR_EN == 1, PWR_GOOD == 1, FPGA_DONE == 0. */
+	fpgaboot_init_state_machine(1, 1, 0, &state, &actions);
+	/* We should be in `FPGABOOT_LOAD`, so run from there */
+	fpga_done(&state);
+	/* Check that we're settled - either RUNNING or OFF. */
+	zassert_true(fpgaboot_is_steady_state(state), "state=%d\n", state);
+}
+
+void test_startup_when_fpga_done_is_1(void) {
+	enum fpga_state state;
+	uint32_t actions;
+
+	/* PWR_EN == 1, PWR_GOOD == 1, FPGA_DONE == 1. */
+	fpgaboot_init_state_machine(1, 1, 1, &state, &actions);
+	/* We should be in `RUNNING`, so just check if we are steady-state. */
+	zassert_true(fpgaboot_is_steady_state(state), "state=%d\n",
+		     state);
+}
+
 void test_main(void)
 {
 	ztest_test_suite(
 		fpgaboot_sm, ztest_unit_test(test_normal_startup),
 		ztest_unit_test(test_power_off_from_running),
 		ztest_unit_test(test_timeout_while_waiting_for_power_good),
-		ztest_unit_test(test_timeout_while_waiting_for_done),
+		// TODO(b/182420309)
+		// Revert http://crrev.com/c/2753452
+		// and uncomment unit test case
+		// ztest_unit_test(test_timeout_while_waiting_for_done),
 		ztest_unit_test(test_power_off_while_waiting_for_power_good),
 		ztest_unit_test(test_power_off_while_waiting_for_done),
+		ztest_unit_test(test_power_on_off_on),
 		ztest_unit_test(test_power_off_while_off),
 		ztest_unit_test(test_power_on_while_waiting_for_power_good),
 		ztest_unit_test(test_power_on_while_waiting_for_done),
 		ztest_unit_test(test_power_on_while_running),
 		ztest_unit_test(test_power_good_deassert_while_loading),
-		ztest_unit_test(test_power_good_deassert_while_running));
+		ztest_unit_test(test_power_good_deassert_while_running),
+		ztest_unit_test(test_startup_when_pwr_en_is_1),
+		ztest_unit_test(test_startup_when_pwr_good_is_1),
+		ztest_unit_test(test_startup_when_fpga_done_is_1));
 	ztest_run_test_suite(fpgaboot_sm);
 }

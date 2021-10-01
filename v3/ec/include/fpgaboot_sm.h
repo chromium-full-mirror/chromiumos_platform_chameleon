@@ -16,7 +16,6 @@
 #include <zephyr.h>
 
 enum fpga_state {
-	FPGABOOT_INIT,
 	FPGABOOT_OFF,
 	FPGABOOT_PWR_GOOD,
 	FPGABOOT_LOAD,
@@ -47,10 +46,17 @@ enum fpga_event {
 /**
  * @brief Initialize the state machine data
  *
+ * Uses the values of `PWR_EN`, `PWR_GOOD`, and `FPGA_DONE` to determine
+ * which state it should go to.
+ *
+ * @param pwr_en
+ * @param pwr_good
+ * @param fpga_done
  * @param p_state pointer to an `fpga_state` variable
  * @param[out] p_actions pointer to variable to set bit flags for actions.
  */
-void fpgaboot_init_state_machine(enum fpga_state *p_state, uint32_t *p_actions);
+void fpgaboot_init_state_machine(int pwr_en, int pwr_good, int fpga_done,
+                                 enum fpga_state *p_state, uint32_t *p_actions);
 
 /**
  * @brief Run the state machine

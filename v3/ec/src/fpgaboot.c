@@ -205,7 +205,10 @@ static void fpgaboot_task(void *unused1, void *unused2, void *unused3)
 
 	k_thread_name_set(NULL, "fpgaboot_task");
 
-	fpgaboot_init_state_machine(&state, &actions);
+	fpgaboot_init_state_machine(gpio_get_level(pwr_en),
+				    gpio_get_level(pwr_good),
+				    gpio_get_level(fpga_done), &state,
+				    &actions);
 	fpgaboot_handle_actions(actions);
 	for (;;) {
 		int ret = k_msgq_get(&fpgaboot_msgq, &event, K_FOREVER);
