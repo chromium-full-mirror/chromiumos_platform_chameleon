@@ -78,6 +78,10 @@
 //Initial phase offset 3 (ns) = 0.000
 //SSC is disabled
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define NUM_REGS_MAX 350
 
 typedef struct Reg_Data{
@@ -437,3 +441,8 @@ Reg_Data const code Reg_Store[NUM_REGS_MAX] = {
 { 94,0x00,0x00},
 {255, 0, 0xFF} }; // set page bit to 0
 //End of file
+
+#ifdef __cplusplus
+}
+#endif
+

@@ -10,6 +10,10 @@
 
 #include <zephyr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * The Chameleon v3 hardware has a series of muxes to route the HDMI or the
  * DisplayPort (after going through a DP/HDMI converter) signals to the
@@ -83,5 +87,9 @@ enum video_dest_t {
  * -EINVAL Invalid port or selection
  */
 int videomux_select(enum video_source_t src, enum video_dest_t dest);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

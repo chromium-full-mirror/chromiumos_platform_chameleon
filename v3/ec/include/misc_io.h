@@ -10,6 +10,10 @@
 
 #include <zephyr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Get the board version number.
  *
@@ -20,5 +24,9 @@
  * @retval <0 error number returned by `gpio_pin_get`
  */
 int misc_io_get_board_version(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

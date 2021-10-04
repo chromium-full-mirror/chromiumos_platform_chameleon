@@ -10,6 +10,10 @@
 
 #include <zephyr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Define all of the monitored inputs.
  */
@@ -56,5 +60,9 @@ enum sysmon_input {
  * @return The value of the monitored input.
  */
 float sysmon_get_val(enum sysmon_input input);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

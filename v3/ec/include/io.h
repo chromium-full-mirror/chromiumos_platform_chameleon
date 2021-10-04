@@ -11,6 +11,10 @@
 #include <zephyr.h>
 #include <drivers/gpio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum gpio_signal {
 	power_good_led,
 	sd_mux_sel,
@@ -130,5 +134,9 @@ const struct device *gpio_get_device(enum gpio_signal signal);
  * @returns pin number for the GPIO
  */
 gpio_pin_t gpio_get_pin(enum gpio_signal signal);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

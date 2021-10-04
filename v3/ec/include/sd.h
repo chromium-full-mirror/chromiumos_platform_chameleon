@@ -10,6 +10,10 @@
 
 #include <zephyr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum sd_state {
 	SD_MUX_OFF,	/**< Disconnect the SD card. */
 	SD_MUX_FPGA,	/**< Connect the SD card to the FPGA. */
@@ -43,5 +47,9 @@ enum sd_state sd_mux_get(void);
  * @retval negative errno value if there was a failure
  */
 int sd_get_cd_det(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

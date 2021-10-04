@@ -10,6 +10,10 @@
 
 #include <zephyr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum i2c_switch_reset_value {
 	RESET_ASSERTED = 0,
 	RESET_DEASSERTED
@@ -61,5 +65,9 @@ int i2c_switch_reset(enum i2c_switch_reset_value val);
  * bitfield where bit 0 is set for INT0, bit 1 set for INT1, etc.
  */
 int i2c_switch_get_int_status(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

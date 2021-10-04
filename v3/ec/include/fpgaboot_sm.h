@@ -15,6 +15,10 @@
 #include <stdbool.h>
 #include <zephyr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum fpga_state {
 	FPGABOOT_OFF,
 	FPGABOOT_PWR_GOOD,
@@ -82,5 +86,9 @@ void fpgaboot_run_state_machine(enum fpga_event event, enum fpga_state *p_state,
  * if the FPGA is in a different state moving towards either on or off
  */
 bool fpgaboot_is_steady_state(enum fpga_state state);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

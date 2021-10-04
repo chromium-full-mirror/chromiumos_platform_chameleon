@@ -10,6 +10,10 @@
 
 #include <zephyr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Define the boot source for the FPGA
  *
@@ -65,5 +69,9 @@ int fpgaboot_power_on(void);
  * Waiting period timed out.
  */
 int fpgaboot_power_off(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
