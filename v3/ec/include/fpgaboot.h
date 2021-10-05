@@ -30,14 +30,9 @@ enum fpga_boot_mode { FPGA_BOOT_EMMC, FPGA_BOOT_QSPI, FPGA_BOOT_SDIO };
 /*
  * @brief Set the boot mode for the FPGA SOM
  *
- * @note Callers are allowed to set the boot mode only when the FPGA is not
- * busy with a power-up or power-down operation.
- *
  * @param mode One of the `fpga_boot_mode` values
  * @retval 0
  * No errors.
- * @retval -EBUSY
- * The FPGA is busy powering up or down
  * @retval -EINVAL
  * Invalid value, probably from passing an int instead of enum
  */

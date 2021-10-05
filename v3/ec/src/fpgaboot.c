@@ -23,11 +23,17 @@ LOG_MODULE_REGISTER(fpgaboot);
  */
 static enum fpga_state state;
 
+/**
+ * FPGA boot mode
+ *
+ * Needs to be saved so that we can force the pins low when power is off,
+ * and then restore them to the previous setting when power is on again.
+ */
+static enum fpga_boot_mode saved_boot_mode;
+
 int fpgaboot_set_boot_mode(enum fpga_boot_mode mode)
 {
-	if (!fpgaboot_is_steady_state(state)) {
-		return -EBUSY;
-	}
+	saved_boot_mode = mode;
 	switch (mode) {
 	case FPGA_BOOT_EMMC:
 		gpio_set_level(boot_mode1, 0);
@@ -129,6 +135,8 @@ static void fpgaboot_handle_actions(uint32_t actions)
 		__ASSERT(
 			(actions & FPGABOOT_DEASSERT_SOM_PWR_EN) == 0,
 			"Don't assert and de-assert SOM_PWR_EN at the same time!");
+		/* Restore the bootmode pins to previous setting. */
+		fpgaboot_set_boot_mode(saved_boot_mode);
 		gpio_set_level(pwr_en, 1);
 	}
 	if (actions & FPGABOOT_DEASSERT_SOM_PWR_EN) {
@@ -136,6 +144,21 @@ static void fpgaboot_handle_actions(uint32_t actions)
 			(actions & FPGABOOT_ASSERT_SOM_PWR_EN) == 0,
 			"Don't assert and de-assert SOM_PWR_EN at the same time!");
 		gpio_set_level(pwr_en, 0);
+		/*
+		 * Force bootmode pins low to prevent driving unpowered pins
+		 * on the FPGA module, but don't use `fpgaboot_set_boot_mode`
+		 * because we don't want to update the saved boot mode.
+		 */
+		gpio_set_level(boot_mode1, 0);
+		gpio_set_level(boot_mode0, 0);
+		/*
+		 * Also ensure the POR signal is driven low. Unlike the boot
+		 * mode, it doesn't need to be restored at power on, as the
+		 * state machine will handle it.
+		 * In fact, this signal is probably already low because of
+		 * the state machine, but there's no harm in making sure.
+		 */
+		gpio_set_level(por_l_load_l, 0);
 	}
 	/* NB: SOM_POR_L_LOAD_L is active low, so "assert" == "set to 0V" */
 	if (actions & FPGABOOT_ASSERT_SOM_POR_L_LOAD_L) {
