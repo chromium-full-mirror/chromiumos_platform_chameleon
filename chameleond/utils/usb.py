@@ -124,7 +124,7 @@ class USBController(object):
         was not successfully enabled by modprobe.
     """
     return_code, out, err = process_output
-    error_message = ('ERROR: could not insert "%s": Module already in '
+    error_message = ('ERROR: could not insert \'%s\': Module already in '
                      'kernel\n' % self._module)
     if return_code == 0:
       if 'insmod' in out and err == '':
