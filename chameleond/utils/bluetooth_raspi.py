@@ -486,6 +486,7 @@ class BluezPeripheral(PeripheralKit):
     if next_device_type:
       self.SetBtdFlags(next_device_type)
 
+    self.CleanCachedFiles()
     self.AdapterPowerOff()
 
     # Stop Bluetooth audio related daemons which may interfere
@@ -510,8 +511,8 @@ class BluezPeripheral(PeripheralKit):
 
     # Make sure device is powered up and discoverable
     if not self._get_hci_prop('org.bluez.Adapter1', 'Powered'):
-        logging.info('Init: Adapter not powered')
-        return False
+      logging.info('Init: Adapter not powered')
+      return False
     self._set_hci_prop('org.bluez.Adapter1', 'Discoverable', dbus.Boolean(1))
 
     # Set class based on device we're emulating
@@ -520,6 +521,51 @@ class BluezPeripheral(PeripheralKit):
 
     return True
 
+
+  def CleanCachedFiles(self):
+    """Clean up files that bluetoothd loads when starts.
+
+    This enforce bluetoothd to be in a clean state by cleanning up files in
+    /var/lib/bluetooth.
+    """
+
+    bluez_storage_path = '/var/lib/bluetooth/'
+    adapter_storage_paths = []
+    cache_storage_paths = []
+    peer_storage_paths = []
+
+    cleanup_syscmds = []
+
+    for (dirpath, dirlist, filelist) in os.walk(bluez_storage_path):
+      if dirpath == bluez_storage_path:
+        adapter_storage_paths = [
+            os.path.join(dirpath, adapter) for adapter in dirlist
+        ]
+      elif dirpath in adapter_storage_paths:
+        if 'settings' in filelist:
+          # Empty adapter persistent settings. e.g. Alias, Powered
+          cleanup_syscmds.append('truncate -s 0 ' + \
+                                  os.path.join(dirpath, 'settings'))
+
+        for dirname in dirlist:
+          if dirname == 'cache':
+            cache_storage_paths.append(os.path.join(dirpath, 'cache'))
+          else:
+            peer_storage_paths.append(os.path.join(dirpath, dirname))
+      elif dirpath in cache_storage_paths:
+        for cached_dev in filelist:
+          cleanup_syscmds.append('rm ' + \
+                                      os.path.join(dirpath, cached_dev))
+      elif dirpath in peer_storage_paths:
+        for info in filelist:
+          cleanup_syscmds.append('rm ' + os.path.join(dirpath, info))
+        cleanup_syscmds.append('rmdir ' + dirpath)
+
+    for cmd in cleanup_syscmds:
+      logging.info('Executing command "%s" for cleanup', cmd)
+      os.system(cmd)
+
+    return True
 
   def CreateSerialDevice(self):
     """Device setup and recovery
