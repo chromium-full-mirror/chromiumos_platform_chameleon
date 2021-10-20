@@ -74,7 +74,7 @@
 		};
 
 		pwr_good {
-			gpios = <&gpioc 8 GPIO_INPUT>;
+			gpios = <&gpioc 8 GPIO_INPUT_PULL_UP>;
 			label = "SOM_PWR_GOOD";
 		};
 

@@ -138,6 +138,14 @@ static void fpgaboot_handle_actions(uint32_t actions)
 		/* Restore the bootmode pins to previous setting. */
 		fpgaboot_set_boot_mode(saved_boot_mode);
 		gpio_set_level(pwr_en, 1);
+		/*Turn on the pull-ups on SOM_PWR_GOOD and SOM_FPGA_DONE. */
+		gpio_pin_configure(gpio_get_device(pwr_good),
+				   gpio_get_pin(pwr_good),
+				   GPIO_INPUT | GPIO_PULL_UP);
+		gpio_pin_configure(gpio_get_device(fpga_done),
+				   gpio_get_pin(fpga_done),
+				   GPIO_INPUT | GPIO_PULL_UP);
+
 	}
 	if (actions & FPGABOOT_DEASSERT_SOM_PWR_EN) {
 		__ASSERT(
@@ -159,6 +167,16 @@ static void fpgaboot_handle_actions(uint32_t actions)
 		 * the state machine, but there's no harm in making sure.
 		 */
 		gpio_set_level(por_l_load_l, 0);
+		/*
+		 * Turn off the pull-ups on SOM_PWR_GOOD and SOM_FPGA_DONE
+		 * to prevent current leakage into the FPGA module.
+		 */
+		gpio_pin_configure(gpio_get_device(pwr_good),
+				   gpio_get_pin(pwr_good),
+				   GPIO_INPUT);
+		gpio_pin_configure(gpio_get_device(fpga_done),
+				   gpio_get_pin(fpga_done),
+				   GPIO_INPUT);
 	}
 	/* NB: SOM_POR_L_LOAD_L is active low, so "assert" == "set to 0V" */
 	if (actions & FPGABOOT_ASSERT_SOM_POR_L_LOAD_L) {
