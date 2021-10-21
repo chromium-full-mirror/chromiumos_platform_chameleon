@@ -6,7 +6,7 @@ service board_service {
     rpc get_board_version (Empty) returns (board_service_version_response);
 
     // Get the readings for the voltage and current monitors
-    rpc get_sysmon (Empty) returns (sysmon_msg);
+    rpc get_sysmon (Empty) returns (sysmon_response);
 
     // Get the values for the state of the DisplayPort AUX pins and
     // the HDMI power pins, indicating whether cables are connected
@@ -33,7 +33,7 @@ service it68051_service {
     rpc select_port (it68051_port_num_request) returns (Empty);
 
     // Control the HPD output from the IT68051
-    rpc set_hpd (it68051_port_num_request, it68051_hpd_response) returns (Empty);
+    rpc set_hpd (it68051_port_num_request, it68051_hpd_request) returns (Empty);
 
     // Select one of the pre-defined EDIDs
     rpc set_edid_idx (it68051_edid_idx_request) returns (Empty);
@@ -55,7 +55,7 @@ message hpd_response {
     fixed32 dp1_auxp_det = 5;
 }
 
-message sysmon_msg {
+message sysmon_response {
     float vmon_12v = 0;         // 12V
     float cmon_som = 1;         // CMON_SOM, current monitor for the FPGA module
     float cmon_board = 2;       // CMON_BOARD, current monitor for the whole board
@@ -122,7 +122,7 @@ message it68051_port_num_request {
     it68051_port_num port = 0;
 }
 
-message it68051_hpd_response {
+message it68051_hpd_request {
     // Set to zero to de-assert HPD, non-zero to assert
     fixed32 on_off = 0;
 }
