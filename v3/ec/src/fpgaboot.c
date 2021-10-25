@@ -98,11 +98,11 @@ static void fpga_done_cb(const struct device *dev, struct gpio_callback *cb,
 /*
  * @brief Post a TIMER_EXPIRED event when the time expires
  *
- * @param dummy Unused, required by signature
+ * @param timer_id Unused, required by signature
  */
-static void fpgaboot_timeout(struct k_timer *dummy)
+static void fpgaboot_timeout(struct k_timer *timer_id)
 {
-	ARG_UNUSED(dummy);
+	ARG_UNUSED(timer_id);
 
 	enum fpga_event event = FPGABOOT_TIMER_EXPIRED;
 

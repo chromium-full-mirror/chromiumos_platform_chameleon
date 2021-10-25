@@ -14,11 +14,8 @@
 #
 # See repohooks/README.md for more details.
 
-# black.?hat
-# first.?class.?citizen
-# grandfathered
-# gr[ae]y.?hat
 master
 slave
-# white.?glove
-# white.?hat
+# The Zephyr RTOS uses "native_posix" as a build target, so unblock
+# just that specific usage.
+native_posix

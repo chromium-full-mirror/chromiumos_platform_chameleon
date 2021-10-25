@@ -236,15 +236,17 @@ static struct k_thread sysmon_thread_data;
 K_SEM_DEFINE(sysmon_sem, 0, 1);
 
 /**
- * Timer handler to signal sysmon to sample another ADC input
+ * @brief Timer handler to signal sysmon to sample another ADC input
  *
  * Note that we don't care if the semaphone has already been signaled; it
  * is a binary semaphore, so internally the kernel will just ignore the
  * extra give.
+ *
+ * @param timer_id Unused, required by signature
  */
-void sysmon_timer_handler(struct k_timer *dummy)
+void sysmon_timer_handler(struct k_timer *timer_id)
 {
-	ARG_UNUSED(dummy);
+	ARG_UNUSED(timer_id);
 
 	k_sem_give(&sysmon_sem);
 }
