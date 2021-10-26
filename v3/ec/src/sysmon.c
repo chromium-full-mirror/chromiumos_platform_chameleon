@@ -244,7 +244,7 @@ K_SEM_DEFINE(sysmon_sem, 0, 1);
  *
  * @param timer_id Unused, required by signature
  */
-void sysmon_timer_handler(struct k_timer *timer_id)
+static void sysmon_timer_handler(struct k_timer *timer_id)
 {
 	ARG_UNUSED(timer_id);
 
