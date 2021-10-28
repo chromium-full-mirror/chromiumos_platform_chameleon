@@ -93,8 +93,8 @@ def main():
     logging.debug('new value: %d', int(value))
     # Update the crc32 of the data, starting from the 0x204 to the end
     # (0x200+4K), and keep it in 0x200.
-    crc = binascii.crc32(mm[ENV_OFFSET+4:ENV_OFFSET+4096])
-    mm[ENV_OFFSET:ENV_OFFSET+4] = struct.pack('<i', crc)
+    crc = binascii.crc32(mm[ENV_OFFSET+4:ENV_OFFSET+4096]) & 0xffffffff
+    mm[ENV_OFFSET:ENV_OFFSET+4] = struct.pack('<I', crc)
 
 
 if __name__ == '__main__':
