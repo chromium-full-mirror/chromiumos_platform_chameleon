@@ -300,8 +300,8 @@ class VideoDumper(object):
     BYTE_PER_PIXEL = 3
     PAGE_SIZE = 4096
     field_size = width * height * BYTE_PER_PIXEL
-    field_size = ((field_size - 1) / PAGE_SIZE + 1) * PAGE_SIZE
-    return cls._DUMP_BUFFER_SIZE / field_size
+    field_size = ((field_size - 1) // PAGE_SIZE + 1) * PAGE_SIZE
+    return cls._DUMP_BUFFER_SIZE // field_size
 
   def SetFieldLimit(self, field_limit, loop=False):
     """Sets the limitation of total fields to dump.

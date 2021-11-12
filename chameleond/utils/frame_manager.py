@@ -49,9 +49,9 @@ class FrameManager(object):
   def GetMaxFrameLimit(self, width, height):
     """Returns of the maximal number of frames which can be dumped."""
     field_per_frame = 2 if self._rx.IsInterlaced() else 1
-    height = height / field_per_frame
+    height = height // field_per_frame
     field_limit = self._field_manager.GetMaxFieldLimit(width, height)
-    return field_limit / field_per_frame
+    return field_limit // field_per_frame
 
   def GetFrameHashes(self, start, stop):
     """Returns the saved list of the frame hashes.
@@ -92,7 +92,7 @@ class FrameManager(object):
   def GetFrameCount(self):
     """Returns the saved number of frame dumped."""
     field_per_frame = 2 if self._is_interlaced else 1
-    return self._field_manager.GetFieldCount() / field_per_frame
+    return self._field_manager.GetFieldCount() // field_per_frame
 
   def ReadDumpedFrame(self, frame_index):
     """Reads the content of the dumped frame from the buffer."""
@@ -145,10 +145,10 @@ class FrameManager(object):
       if y is not None:
         if y % 2:
           raise FrameManagerError('Argument y not even in interlaced mode.')
-        y = y / field_per_frame
+        y = y // field_per_frame
       if height % 2:
         raise FrameManagerError('Argument height not even in interlaced mode.')
-      height = height / field_per_frame
+      height = height // field_per_frame
 
     field_buffer_limit = frame_buffer_limit * field_per_frame
     self._field_manager.DumpFieldsToLimit(
@@ -177,10 +177,10 @@ class FrameManager(object):
       if y is not None:
         if y % 2:
           raise FrameManagerError('Argument y not even in interlaced mode.')
-        y = y / field_per_frame
+        y = y // field_per_frame
       if height % 2:
         raise FrameManagerError('Argument height not even in interlaced mode.')
-      height = height / field_per_frame
+      height = height // field_per_frame
 
     field_buffer_limit = frame_buffer_limit * field_per_frame
     self._field_manager.StartDumpingFields(

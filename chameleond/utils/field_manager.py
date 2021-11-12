@@ -84,7 +84,7 @@ class FieldManager(object):
   def GetMaxFieldLimit(self, width, height):
     """Returns of the maximal number of fields which can be dumped."""
     if self._is_dual:
-      width = width / 2
+      width = width // 2
     return fpga.VideoDumper.GetMaxFieldLimit(width, height)
 
   def _StopFieldDump(self):
@@ -138,7 +138,7 @@ class FieldManager(object):
         vdump.DisableCrop()
       else:
         if self._is_dual:
-          vdump.EnableCrop(x / 2, y, width / 2, height)
+          vdump.EnableCrop(x // 2, y, width // 2, height)
         else:
           vdump.EnableCrop(x, y, width, height)
 
@@ -195,13 +195,13 @@ class FieldManager(object):
 
     (width, height) = self._dimension
     if self._is_dual:
-      width = width / 2
+      width = width // 2
 
     # Modify the memory offset to match the field.
     PAGE_SIZE = 4096
     PIXEL_LEN = 3
     field_size = width * height * PIXEL_LEN
-    field_size = ((field_size - 1) / PAGE_SIZE + 1) * PAGE_SIZE
+    field_size = ((field_size - 1) // PAGE_SIZE + 1) * PAGE_SIZE
     offset_args = ['-g', self._GRID_NUM, '-s', self._GRID_SAMPLE_NUM]
     # The histogram is computed by sampled pixels. Getting one band is enough
     # even if it is in dual pixel mode.
@@ -237,13 +237,13 @@ class FieldManager(object):
     """Reads the content of the dumped field from the buffer."""
     (width, height) = self._dimension
     if self._is_dual:
-      width = width / 2
+      width = width // 2
 
     # Modify the memory offset to match the field.
     PAGE_SIZE = 4096
     PIXEL_LEN = 3
     field_size = width * height * PIXEL_LEN
-    field_size = ((field_size - 1) / PAGE_SIZE + 1) * PAGE_SIZE
+    field_size = ((field_size - 1) // PAGE_SIZE + 1) * PAGE_SIZE
     offset = field_size * field_index
     offset_args = []
     for arg in fpga.VideoDumper.GetPixelDumpArgs(self._input_id, self._is_dual):
@@ -278,7 +278,7 @@ class FieldManager(object):
     (original_width, original_height) = self._dimension
     # Raise error
     if self._is_dual:
-      single_band_width = original_width / 2
+      single_band_width = original_width // 2
     else:
       single_band_width = original_width
 
@@ -286,7 +286,7 @@ class FieldManager(object):
     PAGE_SIZE = 4096
     PIXEL_LEN = 3
     field_size = single_band_width * original_height * PIXEL_LEN
-    field_size = ((field_size - 1) / PAGE_SIZE + 1) * PAGE_SIZE
+    field_size = ((field_size - 1) // PAGE_SIZE + 1) * PAGE_SIZE
 
     max_limit = fpga.VideoDumper.GetMaxFieldLimit(single_band_width,
                                                   original_height)
@@ -298,7 +298,7 @@ class FieldManager(object):
 
     if self._is_dual:
       # Divide 2 because it is in double pixel mode.
-      skip_pixel_num = (ratio / 2) - 1
+      skip_pixel_num = (ratio // 2) - 1
     else:
       # Read 1 pixel and skip the rest.
       skip_pixel_num = ratio - 1
