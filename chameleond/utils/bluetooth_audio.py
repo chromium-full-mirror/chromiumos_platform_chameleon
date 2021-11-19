@@ -32,56 +32,6 @@ from chameleond.utils.bluez_service_consts import (
 from six.moves import range
 
 
-# The audio test data for various profiles.
-audio_record_dir = '/tmp/audio'
-audio_data_dir = '/usr/share/autotest/audio-test-data'
-audio_test_data = {
-    # hfp nbs test data
-    'hfp_nbs': {
-        'format': 's16le',
-        'rate': 8000,
-        'channels': 1,
-        'file': os.path.join(audio_data_dir,
-                             'sine_3500hz_rate8000_ch1_5secs.wav'),
-        'recorded_file': os.path.join(audio_record_dir,
-                                      'hfp_nbs_recorded_by_peer.wav'),
-    },
-
-    # hfp wbs test data
-    'hfp_wbs': {
-        'format': 's16le',
-        'rate': 16000,
-        'channels': 1,
-        'file': os.path.join(audio_data_dir,
-                             'sine_7000hz_rate16000_ch1_5secs.wav'),
-        'recorded_file': os.path.join(audio_record_dir,
-                                      'hfp_wbs_recorded_by_peer.wav'),
-    },
-
-    # a2dp test data
-    'a2dp': {
-        'format': 's16le',
-        'rate': 48000,
-        'channels': 2,
-        'recorded_file': os.path.join(audio_record_dir,
-                                      'a2dp_recorded_by_peer_%d.raw'),
-        'chunk_file': os.path.join(audio_record_dir,
-                                   'a2dp_recorded_by_peer_%d.raw'),
-    },
-
-    # a2dp long test data
-    'a2dp_long': {
-        'format': 's16le',
-        'rate': 48000,
-        'channels': 2,
-        'recorded_file': os.path.join(audio_record_dir,
-                                      'a2dp_long_recorded_by_peer_%d.raw'),
-        'chunk_file': os.path.join(audio_record_dir,
-                                   'a2dp_long_recorded_by_peer_%d.raw'),
-    },
-}
-
-
 class BluetoothAudioException(BluezPeripheralException):
   """A dummy exception class for BluetoothAudio class."""
   pass
@@ -177,7 +127,6 @@ class BluetoothAudio(BluezPeripheral):
     self._play = None
     self._profile = None
     self._media_player = None
-    self._MakeAudioRecordDirectory()
 
     # A hfp bluez source device looks like:
     #   5 bluez_source.DC_71_96_68_E0_9C.headset_audio_gateway \
@@ -200,7 +149,13 @@ class BluetoothAudio(BluezPeripheral):
     self._start_pulseaudio_cmd = ('%s --start' %
                                   SystemTools.GetToolPath(self.PULSEAUDIO))
 
-  def _MakeAudioRecordDirectory(self):
+  def _MakeAudioRecordDirectory(self, audio_record_dir):
+    """Create a new directory for audio recording.
+
+    Args:
+      audio_record_dir: the folder path to be created.
+
+    """
     if not os.path.exists(audio_record_dir):
       os.makedirs(audio_record_dir)
 
@@ -441,8 +396,9 @@ class BluetoothAudio(BluezPeripheral):
     """Start playing the audio file in a subprocess.
 
     Args:
-      audio_profile: the audio profile, either a2dp, hfp_wbs, or hfp_nbs
-      test_data: the audio file to play and data about the file
+      audio_profile: the audio profile, either a2dp, hfp_wbs, or hfp_nbs.
+      test_data: a dictionary about the audio test data transmitted by the test
+                 server.
       wait_secs: the time interval to wait for ofono to complete starting.
 
     Returns:
@@ -458,16 +414,11 @@ class BluetoothAudio(BluezPeripheral):
       logging.error('Failed to get the device number of bluez_sink for HFP')
       return False
 
-    self._profile = profile = audio_test_data.get(audio_profile)
-    file_path = profile['file']
-    if profile is None:
-      logging.error('%s is not a supported audio profile', audio_profile)
-      return False
 
-    if 'visqol_test' in test_data:
-      self._profile = profile = test_data
-      file_path = os.path.join(audio_data_dir,
-                               os.path.split(test_data['file'])[1])
+    self._profile = test_data
+    file_path = test_data['device_file']
+
+
 
     sample_format = test_data['format'].lower().replace('_', '')
 
@@ -624,12 +575,15 @@ class BluetoothAudio(BluezPeripheral):
         return a2dp_id
     return None
 
-  def StartRecordingAudioSubprocess(self, audio_profile, test_data):
+  def StartRecordingAudioSubprocess(self, audio_profile, test_data,
+                                    recording_entity='recorded_by_peer'):
     """Start recording audio in a subprocess.
 
     Args:
       audio_profile: the audio profile used to get the recording settings
       test_data: the details of the file being recorded
+      recording_entity: which entity will record the audio, defined in
+                        bluetooth_audio_test_data.py
 
     Returns:
       True if successful
@@ -646,7 +600,9 @@ class BluetoothAudio(BluezPeripheral):
 
     self._profile = test_data
     sample_format = test_data['format'].lower().replace('_', '')
-    file_path = test_data['recorded_by_peer']
+    file_path = test_data[recording_entity]
+
+    self._MakeAudioRecordDirectory(os.path.split(file_path)[0])
 
     if audio_profile.startswith('a2dp'):
       # default is .raw (not .wav)
@@ -687,13 +643,12 @@ class BluetoothAudio(BluezPeripheral):
     logging.debug('remaining size %d', self._remaining_size)
     return self._remaining_size <= 0
 
-  def HandleOneChunk(self, chunk_in_secs, index, audio_profile, dut_ip):
+  def HandleOneChunk(self, chunk_in_secs, index, dut_ip):
     """Save one chunk of data into a file and remote copy it to the DUT.
 
     Args:
-      chunk_in_secs: the duration of the chunk to save in seconds
+      chunk_in_secs: the duration of the chunk to save in seconds.
       index: the i-th chunk in the whole recorded audio streams.
-      audio_profile: the audio profile used to get the recording settings
       dut_ip: the DUT IP address to copy the chunk file to.
 
     Returns:
@@ -702,7 +657,7 @@ class BluetoothAudio(BluezPeripheral):
 
     profile = self._profile
     nframes = profile['rate'] * profile['channels'] * chunk_in_secs
-    chunk_filename = audio_test_data[audio_profile]['chunk_file'] % index
+    chunk_filename = profile['chunk_file'] % index
 
     # Each frame takes 16 bits, or 2 bytes.
     buf_size = nframes * 2
