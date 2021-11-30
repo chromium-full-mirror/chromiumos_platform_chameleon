@@ -36,6 +36,7 @@ enum gpio_signal {
 	board_version_2,
 	board_version_1,
 	board_version_0,
+	si5338c_int,
 	exp_reset,
 	exp_irq,
 	gp213_it68051p1_ch_sel,

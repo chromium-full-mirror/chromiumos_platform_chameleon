@@ -136,6 +136,11 @@
 			gpios = <&u78 13 GPIO_INPUT>;
 			label = "BOARD_VERSION_0";
 		};
+
+		si5338c_int {
+			gpios = <&gpiob 15 GPIO_INPUT>;
+			label = "SI5338C_INT";
+		};
 	};
 
 	i2c-switch {

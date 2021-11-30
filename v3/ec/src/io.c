@@ -52,6 +52,7 @@ static struct gpio_info gpios[] = {
 	GPIO(misc, board_version_2),
 	GPIO(misc, board_version_1),
 	GPIO(misc, board_version_0),
+	GPIO(misc, si5338c_int),
 	GPIO(i2c_switch, exp_reset),
 	GPIO(i2c_switch, exp_irq),
 	GPIO(videomux, gp213_it68051p1_ch_sel),
