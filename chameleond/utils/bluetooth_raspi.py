@@ -513,7 +513,7 @@ class BluezPeripheral(PeripheralKit):
     if not self._get_hci_prop('org.bluez.Adapter1', 'Powered'):
       logging.info('Init: Adapter not powered')
       return False
-    self._set_hci_prop('org.bluez.Adapter1', 'Discoverable', dbus.Boolean(1))
+    self.SetDiscoverable(True)
 
     # Set class based on device we're emulating
     if self._device_type and 'BLE' not in self._device_type:
@@ -619,6 +619,10 @@ class BluezPeripheral(PeripheralKit):
     self._set_hci_prop('org.bluez.Adapter1', 'Discoverable',
                        dbus.Boolean(discoverable))
 
+    # Set discoverable timeout to 0 so that it won't expire.
+    if discoverable:
+        self._set_hci_prop('org.bluez.Adapter1', 'DiscoverableTimeout',
+                           dbus.UInt32(0))
     # Also set discoverable in gatt server if relevant
     if self._gatt_server:
       self._gatt_server.SetDiscoverable(discoverable)
