@@ -1,25 +1,34 @@
-# Chameleon Zephyr hello, world!
+# Chameleon Application
 
-This document contains information about how to build the hello, world app
-for the Chameleon board using the Zephyr RTOS.
+This document describes how to build and use the Chameleon application on
+the Chameleon v3 Proto 2 hardware (with an STM32H743ZI embedded controller).
 
-## Copied from ...
+## Installing Zephyr toolchain and source
 
-The hello, world app was based heavily on `experimental/scarlet`, in that I
-copied the tree over, renamed some files, and then edited all the files to
-change references to the STM32F0 series to the proper chip for Chameleon.
+Follow the instructions in the Zephyr [Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html).
 
-## Chip support
+Ensure that you have sufficiently recent code
 
-The Chameleon has an STM32F103ZG (1 MB flash, 96 KB RAM), but the ZG doesn't
-have a board support file in Zephyr yet. However, the ZE (STM32F103ZE, 512 KB
-flash, 64 KB RAM) does, so I just used that chip for this proof of concept.
+```
+$ cd ~/zephyrproject
+$ west update
+$ cd zephyr/
+$ git show 7b86137b6cca28c3d9c5f96b84a4408de198c8de
+commit 7b86137b6cca28c3d9c5f96b84a4408de198c8de
+Author: Yuval Peress <peress@google.com>
+Date:   Thu Dec 9 20:43:36 2021 -0700
 
-See [PR#28335](https://github.com/zephyrproject-rtos/zephyr/pull/28335) and
-[PR#28336](https://github.com/zephyrproject-rtos/zephyr/pull/28336) for
-STM32F103ZG support added in Zephyr 2.4.
+    fatal: fix missing extern "C"
 
-## Build steps
+    This was causing an error when building with pigweed as a module.
+
+    Signed-off-by: Yuval Peress <peress@google.com>
+```
+
+If you do not see that commit in your tree, `git pull origin main` and then
+check again.
+
+## Building the application
 
 ```
 cd ~/zephyrproject
@@ -31,17 +40,19 @@ Output files are in `~/zephyrproject/build/zephyr`
 * zephyr.elf
 * zephyr.hex
 
-## Load firmware
+## Programming the board
 
-You can use a
-[SEGGER JLink](https://www.segger.com/products/debug-probes/j-link/) probe
-to program the firmware, or you can use the serial bootloader.
+The H743 bootloader supports multiple interfaces including USART and USB-DFU.
+
+Because of how the USB is connected, the H743 bootloader will always use
+USB-DFU if the USB-C port is connected to a host PC. The USART is only
+available if the USB-C port is disconnected and the AP is using USART2 to
+update the H743.
 
 ### Jlink
 
-As of Proto 1, there is a separate programming connector for the STM32.
-
-Connect your JLink to the JTAG, using a
+Connect a [SEGGER JLink](https://www.segger.com/products/debug-probes/j-link/)
+to the JTAG connector using a
 [9-pin Cortex-M adapter](https://www.segger.com/products/debug-probes/j-link/accessories/adapters/9-pin-cortex-m-adapter/)
 
 Connect 12V power to the Chameleon.
@@ -51,127 +62,44 @@ cd ~/zephyrproject
 west flash --erase --reset-after-load
 ```
 
-### FTDI Provisioning
+### USB-DFU
 
-Starting with proto1, the FTDI connected to the STM32 has control over its
-reset line (as RTS# + boot0 as DTR#). By default this is the wrong polarity
-(default RTS state from serial emulators will prevent the EC from booting).
-It's recommented to provision the FTDI to have the right polarity.
+Install `dfu-util` on your system with `apt-get install` or similar.
 
-One of the most straightforward tools for this is
-[ft232r_prog](http://rtr.ca/ft232r/). A copy is also available at
-http://b/186062038#comment4
+1. Press and hold the RESET button on the top side of the PCB
+1. Press and hold the BOOT0 button on the bottom side of the PCB
+1. Release the RESET button on the top side
+1. Release the BOOT0 button on the bottom side
+1. Run `dfu-util -a 0 -s 0x08000000:leave -D ~/zephyrproject/build/zephyr/zephyr.bin`
 
-After running `make` one can provision their FTDI using:
+### stm32flash
 
-```
-sudo ./ft232r_prog --manufacturer "Google" --product "Chameleon V3 $version FTDI" --new-serial-number $serial --invert_rts
-```
-
-Don't forget to update the board version and serial number depending on the
-particular board. Here's what an example eeprom looks like after the update:
+`stm32flash` v 0.6 added support for the H743. You may need to build it from
+source and install it on your system. The following commands will
+reset the the EC into bootloader moder and use `stm32flash` to reprogram the
+EC.
 
 ```
-amstan@amstan-glaptop:/tmp/ft232r_prog-1.25% ./ft232r_prog --dump
-
-ft232r_prog: version 1.25, by Mark Lord.
-       eeprom_size = 128
-         vendor_id = 0x0403
-        product_id = 0x6001
-      self_powered = 0
-     remote_wakeup = 1
-suspend_pull_downs = 0
-     max_bus_power = 90 mA
-      manufacturer = Google
-           product = Chameleon V3 Proto 1 FTDI
-         serialnum = 3
-   high_current_io = 0
-  load_d2xx_driver = 0
-      txd_inverted = 0
-      rxd_inverted = 0
-      rts_inverted = 1
-      cts_inverted = 0
-      dtr_inverted = 0
-      dsr_inverted = 0
-      dcd_inverted = 0
-       ri_inverted = 0
-           cbus[0] = TxLED
-           cbus[1] = RxLED
-           cbus[2] = TxDEN
-           cbus[3] = PwrEn
-           cbus[4] = Sleep
-No change from existing eeprom contents.
+modprobe i2c-dev
+sudo i2cset -y 1 0x21 0x06 0x3f
+sudo i2cset -y 1 0x21 0x02 0xbf
+sudo i2cset -y 1 0x21 0x02 0xff
+sudo stm32flash -w ~/zephyrproject/build/zephyr/zephyr.bin -v -S 0x8000000 -f /dev/ttyS0
 ```
 
-### Serial Bootloader
-
-To use the serial bootloader to update the STM32's firmware, you must install
-`stm32flash`. For now all of these things have to do be done outside
-the chroot.
-
-```
-sudo apt-get install stm32flash
-```
-
-This section assumes that the chromiumos chroot environment is set up in
-~/chromiumos, and that zephyr is set up in ~/zephyrproject.
-
-Connect the USB-C cable to the USB-C port closest to the HDMI/DisplayPort
-connectors. Note: cable orientation is important before Proto 2.
-
-Connect 12V power to the Chameleon.
-
-```
-killall your_terminal; sleep 0.5 # to avoid interference
-stm32flash -f /dev/serial/by-id/*Chameleon*FTDI* -w ~/zephyrproject/build/zephyr/zephyr.bin -v -S 0x8000000 -i '-rts,-dtr,rts,' -b 1000000
-```
-
-#### Proto 0 (deprecated instructions)
-
-Installing:
-
-```
-sudo apt-get install gpiod libgpiod-dev
-cd ~/chromiumos/src/platform/chameleon/utils/stm32reset
-make
-```
-
-Flashing:
-
-```
-sudo ~/chromiumos/src/platform/chameleon/utils/stm32reset/stm32reset --bootloader
-stm32flash -o -f /dev/ttyUSB0
-stm32flash -w ~/zephyrproject/build/zephyr/zephyr.bin -v -S 0x8000000 -f /dev/ttyUSB0
-sudo ~/chromiumos/src/platform/chameleon/utils/stm32reset/stm32reset --user
-```
-
-## Testing
-
-Open miniterm
-
-```
-$ miniterm.py /dev/ttyUSB0 115200
---- Miniterm on /dev/ttyUSB0  115200,8,N,1 ---
---- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H ---
-```
-
-Press the reset button, located between the STM32 and the edge of the PCB.
-Observe the following text on the terminal:
-```
-*** Booting Zephyr OS version 2.3.0  ***
-Hello World! arm
-```
-
-The red LED at the bottom edge of the board (near the PCIe connector) will
-blink at 0.5 Hz.
-
-# Chameleon Application
-
-Instructions to build and run remain the same.
+## Running the application
 
 When the Zephyr kernel boots, the POWER_GOOD LED (red LED near the PCIe
-connector, previously the "blinky" LED in the hello, world! app) turns on and
-stays lit. The shell prompt (`uart:~$`) appears after the startup messages.
+connector) turns on and stays lit. The shell prompt (`$`) appears after the
+startup messages:
+
+```
+*** Booting Zephyr OS build v2.7.0-rc3-2411-gf8cd20fa3e74  ***
+
+$
+```
+
+There may also be some log messages from modules starting up.
 
 ## POWERGOOD LED
 
@@ -244,23 +172,23 @@ The command `sysmon` prints a list of the various voltages being monitored:
 
 ```
 $ sysmon
-12V: 12.304102
-CMON_SOM: 0.278760
-CMON_BOARD: 0.479370
-PP1200: 1.205273
-CMON_PP1200: 1.068310
-CMON_PP3300: 0.555103
-VMON_9V: 9.223242
-VMON_5V: 5.169141
-VMON_3V3: 3.325781
-PP1800: 2.239746
-SOM_VMON: 1.458252
-SOM_VMON_1V2: 2.482251
-SOM_VMON_MGT: 1.549292
-SOM_VMON_1V8A: 2.015771
-SOM_VMON_C8: 2.193017
-VREF_CS1: 0.001611
-VREF_CS2: 0.000806
+12V: 12.645703
+CMON_SOM: 0.279565
+CMON_BOARD: 0.149854
+PP1200: 1.242334
+CMON_PP1200: 0.157104
+CMON_PP3300: 0.388330
+VMON_9V: 9.464941
+VMON_5V: 5.011230
+VMON_3V3: 3.313696
+PP1800: 1.956958
+SOM_VMON: 0.913623
+SOM_VMON_1V2: 1.199634
+SOM_VMON_MGT: 1.048975
+SOM_VMON_1V8A: 1.812744
+SOM_VMON_C8: 0.001611
+VREF_CS1: 0.000806
+VREF_CS2: 0.000000
 VREF_CS3: 0.000806
 ```
 
@@ -273,62 +201,43 @@ zero values if you run the `sysmon` command soon after start-up. Within a
 few seconds, all of the values are populated.
 ```
 $ sysmon
-12V: 12.294434
-CMON_SOM: 0.274731
-CMON_BOARD: 0.411694
-PP1200: 1.227832
-CMON_PP1200: 0.000000
-CMON_PP3300: 0.000000
-VMON_9V: 0.000000
-VMON_5V: 0.000000
-VMON_3V3: 0.000000
-PP1800: 0.000000
-SOM_VMON: 0.000000
-SOM_VMON_1V2: 0.000000
-SOM_VMON_MGT: 0.000000
+12V: 12.648926
+CMON_SOM: 0.318237
+CMON_BOARD: 0.152271
+PP1200: 1.219775
+CMON_PP1200: 0.323071
+CMON_PP3300: 0.385107
+VMON_9V: 9.381152
+VMON_5V: 5.001563
+VMON_3V3: 3.307654
+PP1800: 1.922314
+SOM_VMON: 0.912012
+SOM_VMON_1V2: 1.203662
+SOM_VMON_MGT: 1.052197
 SOM_VMON_1V8A: 0.000000
 SOM_VMON_C8: 0.000000
 VREF_CS1: 0.000000
 VREF_CS2: 0.000000
 VREF_CS3: 0.000000
 $ sysmon
-12V: 12.294434
-CMON_SOM: 0.274731
-CMON_BOARD: 0.411694
-PP1200: 1.227832
-CMON_PP1200: 0.617139
-CMON_PP3300: 0.509985
-VMON_9V: 9.245801
-VMON_5V: 5.136914
-VMON_3V3: 3.318530
-PP1800: 2.280835
-SOM_VMON: 1.400244
-SOM_VMON_1V2: 2.552344
-SOM_VMON_MGT: 1.494507
-SOM_VMON_1V8A: 1.969849
-SOM_VMON_C8: 0.000000
+12V: 12.687597
+CMON_SOM: 0.286816
+CMON_BOARD: 0.206250
+PP1200: 1.207690
+CMON_PP1200: 0.646143
+CMON_PP3300: 0.385107
+VMON_9V: 9.381152
+VMON_5V: 5.001563
+VMON_3V3: 3.307654
+PP1800: 1.922314
+SOM_VMON: 0.912012
+SOM_VMON_1V2: 1.203662
+SOM_VMON_MGT: 1.052197
+SOM_VMON_1V8A: 1.812744
+SOM_VMON_C8: 0.004028
 VREF_CS1: 0.000000
-VREF_CS2: 0.000000
-VREF_CS3: 0.000000
-$ sysmon
-12V: 12.294434
-CMON_SOM: 0.277148
-CMON_BOARD: 0.512402
-PP1200: 1.198828
-CMON_PP1200: 1.206885
-CMON_PP3300: 0.550269
-VMON_9V: 9.236133
-VMON_5V: 5.136914
-VMON_3V3: 3.318530
-PP1800: 2.280835
-SOM_VMON: 1.400244
-SOM_VMON_1V2: 2.552344
-SOM_VMON_MGT: 1.494507
-SOM_VMON_1V8A: 1.969849
-SOM_VMON_C8: 2.158374
-VREF_CS1: 0.001611
-VREF_CS2: 0.000806
-VREF_CS3: 0.000806
+VREF_CS2: 0.002417
+VREF_CS3: 0.003223
 ```
 
 ## Clock Generator
@@ -434,7 +343,7 @@ shell:
 
 ```
 $ board
-BOARD_VERSION[2:0] = 4
+BOARD_VERSION[2:0] = 2
 $ io get TP125
 TP125 = 0
 $ io get TP126
