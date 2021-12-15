@@ -9,6 +9,7 @@
 #include <logging/log.h>
 
 #include "io.h"
+#include "rpc.h"
 
 LOG_MODULE_REGISTER(main);
 
@@ -20,4 +21,6 @@ void main(void)
 	if (ret < 0) {
 		LOG_ERR("Failed to turn on POWER_GOOD, ret = %d.\n", ret);
 	}
+
+	rpc_start();
 }

@@ -28,6 +28,14 @@ Date:   Thu Dec 9 20:43:36 2021 -0700
 If you do not see that commit in your tree, `git pull origin main` and then
 check again.
 
+## Installing Pigweed
+
+If `ls ~/chromiumos/src/third_party/pigweed` comes up empty, sync your repo
+to get the latest manifest and bring in the Pigweed repository.
+
+You also need to `pip install pigweed` so that the Pigweed RPC tools are
+installed.
+
 ## Building the application
 
 ```
