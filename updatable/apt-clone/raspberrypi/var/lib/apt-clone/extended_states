@@ -250,10 +250,6 @@ Package: xdg-user-dirs
 Architecture: armhf
 Auto-Installed: 1
 
-Package: libpython2-stdlib
-Architecture: armhf
-Auto-Installed: 1
-
 Package: cpp-8
 Architecture: armhf
 Auto-Installed: 1
@@ -266,15 +262,7 @@ Package: libpng-dev
 Architecture: armhf
 Auto-Installed: 1
 
-Package: python-colorzero
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libpsl5
-Architecture: armhf
-Auto-Installed: 1
-
-Package: python2.7-minimal
 Architecture: armhf
 Auto-Installed: 1
 
@@ -338,10 +326,6 @@ Package: python3-colorzero
 Architecture: armhf
 Auto-Installed: 1
 
-Package: python2.7
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libbabeltrace1
 Architecture: armhf
 Auto-Installed: 1
@@ -367,10 +351,6 @@ Architecture: armhf
 Auto-Installed: 1
 
 Package: openssh-sftp-server
-Architecture: armhf
-Auto-Installed: 1
-
-Package: python2
 Architecture: armhf
 Auto-Installed: 1
 
@@ -474,19 +454,11 @@ Package: liblmdb0
 Architecture: armhf
 Auto-Installed: 1
 
-Package: python-spidev
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libjim0.77
 Architecture: armhf
 Auto-Installed: 1
 
 Package: libperl5.28
-Architecture: armhf
-Auto-Installed: 1
-
-Package: libpython-stdlib
 Architecture: armhf
 Auto-Installed: 1
 
@@ -534,10 +506,6 @@ Package: libxcb1
 Architecture: armhf
 Auto-Installed: 1
 
-Package: python2-minimal
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libusb-0.1-4
 Architecture: armhf
 Auto-Installed: 1
@@ -579,10 +547,6 @@ Architecture: armhf
 Auto-Installed: 1
 
 Package: ucf
-Architecture: armhf
-Auto-Installed: 1
-
-Package: python-pkg-resources
 Architecture: armhf
 Auto-Installed: 1
 
@@ -710,10 +674,6 @@ Package: libpcre2-posix0
 Architecture: armhf
 Auto-Installed: 1
 
-Package: libpython2.7-minimal
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libedit2
 Architecture: armhf
 Auto-Installed: 1
@@ -778,10 +738,6 @@ Package: gettext-base
 Architecture: armhf
 Auto-Installed: 1
 
-Package: libpython2.7-stdlib
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libdpkg-perl
 Architecture: armhf
 Auto-Installed: 1
@@ -803,10 +759,6 @@ Architecture: armhf
 Auto-Installed: 1
 
 Package: libalgorithm-diff-xs-perl
-Architecture: armhf
-Auto-Installed: 1
-
-Package: python-minimal
 Architecture: armhf
 Auto-Installed: 1
 
@@ -859,10 +811,6 @@ Architecture: armhf
 Auto-Installed: 1
 
 Package: openresolv
-Architecture: armhf
-Auto-Installed: 1
-
-Package: python3-dev
 Architecture: armhf
 Auto-Installed: 1
 
@@ -958,7 +906,27 @@ Package: python3-setuptools
 Architecture: armhf
 Auto-Installed: 1
 
-Package: dpkg-repack
+Package: libbluetooth3
+Architecture: armhf
+Auto-Installed: 1
+
+Package: git-man
+Architecture: armhf
+Auto-Installed: 1
+
+Package: libcurl3-gnutls
+Architecture: armhf
+Auto-Installed: 1
+
+Package: liberror-perl
+Architecture: armhf
+Auto-Installed: 1
+
+Package: libatlas3-base
+Architecture: armhf
+Auto-Installed: 1
+
+Package: libgfortran5
 Architecture: armhf
 Auto-Installed: 1
 
@@ -967,10 +935,6 @@ Architecture: armhf
 Auto-Installed: 1
 
 Package: libx265-165
-Architecture: armhf
-Auto-Installed: 1
-
-Package: python-six
 Architecture: armhf
 Auto-Installed: 1
 
@@ -986,15 +950,7 @@ Package: libwebp6
 Architecture: armhf
 Auto-Installed: 1
 
-Package: python2.7-dev
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libsnappy1v5
-Architecture: armhf
-Auto-Installed: 1
-
-Package: libatlas3-base
 Architecture: armhf
 Auto-Installed: 1
 
@@ -1062,10 +1018,6 @@ Package: libswresample3
 Architecture: armhf
 Auto-Installed: 1
 
-Package: git-man
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libpulsedsp
 Architecture: armhf
 Auto-Installed: 1
@@ -1102,10 +1054,6 @@ Package: libpixman-1-0
 Architecture: armhf
 Auto-Installed: 1
 
-Package: python-gi
-Architecture: armhf
-Auto-Installed: 1
-
 Package: rtkit
 Architecture: armhf
 Auto-Installed: 1
@@ -1134,19 +1082,11 @@ Package: libogg0
 Architecture: armhf
 Auto-Installed: 1
 
-Package: libplayerctl2
-Architecture: armhf
-Auto-Installed: 1
-
 Package: at-spi2-core
 Architecture: armhf
 Auto-Installed: 1
 
 Package: dconf-gsettings-backend
-Architecture: armhf
-Auto-Installed: 1
-
-Package: libpython2.7
 Architecture: armhf
 Auto-Installed: 1
 
@@ -1170,10 +1110,6 @@ Package: libvorbisfile3
 Architecture: armhf
 Auto-Installed: 1
 
-Package: libpython2.7-dev
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libxcb-shm0
 Architecture: armhf
 Auto-Installed: 1
@@ -1183,10 +1119,6 @@ Architecture: armhf
 Auto-Installed: 1
 
 Package: gsettings-desktop-schemas
-Architecture: armhf
-Auto-Installed: 1
-
-Package: libpython2-dev
 Architecture: armhf
 Auto-Installed: 1
 
@@ -1290,10 +1222,6 @@ Package: libpulse0
 Architecture: armhf
 Auto-Installed: 1
 
-Package: python2-dev
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libxvidcore4
 Architecture: armhf
 Auto-Installed: 1
@@ -1318,15 +1246,7 @@ Package: libzvbi0
 Architecture: armhf
 Auto-Installed: 1
 
-Package: libpython-dev
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libvorbisenc2
-Architecture: armhf
-Auto-Installed: 1
-
-Package: libgfortran5
 Architecture: armhf
 Auto-Installed: 1
 
@@ -1542,10 +1462,6 @@ Package: libharfbuzz0b
 Architecture: armhf
 Auto-Installed: 1
 
-Package: libbluetooth3
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libice6
 Architecture: armhf
 Auto-Installed: 1
@@ -1602,19 +1518,11 @@ Package: libavresample4
 Architecture: armhf
 Auto-Installed: 1
 
-Package: libcurl3-gnutls
-Architecture: armhf
-Auto-Installed: 1
-
 Package: libx11-xcb1
 Architecture: armhf
 Auto-Installed: 1
 
 Package: libxcb-sync1
-Architecture: armhf
-Auto-Installed: 1
-
-Package: libsbc1
 Architecture: armhf
 Auto-Installed: 1
 
@@ -1654,7 +1562,15 @@ Package: libwayland-cursor0
 Architecture: armhf
 Auto-Installed: 1
 
-Package: liberror-perl
+Package: libplayerctl2
+Architecture: armhf
+Auto-Installed: 1
+
+Package: libsbc1
+Architecture: armhf
+Auto-Installed: 1
+
+Package: dpkg-repack
 Architecture: armhf
 Auto-Installed: 1
 

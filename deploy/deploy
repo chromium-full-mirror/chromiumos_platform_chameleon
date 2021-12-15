@@ -87,7 +87,7 @@ validate_socket_installation() {
     PACKAGE_NAME="btsocket"
     SOURCE_REPO="https://chromium.googlesource.com/chromiumos/platform/btsocket"
 
-    if ! python -c "import ${PACKAGE_NAME}"; then
+    if ! python3 -c "import ${PACKAGE_NAME}"; then
         if [ -d "${INSTALL_LOCATION}/${PACKAGE_NAME}" ]; then
             rm -rf "${INSTALL_LOCATION}/${PACKAGE_NAME}"
         fi
@@ -101,8 +101,8 @@ validate_socket_installation() {
             exit
         fi
 
-        python setup.py build
-        python setup.py install
+        python3 setup.py build
+        python3 setup.py install
 
         # Return to directory we started at
         cd ${cwd}
@@ -328,14 +328,14 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     # Install required packages
     validate_package_installation "bluetooth"
     validate_package_installation "bluez"
-    validate_package_installation "python-bluez"
-    validate_package_installation "python-dbus"
-    validate_package_installation "python-pyudev"
+    validate_package_installation "python3-bluez"
+    validate_package_installation "python3-dbus"
+    validate_package_installation "python3-pyudev"
 
     # Some required for bluetooth-tester
     validate_package_installation "git"
     validate_package_installation "libatlas-base-dev"
-    validate_package_installation "python-dev"
+    validate_package_installation "python3-dev"
 
     # Some required for bluetooth audio tests
     validate_package_installation "bluez-firmware"
