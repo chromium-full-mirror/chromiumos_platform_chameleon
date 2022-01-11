@@ -258,8 +258,44 @@ The Si5338 is fairly complex, and configuration is best done with Silicon
 Labs' [Clock Builder Pro software](https://www.silabs.com/products/development-tools/software/clockbuilder-pro-software).
 This is an MS Windows-only tool, so I ran it on my personal laptop, saved
 the project (it uses a binary format) and exported a C header file with all
-of the register settings. Note that the header file is not modified, and
-`checkpatch.pl` hates the way it's formatted.
+of the register settings.
+
+* Run the Clock Generator tool
+* Import the settings file and make any changes
+* Choose "Export"
+* Switch to the "Register File" tab
+
+![Register File tab](images/si5338-export1.png "Register File tab in Export Dialog")
+
+Use the file name that the program suggests, `Si5338-CLK24-Registers.h`.
+
+![Export Successful](images/si5338-export2.png "Export Successful")
+
+* Copy the file to your Linux system
+* Convert the file to UNIX-style line endings, `dos2unix Si5338-CLK24-Registers.h`
+* Modify the header file so that it will build with C++:
+
+* Add
+```
+#ifdef __cplusplus
+extern "C" {
+#endif
+```
+just before the `#define NUM_REGS_MAX`.
+
+* Add
+```
+#ifdef __cplusplus
+}
+#endif
+```
+at the end of the file.
+
+* Change register 6 from `{  6,0x08,0x1D},` to `{  6,0x00,0x1D},`. There doesn't
+appear to be a direct way to do this in the Clock Generator tool.
+
+Note `checkpatch.pl` will flag almost every line of the generated file;
+ignore the errors and continue.
 
 The clock output can be verified with an oscilloscope and either a very steady
 hand or some short wires to attach probes. When the board is in reset, the

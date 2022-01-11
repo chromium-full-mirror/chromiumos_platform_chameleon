@@ -1,7 +1,7 @@
 //Register map for use with AN428 (JumpStart)
 //http://www.silabs.com/clocks
 //#BEGIN_HEADER
-//Date = Monday, November 02, 2020 9:37 PM
+//Date = Monday, January 10, 2022 5:41 PM
 //File version = 3
 //Software Name = ClockBuilder Pro
 //Software version = 2.45.0.0
@@ -18,28 +18,28 @@
 //P2 = 1
 //FDBK Mux = NoClk
 //PFD Input Frequency (MHz) = 24.000000000
-//VCO Frequency (GHz) = 2.600000
-//N = 108  1/3  (108.3333)
+//VCO Frequency (GHz) = 2.700000
+//N = 112  1/2  (112.5000)
 //Internal feedback enabled
 //Output Clock 0
 // Output Frequency (MHz) = 100.000000000
 // Mux Selection = IDn
-// MultiSynth = 26  (26.0000)
+// MultiSynth = 27  (27.0000)
 // R = 1
 //Output Clock 1
 // Output Frequency (MHz) = 100.000000000
 // Mux Selection = IDn
-// MultiSynth = 26  (26.0000)
+// MultiSynth = 27  (27.0000)
 // R = 1
 //Output Clock 2
 // Output Frequency (MHz) = 100.000000000
 // Mux Selection = IDn
-// MultiSynth = 26  (26.0000)
+// MultiSynth = 27  (27.0000)
 // R = 1
 //Output Clock 3
-// Output Frequency (MHz) = 100.000000000
+// Output Frequency (MHz) = 135.000000000
 // Mux Selection = IDn
-// MultiSynth = 26  (26.0000)
+// MultiSynth = 20  (20.0000)
 // R = 1
 //Driver 0
 // Enabled
@@ -139,12 +139,12 @@ Reg_Data const code Reg_Store[NUM_REGS_MAX] = {
 { 45,0x00,0xFF},
 { 46,0x00,0xFF},
 { 47,0x14,0x3F},
-{ 48,0x38,0xFF},
+{ 48,0x34,0xFF},
 { 49,0x00,0xFF},
 { 50,0xC3,0xFF},
 { 51,0x07,0xFF},
 { 52,0x10,0xFF},
-{ 53,0x00,0xFF},
+{ 53,0x80,0xFF},
 { 54,0x0B,0xFF},
 { 55,0x00,0xFF},
 { 56,0x00,0xFF},
@@ -155,7 +155,7 @@ Reg_Data const code Reg_Store[NUM_REGS_MAX] = {
 { 61,0x00,0xFF},
 { 62,0x00,0x3F},
 { 63,0x10,0xFF},
-{ 64,0x00,0xFF},
+{ 64,0x80,0xFF},
 { 65,0x0B,0xFF},
 { 66,0x00,0xFF},
 { 67,0x00,0xFF},
@@ -166,7 +166,7 @@ Reg_Data const code Reg_Store[NUM_REGS_MAX] = {
 { 72,0x00,0xFF},
 { 73,0x00,0x3F},
 { 74,0x10,0xFF},
-{ 75,0x00,0xFF},
+{ 75,0x80,0xFF},
 { 76,0x0B,0xFF},
 { 77,0x00,0xFF},
 { 78,0x00,0xFF},
@@ -178,7 +178,7 @@ Reg_Data const code Reg_Store[NUM_REGS_MAX] = {
 { 84,0x00,0x3F},
 { 85,0x10,0xFF},
 { 86,0x00,0xFF},
-{ 87,0x0B,0xFF},
+{ 87,0x08,0xFF},
 { 88,0x00,0xFF},
 { 89,0x00,0xFF},
 { 90,0x00,0xFF},
@@ -188,13 +188,13 @@ Reg_Data const code Reg_Store[NUM_REGS_MAX] = {
 { 94,0x00,0xFF},
 { 95,0x00,0x3F},
 { 96,0x10,0x00},
-{ 97,0x2A,0xFF},
-{ 98,0x34,0xFF},
-{ 99,0x08,0xFF},
+{ 97,0x40,0xFF},
+{ 98,0x36,0xFF},
+{ 99,0x00,0xFF},
 {100,0x00,0xFF},
 {101,0x00,0xFF},
 {102,0x00,0xFF},
-{103,0x03,0xFF},
+{103,0x02,0xFF},
 {104,0x00,0xFF},
 {105,0x00,0xFF},
 {106,0x80,0xBF},
@@ -445,4 +445,3 @@ Reg_Data const code Reg_Store[NUM_REGS_MAX] = {
 #ifdef __cplusplus
 }
 #endif
-
