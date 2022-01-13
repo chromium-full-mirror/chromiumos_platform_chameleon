@@ -6,3 +6,6 @@ chameleond.egg-info/
 # Generated files
 *.pyc
 tags
+
+# ./utils/screenshot likes making these files
+image*.png
