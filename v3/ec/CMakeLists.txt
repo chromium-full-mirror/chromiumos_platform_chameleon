@@ -7,6 +7,14 @@ cmake_minimum_required(VERSION 3.13.1)
 set(BOARD_ROOT ${CMAKE_CURRENT_LIST_DIR})
 set(BOARD chameleon)
 
+# ---
+# TODO b/216092752
+# Temporary workaround until we figure out why pw_checksum is being built
+# for ARM assembly instead of Thumb-2.
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m7 -mthumb" CACHE INTERNAL "")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m7 -mthumb" CACHE INTERNAL "")
+# ---
+
 # Use this copy of Pigweed
 get_filename_component(PW_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../third_party/pigweed" ABSOLUTE)
 set(ENV{PW_ROOT} ${PW_ROOT})

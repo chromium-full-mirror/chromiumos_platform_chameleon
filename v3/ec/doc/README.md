@@ -1,7 +1,15 @@
-# Chameleon Application
+# Chameleon v3 Applications
 
-This document describes how to build and use the Chameleon application on
-the Chameleon v3 Proto 2 hardware (with an STM32H743ZI embedded controller).
+Chameleon v3 has an embedded controller (an STM32H743ZI as of Proto 2) and
+an FPGA with embedded ARM cores that run Linux.
+
+This document describes how to build, install, and run the applications on
+the Chameleon v3 hardware.
+
+# Building the Chameleon Embedded Controller Application
+
+This section describes how to build the Chameleon application for the
+embedded controller.
 
 ## Installing Zephyr toolchain and source
 
@@ -47,6 +55,11 @@ Output files are in `~/zephyrproject/build/zephyr`
 * zephyr.bin
 * zephyr.elf
 * zephyr.hex
+
+# Running the Chameleon Embedded Controller Application
+
+This section describes how to build and use the Chameleon application on
+the Chameleon v3 Proto 2 hardware (with an STM32H743ZI embedded controller).
 
 ## Programming the board
 
@@ -465,6 +478,37 @@ $ i2c scan I2C_1
 [Video Mux Routing](./videomux.md) describes how the video signals are routed
 to either the HDMI Receiver IC or to the FPGA, plus how to test the EDID portion
 of the video path even without an FPGA module.
+
+# Running the Chameleon Linux Application
+
+## Setup
+
+Follow the instructions in the [Chameleon v3 AP Care & Feeding](https://drive.google.com/drive/folders/1tz97RrCWTage-dET76VyppT8xzyukjrK?resourcekey=0-s29tyylG2C0gXg35TtYBOg&usp=sharing)
+documentation to set up the micro SD card for the Linux system.
+
+After the Linux system boots, log in and run the following commands:
+
+```
+sudo pacman -Syy
+sudo pacman -Syu
+sudo pacman -S python-pip
+sudo pip install pigweed
+sudo pacman -S protobuf
+```
+
+Copy the v3 proto to `~alarm`.
+
+## Experimenting with RPC
+
+Start the RPC console by running
+```
+sudo python -m pw_hdlc.rpc_console -o /tmp/pw_hdlc.log -d /dev/ttyS0 --proto-globs v3.proto
+```
+
+Once the console starts, experiment with RPC calls, e.g.
+```
+client.rpcs()["board_service"].get_hpd()
+```
 
 # Unit Tests
 

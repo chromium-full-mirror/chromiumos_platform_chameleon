@@ -6,17 +6,40 @@
  */
 
 #include <zephyr.h>
+#include <drivers/uart.h>
+#include <logging/log.h>
+
 #include "pw_hdlc/rpc_channel.h"
 #include "pw_hdlc/rpc_packets.h"
-#include "pw_log/log.h"
 #include "pw_rpc/server.h"
 #include "pw_status/status.h"
 #include "pw_stream/sys_io_stream.h"
 
-#include "rpc.h"
 #include "board_service.h"
 #include "videomux_service.h"
 #include "it68051_service.h"
+
+LOG_MODULE_REGISTER(rpc);
+
+/**
+ * Define priority for the RPC task
+ */
+#define RPC_PRIORITY 10
+
+/**
+ * Define the size of the stack for the RPC task.
+ */
+#define RPC_STACK_SIZE 1000
+
+/**
+ * Zephyr macro to allocate the stack area.
+ */
+K_THREAD_STACK_DEFINE(rpc_stack_area, RPC_STACK_SIZE);
+
+/**
+ * Internal data structure for tracking the RPC task.
+ */
+static struct k_thread rpc_thread_data;
 
 pw::stream::SysIoWriter writer;
 
@@ -39,14 +62,63 @@ board_service board_service_inst;
 videomux_service videomux_service_inst;
 it68051_service it68051_service_inst;
 
-void rpc_start(void)
+/**
+ * @brief Run the FPGA power/boot state machine
+ *
+ * This task controls the FPGA power/boot sequence. The task listens on a
+ * message queue for events: requests from callers and messages from
+ * interrupt handlers for GPIO inputs. When it gets an event from the queue,
+ * it passes that to the state machine, and then takes the output `actions`
+ * and does the things that the bitfields indicate should be done.
+
+ * @param unused1 Required by the Zephyr thread API. Unused.
+ * @param unused2 Required by the Zephyr thread API. Unused.
+ * @param unused3 Required by the Zephyr thread API. Unused.
+ */
+static void rpc_task(void *unused1, void *unused2, void *unused3)
 {
+	ARG_UNUSED(unused1);
+	ARG_UNUSED(unused2);
+	ARG_UNUSED(unused3);
+
+	k_thread_name_set(NULL, "rpc_task");
+
 	/* Register the RPC services. */
 	server.RegisterService(board_service_inst);
 	server.RegisterService(videomux_service_inst);
 	server.RegisterService(it68051_service_inst);
 
-	PW_LOG_INFO("Starting pw_rpc server");
-	pw::hdlc::ReadAndProcessPackets(server, hdlc_channel_output,
-					input_buffer);
+	/*
+	 * We're using the tty interface, which will suspend until it
+	 * receives data. However, because ReadAndProcessPackets can
+	 * return if there is an error, use an infinite loop to make
+	 * sure that the thread doesn't exit. Put the log call inside
+	 * the loop so that we can get some indication if the packet
+	 * processor is restarting.
+	 */
+	for (;;) {
+		LOG_INF("Starting pw_rpc server");
+		pw::hdlc::ReadAndProcessPackets(server, hdlc_channel_output,
+						input_buffer);
+	}
 }
+
+/**
+ * @brief Start the RPC task
+ *
+ * @param ptr Unused argument, required by SYS_INIT
+ * @retval 0
+ * No error
+ */
+static int rpc_init(const struct device *ptr)
+{
+	ARG_UNUSED(ptr);
+
+	/* Create the RPC task and start it. */
+	k_thread_create(&rpc_thread_data, rpc_stack_area,
+			K_THREAD_STACK_SIZEOF(rpc_stack_area), rpc_task, NULL,
+			NULL, NULL, RPC_PRIORITY, 0, K_NO_WAIT);
+
+	return 0;
+}
+SYS_INIT(rpc_init, APPLICATION, 95);
