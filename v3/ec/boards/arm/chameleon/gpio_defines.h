@@ -1,8 +1,10 @@
-/*
- * Copyright 2020 Google LLC.
+/* SPDX-License-Identifier: BSD-3-Clause
  *
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
  */
+
 #ifndef DT_BINDINGS_GPIO_DEFINES_H_
 #define DT_BINDINGS_GPIO_DEFINES_H_
 
