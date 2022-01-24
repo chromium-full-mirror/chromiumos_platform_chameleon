@@ -510,6 +510,45 @@ Once the console starts, experiment with RPC calls, e.g.
 client.rpcs()["board_service"].get_hpd()
 ```
 
+Alternatively, http://crrev.com/c/3413534 provides a simple REPL and some
+syntactic shortcuts.
+
+### board_service RPC
+
+The following console output (with line breaks added for readability)
+demonstrates two RPC calls to the `board_service` and typical results.
+
+```
+[alarm@alarm ~]$ python -i connect.py
+board_service = Service('board_service',
+     methods=['get_board_version', 'get_sysmon', 'get_hpd'], channel=1)
+videomux_service = Service('videomux_service',
+     methods=['get', 'set', 'all_off'], channel=1)
+it68051_service = Service('it68051_service',
+     methods=['select_port', 'set_hpd', 'set_edid_idx', 'write_edid'],
+     channel=1)
+>>> board_service.get_board_version()
+(Status.OK, board_service_version_response(version=2))
+>>> board_service.get_sysmon()
+(Status.OK, sysmon_response(
+vmon_12v=12.587695121765137,
+cmon_som=0.620361328125,
+cmon_board=0.11279296875,
+vmon_1v2=1.238305687904358,
+cmon_pp1200=0.1611328125,
+cmon_pp3300=0.3689941465854645,
+vmon_9v=9.500391006469727,
+vmon_5v=4.985449314117432,
+vmon_3v3=3.3100709915161133,
+vmon_1v8=1.919091820716858,
+som_vmon=0.913623034954071,
+som_vmon_1v2=1.194799780845642,
+som_vmon_mgt=1.041723608970642,
+som_vmon_1v8a=1.8046875,
+som_vmon_c8=0.0008056640508584678,
+vref_cs2=0.0008056640508584678))
+```
+
 # Unit Tests
 
 [Chameleon Unit Tests](./unittest.md) describes how to build and run unit
