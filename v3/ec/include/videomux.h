@@ -69,9 +69,21 @@ enum video_source_t {
 };
 
 enum video_dest_t {
+        NO_CONNECTION,
 	HDMI_RECEIVER,
 	FPGA_MGT
 };
+
+/**
+ * @brief Determine where a video source is connected
+ *
+ * Query the video muxes and demuxes to determine how the source
+ * is connected, if at all.
+ *
+ * @param src A video source to check - DP1, DP2, HDMI1, HDMI2
+ * @return where the source is connected, or NO_CONNECTION
+ */
+enum video_dest_t videomux_get(enum video_source_t src);
 
 /**
  * @brief Configure the muxes to route the vidoe signals
@@ -87,6 +99,17 @@ enum video_dest_t {
  * -EINVAL Invalid port or selection
  */
 int videomux_select(enum video_source_t src, enum video_dest_t dest);
+
+/**
+ * @brief Disconnect all inputs from destinations
+ *
+ * Configure the muxes so that all of the video inputs are not connected
+ * to any of the destinations.
+ *
+ * Refer to doc/videomux.md for a discussion of how this works.
+ *
+ */
+void videomux_disconnect_all(void);
 
 #ifdef __cplusplus
 }

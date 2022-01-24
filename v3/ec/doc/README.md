@@ -549,6 +549,48 @@ som_vmon_c8=0.0008056640508584678,
 vref_cs2=0.0008056640508584678))
 ```
 
+### videomux_service RPC
+
+Connect a Chromebook to the Chameleon DisplayPort 2 input with a USB-C
+DisplayPort adapter. Open the Settigns app, select Device, then Displays.
+
+On the EC console enable the DisplayPort 2 input.
+```
+$ videomux dp2 rx
+Connect DP2 to receiver
+```
+
+The Chromebook will recognize a second display.
+
+In the REPL, use the `videomux_service` to query the mux state and then
+disconnect all video inputs.
+```
+>>> r=videomux_service.get()
+>>> r.response.dp2
+2
+>>> videomux_service.all_off()
+(Status.OK, Empty())
+```
+
+The second display will no longer be available on the Chromebook.
+
+Now connect the DisplayPort 2 input to the HDMI receiver again, but using
+an RPC instead of an EC console command:
+```
+>>> videomux_service.set(hdmi1=0,hdmi2=0,dp1=0,dp2=2)
+(Status.OK, videomux_service_set_response(result=True))
+```
+
+The Chromebook will recognize a second display. Verify the connection on the
+EC console:
+```
+$ videomux get
+DP1: n/c
+DP2: HDMI RX
+HDMI1: n/c
+HDMI2: n/c
+```
+
 # Unit Tests
 
 [Chameleon Unit Tests](./unittest.md) describes how to build and run unit

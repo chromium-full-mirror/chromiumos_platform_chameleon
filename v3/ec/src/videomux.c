@@ -16,6 +16,66 @@
 
 LOG_MODULE_REGISTER(videomux);
 
+enum video_dest_t videomux_get(enum video_source_t src)
+{
+	uint8_t rx1_mux = gpio_get_level(gp213_it68051p1_ch_sel);
+	uint8_t dp1_demux = gpio_get_level(dp1_ps8468_sw);
+	uint8_t hdmi1_demux = gpio_get_level(hdmi1_gp213_ch_sel);
+	uint8_t fpga1_mux = gpio_get_level(somp1_mode_sel);
+
+	uint8_t rx2_mux = gpio_get_level(gp213_it68051p0_ch_sel);
+	uint8_t dp2_demux = gpio_get_level(dp2_ps8468_sw);
+	uint8_t hdmi2_demux = gpio_get_level(hdmi2_gp213_ch_sel);
+	uint8_t fpga2_mux = gpio_get_level(somp2_mode_sel);
+
+	enum video_dest_t dest = NO_CONNECTION;
+
+	switch (src) {
+	case DP1:
+		if ((dp1_demux == 0) && (rx1_mux == 0)) {
+			dest = HDMI_RECEIVER;
+		} else if ((dp1_demux == 1) && (fpga1_mux == 0)) {
+			dest = FPGA_MGT;
+		} else {
+			dest = NO_CONNECTION;
+		}
+		break;
+	case DP2:
+		if ((dp2_demux == 0) && (rx2_mux == 0)) {
+			dest = HDMI_RECEIVER;
+		} else if ((dp2_demux == 1) && (fpga2_mux == 0)) {
+			dest = FPGA_MGT;
+		} else {
+			dest = NO_CONNECTION;
+		}
+		break;
+	case HDMI1:
+		if ((hdmi1_demux == 0) && (rx1_mux == 1)) {
+			dest = HDMI_RECEIVER;
+		} else if ((hdmi1_demux == 1) && (fpga1_mux == 1)) {
+			dest = FPGA_MGT;
+		} else {
+			dest = NO_CONNECTION;
+		}
+		break;
+	case HDMI2:
+		if ((hdmi2_demux == 0) && (rx2_mux == 1)) {
+			dest = HDMI_RECEIVER;
+		} else if ((hdmi2_demux == 1) && (fpga2_mux == 1)) {
+			dest = FPGA_MGT;
+		} else {
+			dest = NO_CONNECTION;
+		}
+
+		break;
+	default:
+		LOG_ERR("Invalid source %d", (int)src);
+		break;
+	}
+
+	return dest;
+}
+
 int videomux_select(enum video_source_t src, enum video_dest_t dest)
 {
 	/* Check `sel` for validity. */
@@ -67,6 +127,26 @@ int videomux_select(enum video_source_t src, enum video_dest_t dest)
 	return 0;
 }
 
+void videomux_disconnect_all(void)
+{
+	gpio_set_level(dp1_ps8468_sw, 0);
+	gpio_set_level(gp213_it68051p1_ch_sel, 1);
+
+	gpio_set_level(somp1_mode_sel, 0);
+	gpio_set_level(hdmi1_gp213_ch_sel, 1);
+
+	gpio_set_level(dp2_ps8468_sw, 0);
+	gpio_set_level(gp213_it68051p0_ch_sel, 1);
+
+	gpio_set_level(somp2_mode_sel, 0);
+	gpio_set_level(hdmi2_gp213_ch_sel, 1);
+}
+
+/**
+ * @brief Convert video_dest_t to a string
+ */
+static const char *video_dest_string[] = { "n/c", "HDMI RX", "FPGA" };
+
 /**
  * @brief Show status of videomux settings
  *
@@ -91,57 +171,14 @@ static int cmd_videomux_get(const struct shell *shell, size_t argc, char **argv)
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	uint8_t rx1_mux = gpio_get_level(gp213_it68051p1_ch_sel);
-	uint8_t dp1_demux = gpio_get_level(dp1_ps8468_sw);
-	uint8_t hdmi1_demux = gpio_get_level(hdmi1_gp213_ch_sel);
-	uint8_t fpga1_mux = gpio_get_level(somp1_mode_sel);
-
-	uint8_t rx2_mux = gpio_get_level(gp213_it68051p0_ch_sel);
-	uint8_t dp2_demux = gpio_get_level(dp2_ps8468_sw);
-	uint8_t hdmi2_demux = gpio_get_level(hdmi2_gp213_ch_sel);
-	uint8_t fpga2_mux = gpio_get_level(somp2_mode_sel);
-
-	shell_fprintf(
-		shell, SHELL_NORMAL,
-		"U3:%d U10:%d U11:%d U18:%d U22:%d U29:%d U31:%d U14:%d\n",
-		dp1_demux, hdmi1_demux, fpga1_mux, rx1_mux, dp2_demux,
-		hdmi2_demux, rx2_mux, fpga2_mux);
-
-	shell_fprintf(shell, SHELL_NORMAL, "DP1: ");
-	if ((dp1_demux == 0) && (rx1_mux == 0)) {
-		shell_fprintf(shell, SHELL_NORMAL, "HDMI RX\n");
-	} else if ((dp1_demux == 1) && (fpga1_mux == 0)) {
-		shell_fprintf(shell, SHELL_NORMAL, "FPGA\n");
-	} else {
-		shell_fprintf(shell, SHELL_NORMAL, "n/c\n");
-	}
-
-	shell_fprintf(shell, SHELL_NORMAL, "DP2: ");
-	if ((dp2_demux == 0) && (rx2_mux == 0)) {
-		shell_fprintf(shell, SHELL_NORMAL, "HDMI RX\n");
-	} else if ((dp2_demux == 1) && (fpga2_mux == 0)) {
-		shell_fprintf(shell, SHELL_NORMAL, "FPGA\n");
-	} else {
-		shell_fprintf(shell, SHELL_NORMAL, "n/c\n");
-	}
-
-	shell_fprintf(shell, SHELL_NORMAL, "HDMI1: ");
-	if ((hdmi1_demux == 0) && (rx1_mux == 1)) {
-		shell_fprintf(shell, SHELL_NORMAL, "HDMI RX\n");
-	} else if ((hdmi1_demux == 1) && (fpga1_mux == 1)) {
-		shell_fprintf(shell, SHELL_NORMAL, "FPGA\n");
-	} else {
-		shell_fprintf(shell, SHELL_NORMAL, "n/c\n");
-	}
-
-	shell_fprintf(shell, SHELL_NORMAL, "HDMI2: ");
-	if ((hdmi2_demux == 0) && (rx2_mux == 1)) {
-		shell_fprintf(shell, SHELL_NORMAL, "HDMI RX\n");
-	} else if ((hdmi2_demux == 1) && (fpga2_mux == 1)) {
-		shell_fprintf(shell, SHELL_NORMAL, "FPGA\n");
-	} else {
-		shell_fprintf(shell, SHELL_NORMAL, "n/c\n");
-	}
+	shell_fprintf(shell, SHELL_NORMAL, "DP1: %s\n",
+		      video_dest_string[videomux_get(DP1)]);
+	shell_fprintf(shell, SHELL_NORMAL, "DP2: %s\n",
+		      video_dest_string[videomux_get(DP2)]);
+	shell_fprintf(shell, SHELL_NORMAL, "HDMI1: %s\n",
+		      video_dest_string[videomux_get(HDMI1)]);
+	shell_fprintf(shell, SHELL_NORMAL, "HDMI2: %s\n",
+		      video_dest_string[videomux_get(HDMI2)]);
 
 	return 0;
 }
@@ -246,11 +283,6 @@ static int cmd_videomux_set(const struct shell *shell, size_t argc, char **argv)
 /**
  * @brief Disconnect all inputs from destinations
  *
- * Configure the muxes so that all of the video inputs are not connected
- * to any of the destinations.
- *
- * Refer to doc/videomux.md for a discussion of how this works.
- *
  * @param shell Our shell data struct; needed for some shell APIs.
  * @param argc Count of arguments passed to this shell command. Unused.
  * @param argv Arguments for this shell command. Unused.
@@ -262,19 +294,9 @@ static int cmd_videomux_off(const struct shell *shell, size_t argc, char **argv)
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	gpio_set_level(dp1_ps8468_sw, 0);
-	gpio_set_level(gp213_it68051p1_ch_sel, 1);
-
-	gpio_set_level(somp1_mode_sel, 0);
-	gpio_set_level(hdmi1_gp213_ch_sel, 1);
-
-	gpio_set_level(dp2_ps8468_sw, 0);
-	gpio_set_level(gp213_it68051p0_ch_sel, 1);
-
-	gpio_set_level(somp2_mode_sel, 0);
-	gpio_set_level(hdmi2_gp213_ch_sel, 1);
-
 	shell_fprintf(shell, SHELL_NORMAL, "Disconnect all HDMI and DP\n");
+	videomux_disconnect_all();
+
 	return 0;
 }
 
