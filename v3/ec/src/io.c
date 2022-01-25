@@ -98,6 +98,12 @@ static struct gpio_info gpios[] = {
 	GPIO(dp_cfg, dp2_ps8468_cfg4),
 	GPIO(dp_cfg, dp2_ps8468_eq0),
 	GPIO(dp_cfg, dp2_ps8468_eq1),
+	GPIO(dp_cfg, dp1_out_sw),
+	GPIO(dp_cfg, dp1_out_pd_l),
+	GPIO(dp_cfg, dp1_out_mode),
+	GPIO(dp_cfg, dp2_out_sw),
+	GPIO(dp_cfg, dp2_out_pd_l),
+	GPIO(dp_cfg, dp2_out_mode),
 };
 
 /*

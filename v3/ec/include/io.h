@@ -82,6 +82,12 @@ enum gpio_signal {
 	dp2_ps8468_cfg4,
 	dp2_ps8468_eq0,
 	dp2_ps8468_eq1,
+	dp1_out_sw,
+	dp1_out_pd_l,
+	dp1_out_mode,
+	dp2_out_sw,
+	dp2_out_pd_l,
+	dp2_out_mode,
 };
 
 /**

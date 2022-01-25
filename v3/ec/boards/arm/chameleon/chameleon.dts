@@ -425,6 +425,36 @@
 			gpios = <&u77 15 GPIO_INPUT>;
 			label = "DP2_PS8468_EQ1";
 		};
+
+		dp1_out_sw {
+			gpios = <&u78 0 GPIO_OUTPUT_LOW>;
+			label = "DP1_OUT_SW";
+		};
+
+		dp1_out_pd_l {
+			gpios = <&u78 8 GPIO_OUTPUT_HIGH>;
+			label = "DP1_OUT_PD_L";
+		};
+
+		dp1_out_mode {
+			gpios = <&u78 9 GPIO_OUTPUT_LOW>;
+			label = "DP1_OUT_MODE";
+		};
+
+		dp2_out_sw {
+			gpios = <&u79 0 GPIO_OUTPUT_LOW>;
+			label = "DP2_OUT_SW";
+		};
+
+		dp2_out_pd_l {
+			gpios = <&u79 8 GPIO_OUTPUT_HIGH>;
+			label = "DP2_OUT_PD_L";
+		};
+
+		dp2_out_mode {
+			gpios = <&u79 9 GPIO_OUTPUT_LOW>;
+			label = "DP2_OUT_MODE";
+		};
 	};
 };
 
