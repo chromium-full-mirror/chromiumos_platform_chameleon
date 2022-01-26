@@ -9,36 +9,70 @@
  */
 
 #include "it68051_service.h"
+#include "it68051.h"
+#include "it68051_edid.h"
 
 // Method definitions for it68051_service.
-::pw::Status it68051_service::select_port( const ::it68051_port_num_request& request, ::Empty& response) {
-  // TODO: Read the request as appropriate for your application
-  static_cast<void>(request);
-  // TODO: Fill in the response as appropriate for your application
-  static_cast<void>(response);
-  return ::pw::Status::Unimplemented();
+::pw::Status
+it68051_service::select_port(const ::it68051_port_num_request &request,
+			     ::Empty &response)
+{
+	static_cast<void>(response);
+
+	/* Translate from protobuf's enum to IT68051 C API enum */
+	enum it68051_port port;
+	if (request.port == it68051_port_num_PORT2) {
+		port = PORT2;
+	} else if (request.port == it68051_port_num_PORT1) {
+		port = PORT1;
+	} else {
+		return ::pw::Status::InvalidArgument();
+	}
+
+	it68051_port_select(port);
+
+	return ::pw::OkStatus();
 }
 
-::pw::Status it68051_service::set_hpd( const ::it68051_hpd_request& request, ::Empty& response) {
-  // TODO: Read the request as appropriate for your application
-  static_cast<void>(request);
-  // TODO: Fill in the response as appropriate for your application
-  static_cast<void>(response);
-  return ::pw::Status::Unimplemented();
+::pw::Status it68051_service::set_hpd(const ::it68051_hpd_request &request,
+				      ::Empty &response)
+{
+	static_cast<void>(response);
+
+	/* Translate from protobuf's enum to IT68051 C API enum */
+	enum it68051_port port;
+	if (request.port == it68051_port_num_PORT2) {
+		port = PORT2;
+	} else if (request.port == it68051_port_num_PORT1) {
+		port = PORT1;
+	} else {
+		return ::pw::Status::InvalidArgument();
+	}
+
+	it68051_set_hpd(port, (request.on_off != 0));
+
+	return ::pw::OkStatus();
 }
 
-::pw::Status it68051_service::set_edid_idx( const ::it68051_edid_idx_request& request, ::Empty& response) {
-  // TODO: Read the request as appropriate for your application
-  static_cast<void>(request);
-  // TODO: Fill in the response as appropriate for your application
-  static_cast<void>(response);
-  return ::pw::Status::Unimplemented();
+::pw::Status
+it68051_service::set_edid_idx(const ::it68051_edid_idx_request &request,
+			      ::Empty &response)
+{
+	static_cast<void>(response);
+
+	it68051_edid_select(request.edid_idx);
+	it68051_edid_init();
+
+	return ::pw::OkStatus();
 }
 
-::pw::Status it68051_service::write_edid( const ::it68051_raw_edid_request& request, ::Empty& response) {
-  // TODO: Read the request as appropriate for your application
-  static_cast<void>(request);
-  // TODO: Fill in the response as appropriate for your application
-  static_cast<void>(response);
-  return ::pw::Status::Unimplemented();
+::pw::Status
+it68051_service::write_edid(const ::it68051_raw_edid_request &request,
+			    ::Empty &response)
+{
+	// TODO: Read the request as appropriate for your application
+	static_cast<void>(request);
+	// TODO: Fill in the response as appropriate for your application
+	static_cast<void>(response);
+	return ::pw::Status::Unimplemented();
 }

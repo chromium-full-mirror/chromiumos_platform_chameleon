@@ -591,6 +591,33 @@ HDMI1: n/c
 HDMI2: n/c
 ```
 
+### it68051_service RPC
+
+Connect a Chromebook to the Chameleon DisplayPort 2 input with a USB-C
+DisplayPort adapter. Open the Settigns app, select Device, then Displays.
+
+In the REPL, use the `videomux_service` to enable tje Display Port 2 input.
+```
+videomux_service.set(hdmi1=0,hdmi2=0,dp1=0,dp2=2)
+```
+
+The Chromebook will recognize a second display with the name "ITE6802".
+
+Turn off the display, select a different EDID, and turn the display back
+on by
+```
+it68051_service.set_hpd(port=0,on_off=0)
+it68051_service.set_edid_idx(edid_idx=17)
+it68051_service.set_hpd(port=0,on_off=1)
+```
+
+The second display is now named "CB240HYK".
+
+**Note** unlike `cmd_edid` in `it68051_shell.c`, there is no provision for
+saving the state of HPD for both ports, adding a delay if either HPD was
+asserted, or restoring the state of HPD after the new EDID has been selected
+and initialized.
+
 # Unit Tests
 
 [Chameleon Unit Tests](./unittest.md) describes how to build and run unit
