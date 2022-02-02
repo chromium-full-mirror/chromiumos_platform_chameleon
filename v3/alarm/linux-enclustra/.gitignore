@@ -1,0 +1,9 @@
+# commit hash downloaded from gerrit
+*.tar.gz
+
+# build files
+src/
+pkg/
+
+# output files
+*pkg.tar*
