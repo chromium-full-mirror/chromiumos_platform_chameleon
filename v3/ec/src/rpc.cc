@@ -48,7 +48,7 @@ constexpr size_t kMaxTransmissionUnit = 2560;
 /* Declare a buffer for decoding incoming HDLC frames. */
 std::array<std::byte, kMaxTransmissionUnit> input_buffer;
 
-pw::hdlc::RpcChannelOutput hdlc_channel_output(writer, input_buffer,
+pw::hdlc::RpcChannelOutput hdlc_channel_output(writer,
 					       pw::hdlc::kDefaultRpcAddress,
 					       "HDLC output");
 
