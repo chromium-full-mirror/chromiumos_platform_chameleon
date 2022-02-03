@@ -1,0 +1,42 @@
+- name: Look inside intermediate/ before we start building
+  hosts: localhost
+  vars:
+    ansible_become: yes
+  tags: chameleon, chameleon_alarm, check_intermediate
+
+  tasks:
+    - name: Find fpga .rbf files
+      ansible.builtin.find:
+        path: '{{playbook_dir}}/intermediate/'
+        patterns: '*.rbf'
+      register: fpga_rbf_files
+      tags: fpga
+
+    - name: Find preloader-mkpimage.bin
+      ansible.builtin.find:
+        path: '{{playbook_dir}}/intermediate/'
+        patterns: 'preloader-mkpimage.bin'
+      register: preloader_file
+      tags: chameleon_sd, uboot
+
+    - name: Find uboot.scr
+      ansible.builtin.find:
+        path: '{{playbook_dir}}/intermediate/'
+        patterns: 'uboot.scr'
+      register: uboot_scr_file
+      tags: chameleon_sd, uboot
+
+    - name: Find linux*.pkg* files nearby
+      ansible.builtin.find:
+        path: '{{playbook_dir}}/../linux-enclustra/'
+        patterns: 'linux*.pkg*'
+      register: kernel_pkg_files
+      tags: kernel, update
+
+    - name: Assert that everything required is there
+      ansible.builtin.assert:
+        that:
+          - fpga_rbf_files.matched
+          - preloader_file.matched
+          - uboot_scr_file.matched
+          - kernel_pkg_files.matched

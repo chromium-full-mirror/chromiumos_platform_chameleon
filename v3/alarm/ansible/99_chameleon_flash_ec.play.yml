@@ -1,0 +1,40 @@
+- name: Check for presence of EC images already built
+  hosts: localhost
+  vars:
+    ansible_become: yes
+  tags: chameleon, ec, update
+
+  tasks:
+    - name: Find *ec.bin files nearby
+      ansible.builtin.find:
+        path: '{{playbook_dir}}/intermediate/'
+        patterns: '*ec.bin'
+      register: ec_files
+
+- name: Program EC on a real chameleon host
+  hosts: chameleon
+  vars:
+    ansible_become: yes
+  tags: chameleon, ec, update
+
+  tasks:
+    - name: Upload EC firmware
+      vars:
+        ansible_become_user: '{{username}}'
+      ansible.builtin.copy:
+        src: '{{ item.path }}'
+        dest: '~'
+      with_items: "{{ hostvars['localhost']['ec_files']['files'] }}"
+      register: ec_files
+
+    - name: Flash EC
+      ansible.builtin.shell:
+        cmd: |
+          gpioset -D open-source `sudo gpiofind STM32_BOOT0`=1 # program
+          gpioset -D open-drain `sudo gpiofind STM32_RST_L`=0
+          gpioset -D open-drain `sudo gpiofind STM32_RST_L`=1
+          stm32flash -f /dev/ttyS0 -w {{ item.dest }} -v -S 0x8000000 -b 1000000
+          gpioset -D open-source `sudo gpiofind STM32_BOOT0`=0 # normal mode
+          gpioset -D open-drain `sudo gpiofind STM32_RST_L`=0
+          gpioset -D open-drain `sudo gpiofind STM32_RST_L`=1
+      with_items: "{{ ec_files['results'] }}"

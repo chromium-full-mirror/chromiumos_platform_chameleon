@@ -1,0 +1,113 @@
+- name: Install chameleon packages
+  hosts: archlinuxarm
+  vars:
+    ansible_become: yes
+  tags: chameleon, chameleon_alarm
+
+  tasks:
+    - name: Upload chameleon kernel packages
+      ansible.builtin.copy:
+        src: '{{ item.path }}'
+        dest: /var/cache/pacman/pkg
+      # excluding mercury-aa1, since that one will conflict with chameleon
+      with_items: "{{ hostvars['localhost']['kernel_pkg_files']['files'] | rejectattr('path', 'search', 'mercury_aa1') }}"
+      register: kernel_pkg_files
+      tags: install, kernel, update
+
+    - name: Remove generic kernel
+      community.general.pacman:
+        package:
+          - linux-armv7
+          - mkinitcpio
+          - mkinitcpio-busybox
+        state: absent
+        extra_args: --cascade
+      tags: install, kernel
+
+    - name: Install chameleon kernel package
+      community.general.pacman:
+        package:
+          - "{{ item.dest }}"
+        state: present
+      with_items: "{{ kernel_pkg_files['results'] }}"
+      tags: install, kernel, update
+
+    - name: Upload fpga rbf
+      ansible.builtin.copy:
+        src: '{{ item.path }}'
+        dest: /boot
+      with_items: "{{ hostvars['localhost']['fpga_rbf_files']['files'] }}"
+      register: fpga_rbf_files
+      tags: install, fpga, update
+
+    - name: Enable the correct fpga rbf
+      ansible.builtin.copy:
+        remote_src: yes
+        src: '{{ item.dest }}'
+        dest: /boot/fpga.rbf
+      with_items: "{{ fpga_rbf_files['results'] | selectattr('dest', 'search', fpga_type) }}"
+      tags: install, fpga, update
+
+    - name: Upload uboot.scr
+      ansible.builtin.copy:
+        src: '{{ item.path }}'
+        dest: /boot
+      with_items: "{{ hostvars['localhost']['uboot_scr_file']['files'] }}"
+      tags: install, uboot
+
+    - name: Install more tools
+      community.general.pacman:
+        package:
+          - i2c-tools
+          - dfu-util
+          - protobuf
+          - opencv
+        state: present
+      tags: install
+
+    - name: Install tools from the AUR
+      # This could have been community.general.pacman with executable: pikaur
+      # But glinux's ansible doesn't support that option yet
+      vars:
+        ansible_become_user: '{{username}}'
+      ansible.builtin.shell: |
+        pikaur -S stm32flash libgpiod --noconfirm
+      tags: install, pikaur
+
+    - name: Install python things
+      community.general.pacman:
+        package:
+          - python-pyserial
+          - python-sphinx
+          - python-wheel
+          - python-cffi
+          - python-numpy
+          - python-opencv
+        state: present
+      tags: install, python
+
+    - name: Install pigweed
+      # as root, in case our tools need sudo
+      ansible.builtin.pip:
+        name: pigweed
+      tags: python, pip
+
+- name: Chameleon user things
+  hosts: archlinuxarm
+  vars:
+    ansible_become: yes
+    ansible_become_user: '{{username}}'
+  tags: chameleon, chameleon_alarm
+
+  tasks:
+    - name: Install our bashrc
+      ansible.builtin.copy:
+        src: '{{playbook_dir}}/files/bashrc'
+        dest: '~/.bashrc'
+      tags: provision, bashrc
+
+    - name: Checkout chameleon public repo
+      ansible.builtin.git:
+        repo: 'https://chromium.googlesource.com/chromiumos/platform/chameleon'
+        dest: '{{chameleon_dir}}'
+      tags: git, update

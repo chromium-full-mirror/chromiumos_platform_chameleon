@@ -8,3 +8,4 @@ In this folder you'll find a few thing necessary to build the OS image
 using Arch Linux ARM:
 
 * `linux-enclustra`: PKGBUILD to compile the kernel packages
+* `ansible`: Scripts used to generate an sd card / maintain the os

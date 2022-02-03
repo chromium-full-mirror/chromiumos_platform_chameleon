@@ -1,0 +1,7 @@
+# We need this folder to be present for ansible,
+# So we want git to track and empty folder:
+
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore

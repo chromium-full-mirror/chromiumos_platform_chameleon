@@ -1,0 +1,157 @@
+- name: Create Arch Linux ARM rootfs chroot
+  hosts: localhost
+  vars:
+    ansible_become: yes
+    rootfs: 'ArchLinuxARM-armv7-latest' # variant that alarm calls its tar gz
+    build_dir: '{{playbook_dir}}/build'
+    chroot_dir: '{{build_dir}}/chroot'
+  tags: chroot
+
+  tasks:
+    - name: Download Arch Linux ARM
+      ansible.builtin.get_url:
+        url: 'http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz'
+        checksum: 'md5:http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz.md5'
+        dest: '{{build_dir}}/{{rootfs}}.tar.gz'
+      tags: chroot_aquire
+
+    - name: Download Arch Linux ARM signature
+      ansible.builtin.get_url:
+        url: 'http://os.archlinuxarm.org/os/{{rootfs}}.tar.gz.sig'
+        dest: '{{build_dir}}/{{rootfs}}.tar.gz.sig'
+      tags: chroot_aquire
+
+    - name: Check GPG Signature of Arch Linux ARM
+      ansible.builtin.shell:
+        chdir: '{{build_dir}}'
+        cmd: |
+          gpg --import '{{playbook_dir}}/archlinuxarm.gpg' &&
+          gpg --verify '{{rootfs}}.tar.gz.sig' '{{rootfs}}.tar.gz'
+      tags: chroot_aquire
+
+    - name: Creates Arch Linux ARM directory
+      ansible.builtin.file:
+        path: '{{chroot_dir}}'
+        state: directory
+      tags: chroot_aquire
+
+    - name: Extract Arch Linux ARM
+      ansible.builtin.unarchive:
+        remote_src: yes
+        src: '{{build_dir}}/{{rootfs}}.tar.gz'
+        dest: '{{chroot_dir}}'
+        creates: '{{chroot_dir}}/var/log' # about the last thing from that archive
+      tags: chroot_aquire
+
+    - name: Bootstrap chroot (install python for ansible)
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}'
+        cmd: |
+          './chroot.sh' {{chroot_dir}} bash -c '
+            pacman-key --init;
+            pacman-key --populate archlinuxarm;
+            pacman -Sy python --noconfirm
+          '
+        creates:
+          '{{chroot_dir}}/usr/bin/python'
+      tags: chroot_aquire
+
+    - name: Add chroot host to inventory
+      ansible.builtin.add_host:
+        groups: archlinuxarm
+        name: archlinuxarm-chroot
+        ansible_connection: community.general.chroot
+        ansible_host: '{{chroot_dir}}'
+        ansible_chroot_exe: '{{playbook_dir}}/chroot.sh'
+        ansible_python_interpreter: '/usr/bin/python'
+      tags: chroot_inventory
+
+
+- name: Installation of packages and things as root
+  hosts: archlinuxarm
+  vars:
+    ansible_become: yes
+
+  tasks:
+    - name: Enable pacman.conf ParallelDownloads
+      ansible.builtin.lineinfile:
+          dest: /etc/pacman.conf
+          regexp: '^#ParallelDownloads'
+          line: 'ParallelDownloads = 5'
+
+    - name: Update packages
+      community.general.pacman:
+        update_cache: yes
+        upgrade: yes
+      tags: update
+
+    - name: Install more "base" packages
+      community.general.pacman:
+        package:
+          - sudo
+          - git
+          - base-devel
+          - vim
+          - nano
+          - networkmanager
+          - openssh
+          - btrfs-progs
+          - arch-install-scripts
+          - python-setuptools
+          - python-pip
+        state: present
+      tags: install
+
+    - name: Install aux tool packages
+      community.general.pacman:
+        package:
+          - lshw
+          - usbutils # lsusb is here
+          - htop
+          - wget
+          - man
+          - stress
+          - screen
+        state: present
+      tags: install
+
+    - name: Make wheel sudoers with NOPASSWD
+      ansible.builtin.lineinfile:
+          dest: /etc/sudoers
+          regexp: '^#.*%wheel.*NOPASSWD.*'
+          line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+          validate: /usr/sbin/visudo -cf %s
+      tags: provision
+
+    - name: Enable and start NetworkManager
+      ansible.builtin.systemd:
+        name: NetworkManager
+        enabled: yes
+      tags: provision
+
+    - name: print-ip NetworkManager hook
+      ansible.builtin.copy:
+        src: '{{playbook_dir}}/files/90.print-ip.sh'
+        dest: /etc/NetworkManager/dispatcher.d/90.print-ip.sh
+        mode: '0755'
+      tags: provision
+
+    - name: Enable and start sshd
+      ansible.builtin.systemd:
+        name: sshd
+        enabled: yes
+      tags: provision
+
+    - name: Use multiple cores when makepkg
+      # This will help a lot, especially any chroot cross compilation
+      ansible.builtin.lineinfile:
+          dest: /etc/makepkg.conf
+          regexp: '^#MAKEFLAGS'
+          line: 'MAKEFLAGS="-j$(nproc)"'
+
+    - name: Don't compress when makepkg
+      # This is otherwise slow, unless we really care about size
+      ansible.builtin.lineinfile:
+          dest: /etc/makepkg.conf
+          regexp: "^PKGEXT='.pkg.tar"
+          line: "PKGEXT='.pkg.tar'"

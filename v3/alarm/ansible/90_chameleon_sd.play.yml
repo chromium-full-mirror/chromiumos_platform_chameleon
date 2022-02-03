@@ -1,0 +1,134 @@
+- name: Install chameleon from chroot to sd card
+  hosts: localhost
+  vars:
+    ansible_become: yes
+  tags: chameleon, chameleon_sd
+
+  tasks:
+    - name: Make sure things are unmounted
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}/build'
+        cmd: |
+          # source devices
+          umount -R {{ sd_dev }}p1
+          umount -R {{ sd_dev }}p3
+
+          # taget
+          umount -R sd/
+
+          # always successful no matter what
+          exit 0
+
+    - name: dd uboot preloader onto sd card
+      ansible.builtin.shell: |
+        dd if={{ item.path }} of={{ sd_dev }}
+        partprobe /dev/mmcblk0
+      with_items: "{{ preloader_file['files'] }}"
+      tags: uboot, wipe # TODO: This needs to be changed so it doesn't overwrite existing partition table
+
+    - name: Create /boot partition
+      community.general.parted:
+        device: '{{ sd_dev }}'
+        number: 1
+        # sigh, parted won't actually mkfs, so what's the point of this fs_type argument?
+        # see tasks later on for the actual format call
+        fs_type: fat32
+        part_start: 2MB # leave some room after preloader
+        part_end: 500MB
+        state: present
+
+    - name: Create swap partition
+      community.general.parted:
+        device: '{{ sd_dev }}'
+        number: 2
+        fs_type: linux-swap
+        part_start: 500MB
+        part_end: 3000MB
+        state: present
+
+    - name: Create rootfs partition
+      community.general.parted:
+        device: '{{ sd_dev }}'
+        number: 3
+        fs_type: btrfs
+        part_start: 3000MB
+        state: present
+
+    - name: Wipe /boot partition
+      community.general.filesystem:
+        dev: '{{ sd_dev }}p1'
+        state: absent
+      tags: wipe
+
+    - name: Wipe swap partition
+      community.general.filesystem:
+        dev: '{{ sd_dev }}p2'
+        state: absent
+      tags: wipe
+
+    - name: Wipe rootfs partition
+      community.general.filesystem:
+        dev: '{{ sd_dev }}p3'
+        state: absent
+      tags: wipe
+
+    - name: Format /boot filesystem
+      community.general.filesystem:
+        dev: '{{ sd_dev }}p1'
+        fstype: vfat
+        opts: -F 32 -n "chml_boot" # label has to be under 11 characters
+        state: present
+
+    - name: Format swap filesystem
+      community.general.filesystem:
+        dev: '{{ sd_dev }}p2'
+        fstype: swap
+        opts: -L "chameleon_swap"
+        state: present
+
+    - name: Format rootfs filesystem
+      community.general.filesystem:
+        dev: '{{ sd_dev }}p3'
+        fstype: btrfs
+        opts: -L "chameleon_fs"
+        state: present
+
+    - name: Mount partitions
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}/build'
+        cmd: |
+          mkdir -p sd &&
+          mount {{ sd_dev }}p3 sd &&
+          mkdir -p sd/boot &&
+          mount {{ sd_dev }}p1 sd/boot
+
+    - name: Install /etc/fstab
+      ansible.builtin.copy:
+        remote_src: yes
+        src: '{{playbook_dir}}/files/fstab'
+        dest: '{{playbook_dir}}/build/chroot/etc/fstab'
+
+    - name: Cleanup chroot source before copying
+      # Less stuff to copy
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}/build'
+        cmd: |
+          umount -R chroot
+          rm -Rf chroot/var/cache/pacman/pkg/*
+          rm -Rf chroot/home/*/.cache/*
+        removes: chroot/var/cache/pacman/pkg/*
+      tags: cleanup
+
+    - name: Rsync rootfs from chroot to sd card
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}/build'
+        cmd: |
+          rsync --archive --hard-links --acls --xattrs --sparse -recursive chroot/* sd/
+          sync
+
+    - name: Unmount partitions
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}/build'
+        cmd: |
+          umount -R sd/boot
+          umount -R sd
