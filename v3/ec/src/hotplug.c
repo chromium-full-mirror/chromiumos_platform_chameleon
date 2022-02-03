@@ -37,5 +37,6 @@ static int cmd_get(const struct shell *shell, size_t argc, char **argv)
 
 SHELL_STATIC_SUBCMD_SET_CREATE(hpd_cmds,
 			       SHELL_CMD(get, NULL, "get HPD/presence pins",
-					 cmd_get), );
+					 cmd_get),
+			       SHELL_SUBCMD_SET_END);
 SHELL_CMD_REGISTER(hpd, &hpd_cmds, "hotplug detect (HPD) pins", NULL);
