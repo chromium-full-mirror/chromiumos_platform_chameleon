@@ -8,8 +8,8 @@ pkgbase=linux-enclustra
 _kernelname=${pkgbase#linux}
 _desc="ARMv7 Enclustra"
 pkgver=5.14
-pkgrel=3 # This needs to be incremented with every change to this file
-_commit=3f9f1c126acd823cfb138c0e9e4ce4e19fb1b019 # CHROMIUM: media: chv3-fb: set datarate and pixelmode on probe
+pkgrel=4 # This needs to be incremented with every change to this file
+_commit=aa0fb2ee016f7828e1d003361fadbc6321b38014 # CHROMIUM: media: chv3-fb: set datarate and pixelmode on probe
 arch=('armv7h')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -19,7 +19,7 @@ source=("https://chromium.googlesource.com/chromiumos/third_party/kernel/+archiv
         'config'
         '60-linux.hook')
 md5sums=('SKIP' # gerrit produces non reproducible archives
-         '9dd1ead1c415d07c2132a6262a452354'
+         '5ffc98e75a47acb84f83384dd8fd2e31'
          'ce6c81ad1ad1f8b333fd6077d47abdaf')
 
 prepare() {
