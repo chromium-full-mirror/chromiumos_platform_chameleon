@@ -8,8 +8,8 @@ pkgbase=linux-enclustra
 _kernelname=${pkgbase#linux}
 _desc="ARMv7 Enclustra"
 pkgver=5.14
-pkgrel=4 # This needs to be incremented with every change to this file
-_commit=aa0fb2ee016f7828e1d003361fadbc6321b38014 # CHROMIUM: media: chv3-fb: set datarate and pixelmode on probe
+pkgrel=7 # This needs to be incremented with every change to this file
+_commit=9abf9bcda52ebec01cd7e15447ea32288c12480c # CHROMIUM: MAINTAINERS: Add Paweł Anikiel as Chameleon v3 framebuffer driver maintainer
 arch=('armv7h')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -19,7 +19,7 @@ source=("https://chromium.googlesource.com/chromiumos/third_party/kernel/+archiv
         'config'
         '60-linux.hook')
 md5sums=('SKIP' # gerrit produces non reproducible archives
-         '5ffc98e75a47acb84f83384dd8fd2e31'
+         '428d8f60a52005b000cd85ce13cef7c4'
          'ce6c81ad1ad1f8b333fd6077d47abdaf')
 
 prepare() {
