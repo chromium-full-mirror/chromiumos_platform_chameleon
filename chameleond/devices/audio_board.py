@@ -252,9 +252,10 @@ class _JackPlugger(object):
 
   def Reset(self):
     """Unplugs the jack and checks status."""
-    # Set to true as we want to keep the audio cables constantly plugged, which
-    # helps to eliminate the usage of the audio plugger.
-    self.SetPlugStateAndCheck(True)
+    # Set to false as we want to keep the audio cables constantly unplugged.
+    # Tests require 3.5mm jack plugged ideally should be scheduled to devices
+    # with the audio_cable label.
+    self.SetPlugStateAndCheck(False)
 
   def _SetPlugState(self, plug):
     """Sets plugger state.
