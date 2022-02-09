@@ -70,9 +70,9 @@ it68051_service::set_edid_idx(const ::it68051_edid_idx_request &request,
 it68051_service::write_edid(const ::it68051_raw_edid_request &request,
 			    ::Empty &response)
 {
-	// TODO: Read the request as appropriate for your application
-	static_cast<void>(request);
-	// TODO: Fill in the response as appropriate for your application
 	static_cast<void>(response);
-	return ::pw::Status::Unimplemented();
+
+	it68051_edid_write_block(request.raw_edid);
+
+	return ::pw::OkStatus();
 }

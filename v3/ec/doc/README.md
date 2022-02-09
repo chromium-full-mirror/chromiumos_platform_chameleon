@@ -618,6 +618,36 @@ saving the state of HPD for both ports, adding a delay if either HPD was
 asserted, or restoring the state of HPD after the new EDID has been selected
 and initialized.
 
+To write a raw EDID, grab one from
+`third_party/autotest/files/server/site_tests/display_EdidStress/test_data/edids`,
+such as `weekly/4K_ASUS_PB287Q_HDMI.txt`. Copy it to the SD card in the same
+place as `connect.py`
+
+Run `sudo python3 -i connect.py`
+
+```
+>>> f = open('4K_ASUS_PB287Q_HDMI.txt', 'r')
+>>> lines = f.readlines()
+>>> f.close()
+>>> one_line = ''.join([line.rstrip('\n') for line in lines])
+>>> PB287Q = bytes.fromhex(one_line)
+```
+
+If you `print('PB287Q')`, you will see it is a byte string starting with
+`b'\x00\xff\xff\xff\xff\xff\xff\x00\x04\x69\xa3\x28`
+
+Now send the EDID to the EC
+```
+>>> it68051_service.write_edid(raw_edid=PB287Q)
+```
+
+With a Chromebook connected to HDMI2, turn on the HDMI2 port
+```
+$ videomux hdmi2 rx
+```
+
+The Chromebook shows that an ASUS PB287Q monitor is connected.
+
 # Unit Tests
 
 [Chameleon Unit Tests](./unittest.md) describes how to build and run unit
