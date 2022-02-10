@@ -39,6 +39,7 @@ include($ENV{PW_ROOT}/pw_protobuf_compiler/proto.cmake)
 pw_proto_library(
     v3.protos
     SOURCES proto/v3.proto
+    INPUTS proto/v3.options
 )
 
 FILE(GLOB app_sources src/*.c src/*.cc)
