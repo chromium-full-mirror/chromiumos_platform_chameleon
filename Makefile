@@ -103,6 +103,9 @@ HOST_NOW := `date "+%Y-%m-%d %H:%M:%S"`
 PLATFORM = $(shell awk -F= '/CHROMEOS_RELEASE_NAME/ {print $$2}' \
 	     /etc/lsb-release 2>/dev/null || cat /etc/hostname)
 
+# Valid value: true / false.
+NEEDS_SYSTEM_UPDATE ?= 'false'
+
 .PHONY: install
 install:
 	@mkdir -p $(DESTDIR)
@@ -131,7 +134,7 @@ ifeq ($(PLATFORM), Chrome OS)
 	@echo Please do \"\$ start chameleond\" or \"\$ restart chameleond\".
 else
 	@BUNDLE_VERSION=$(BUNDLE_VERSION) CHAMELEON_BOARD=$(CHAMELEON_BOARD) \
-	deploy/deploy $(PLATFORM) $(PY_VERSION)
+	deploy/deploy $(PLATFORM) $(PY_VERSION) $(NEEDS_SYSTEM_UPDATE)
 	@echo Installing chameleon package on $(PLATFORM) platform is completed.
 endif
 
@@ -196,7 +199,8 @@ ifdef CHAMELEON_HOST
 	        "HOST_NOW=\"$(HOST_NOW)\"" \
 	        "BUNDLE_VERSION=$(BUNDLE_VERSION) " \
 	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
-	        "PY_VERSION=$(PY_VERSION)"
+	        "PY_VERSION=$(PY_VERSION)"\
+	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"
 else
 	$(error CHAMELEON_HOST is undefined)
 endif

@@ -28,6 +28,7 @@ TEST_DATA_DIR='/usr/share/autotest'
 
 PLATFORM="$1"
 PY_VERSION="$2"
+NEEDS_SYSTEM_UPDATE="$3"
 
 if [ "${PLATFORM}" = "raspberrypi" ] || [ "${PLATFORM}" = "x86-generic" ]; then
     IS_BLUETOOTH_PEER=1
@@ -322,7 +323,9 @@ update-rc.d "${UPDATER_NAME}" defaults 90 10
 
 # Some custom actions if chameleon is for Bluetooth peer.
 if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
-    update_system
+
+    [ "${NEEDS_SYSTEM_UPDATE}" = "true" ] && update_system
+
     # TODO(b/183116128): Remove the following package installation after
     # apt-clone proved to be stable.
     # Install required packages
