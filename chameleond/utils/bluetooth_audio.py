@@ -593,7 +593,10 @@ class BluetoothAudio(BluezPeripheral):
           'Trying to start audio recording process when it is still running.')
       return False
 
-    device_number = self.GetBluezSourceDevice(audio_profile)
+    device_number = self._PollForCondition(
+        lambda: self.GetBluezSourceDevice(audio_profile),
+        desc='GetBluezSourceDevice')
+
     if device_number is None:
       logging.error('Failed to get the device number of bluez_source')
       return False
