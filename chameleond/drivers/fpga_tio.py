@@ -153,6 +153,8 @@ class ChameleondDriver(ChameleondInterface):
         ids.BLE_KEYBOARD)
     self.ble_phone = self._device_manager.GetChameleonDevice(
         ids.BLE_PHONE)
+    self.ble_fast_pair = self._device_manager.GetChameleonDevice(
+        ids.BLE_FAST_PAIR)
     self._flow_manager = flow_manager.FlowManager(self._flows)
 
     self.Reset()
@@ -164,7 +166,7 @@ class ChameleondDriver(ChameleondInterface):
       func = self
       for attr in attrs:
         if attr.startswith('_') or not hasattr(func, attr):
-            raise Exception('method "%s" is not supported' % method)
+          raise Exception('method "%s" is not supported' % method)
         func = getattr(func, attr)
       return func(*params)
     except:
@@ -236,6 +238,7 @@ class ChameleondDriver(ChameleondInterface):
         ids.BLUETOOTH_TESTER: bluetooth_tester.BluetoothTester(),
         ids.BLE_PHONE: raspi_bluetooth_flow.RaspiBLEPhone(),
         ids.BLUETOOTH_AUDIO: raspi_bluetooth_flow.RaspiBluetoothAudioFlow(),
+        ids.BLE_FAST_PAIR: raspi_bluetooth_flow.RaspiBLEFastPair(),
     }
     return devices
 
@@ -267,7 +270,7 @@ class ChameleondDriver(ChameleondInterface):
     """Return the last commit hash in chameleon_commits."""
     try:
       output = system_tools.SystemTools.Output('grep', 'BUNDLE_COMMIT_HASH',
-          '/etc/default/chameleond')
+                                               '/etc/default/chameleond')
       logging.debug('output is %s', output)
       commit = output.split('=')[1].strip().replace('"', '')
       logging.debug('got commit %s', commit)

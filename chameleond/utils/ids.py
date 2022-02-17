@@ -37,6 +37,7 @@ BLUETOOTH_BASE = 29
 BLUETOOTH_TESTER = 30
 BLE_PHONE = 31
 BLUETOOTH_AUDIO = 32
+BLE_FAST_PAIR = 33
 
 # device names
 DEVICE_NAMES = {
@@ -75,6 +76,8 @@ DEVICE_NAMES = {
     # A phone device that supports Bluetooth
     BLE_PHONE: 'ble_phone',
     BLUETOOTH_AUDIO: 'bluetooth_audio',
+    # A Bluetooth peripheral which implements the Fast Pair protocol
+    BLE_FAST_PAIR: 'ble_fast_pair',
 }
 
 

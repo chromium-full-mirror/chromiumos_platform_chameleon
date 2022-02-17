@@ -32,6 +32,7 @@ PERIPHERAL_DEVICE_CLASS = {
     # Major Device Class: Audio / Video
     # Minor Device Class: Headphones
     PeripheralKit.BLUETOOTH_AUDIO:    0x202418,
+    PeripheralKit.FAST_PAIR: 0x002540,
 }
 
 PERIPHERAL_DEVICE_NAME = {
@@ -39,6 +40,7 @@ PERIPHERAL_DEVICE_NAME = {
     PeripheralKit.MOUSE:    'MOUSE_REF',
     PeripheralKit.PHONE:    'PHONE_REF',
     PeripheralKit.BLUETOOTH_AUDIO:    'RASPI_AUDIO',
+    PeripheralKit.FAST_PAIR: 'FAST_PAIR_REF',
 }
 
 # https://www.bluetooth.com/wp-content/uploads/Sitecore-Media-Library/Gatt/Xml/Characteristics/org.bluetooth.characteristic.gap.appearance.xml
@@ -47,6 +49,7 @@ PERIPHERAL_DEVICE_APPEARANCE = {
     PeripheralKit.MOUSE:    [0xc2, 0x03],
     PeripheralKit.PHONE:    [0x40, 0x00],
     PeripheralKit.BLUETOOTH_AUDIO:    [0x80, 0x02],   # Generic Media Player
+    PeripheralKit.FAST_PAIR: [0x00, 0x00], # Unknown
 }
 
 SERVICE_PROFILE_SDP_PATH = {
@@ -76,6 +79,7 @@ PERIPHERAL_BTD_FLAGS = {
     PeripheralKit.MOUSE: NON_AUDIO_BTD_FLAGS,
     PeripheralKit.PHONE: NON_AUDIO_BTD_FLAGS,
     PeripheralKit.BLUETOOTH_AUDIO: AUDIO_BTD_FLAGS,
+    PeripheralKit.FAST_PAIR: NON_AUDIO_BTD_FLAGS,
 }
 
 HID_SERVICE_UUID = '00001124-0000-1000-8000-00805f9b34fb'
