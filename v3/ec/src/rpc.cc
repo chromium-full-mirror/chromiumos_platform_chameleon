@@ -29,7 +29,7 @@ LOG_MODULE_REGISTER(rpc);
 /**
  * Define the size of the stack for the RPC task.
  */
-#define RPC_STACK_SIZE 1000
+#define RPC_STACK_SIZE 4096
 
 /**
  * Zephyr macro to allocate the stack area.
