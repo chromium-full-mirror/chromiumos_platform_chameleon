@@ -32,6 +32,9 @@ service it68051_service {
     // Select an input port on the IT68051
     rpc select_port (it68051_port_num_request) returns (Empty);
 
+    // Determine which input port on the IT68051 is selected
+    rpc get_selected_port (Empty) returns (it68051_port_num_response);
+
     // Control the HPD output from the IT68051
     rpc set_hpd (it68051_hpd_request) returns (Empty);
 
@@ -120,6 +123,10 @@ enum it68051_port_num {
 }
 
 message it68051_port_num_request {
+    it68051_port_num port = 1;
+}
+
+message it68051_port_num_response {
     it68051_port_num port = 1;
 }
 

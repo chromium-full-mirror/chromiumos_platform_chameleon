@@ -18,6 +18,8 @@ class it68051_service : public pw_rpc::nanopb::it68051_service::Service<it68051_
  public:
   ::pw::Status select_port( const ::it68051_port_num_request& request, ::Empty& response);
 
+  ::pw::Status get_selected_port( const ::Empty& request, ::it68051_port_num_response& response);
+
   ::pw::Status set_hpd( const ::it68051_hpd_request& request, ::Empty& response);
 
   ::pw::Status get_hpd( const ::it68051_port_num_request& request, ::it68051_hpd_response& response);

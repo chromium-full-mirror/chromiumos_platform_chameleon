@@ -34,6 +34,24 @@ it68051_service::select_port(const ::it68051_port_num_request &request,
 	return ::pw::OkStatus();
 }
 
+::pw::Status
+it68051_service::get_selected_port(const ::Empty &request,
+				   ::it68051_port_num_response &response)
+{
+	static_cast<void>(request);
+
+	enum it68051_port port = it68051_get_selected_port();
+	if (port == PORT2) {
+		response.port = it68051_port_num_PORT2;
+	} else if (port == PORT1) {
+		response.port = it68051_port_num_PORT1;
+	} else {
+		return ::pw::Status::InvalidArgument();
+	}
+
+	return ::pw::OkStatus();
+}
+
 ::pw::Status it68051_service::set_hpd(const ::it68051_hpd_request &request,
 				      ::Empty &response)
 {
