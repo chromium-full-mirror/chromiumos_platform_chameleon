@@ -20,7 +20,7 @@ class board_service : public pw_rpc::nanopb::board_service::Service<board_servic
 
   ::pw::Status get_sysmon( const ::Empty& request, ::sysmon_response& response);
 
-  ::pw::Status get_hpd( const ::Empty& request, ::hpd_response& response);
+  ::pw::Status get_source_presence( const ::Empty& request, ::source_presence_response& response);
 };
 
 #endif

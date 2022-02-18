@@ -11,6 +11,7 @@
 #include "board_service.h"
 #include "io.h"
 #include "misc_io.h"
+#include "source_presence.h"
 #include "sysmon.h"
 
 // Method definitions for board_service.
@@ -48,15 +49,14 @@ board_service::get_board_version(const ::Empty &request,
 	return ::pw::OkStatus();
 }
 
-::pw::Status board_service::get_hpd(const ::Empty &request,
-				    ::hpd_response &response)
+::pw::Status
+board_service::get_source_presence(const ::Empty &request,
+				   ::source_presence_response &response)
 {
 	static_cast<void>(request);
-	response.hdmi2_pp3300 = gpio_get_level(hdmi2_pp3300);
-	response.hdmi1_pp3300 = gpio_get_level(hdmi1_pp3300);
-	response.dp2_auxn_det = gpio_get_level(dp2_auxn_det);
-	response.dp2_auxp_det = gpio_get_level(dp2_auxp_det);
-	response.dp1_auxn_det = gpio_get_level(dp1_auxn_det);
-	response.dp1_auxp_det = gpio_get_level(dp1_auxp_det);
+	response.hdmi2 = gpio_get_level(hdmi2_pp3300);
+	response.hdmi1 = gpio_get_level(hdmi1_pp3300);
+	response.dp2 = get_dp2_present() ? 1 : 0;
+	response.dp1 = get_dp1_present() ? 1 : 0;
 	return ::pw::OkStatus();
 }

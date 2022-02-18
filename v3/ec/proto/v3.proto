@@ -9,10 +9,9 @@ service board_service {
     // Get the readings for the voltage and current monitors
     rpc get_sysmon (Empty) returns (sysmon_response);
 
-    // Get the values for the state of the DisplayPort AUX pins and
-    // the HDMI power pins, indicating whether cables are connected
-    // or not.
-    rpc get_hpd (Empty) returns (hpd_response);
+    // Determine whether a source is connected or not (based on the
+    // state of the DisplayPort AUX pins and the HDMI power pins)
+    rpc get_source_presence (Empty) returns (source_presence_response);
 }
 
 service videomux_service {
@@ -47,13 +46,11 @@ message board_service_version_response {
     fixed32 version = 1;
 }
 
-message hpd_response {
-    fixed32 hdmi2_pp3300 = 1;
-    fixed32 hdmi1_pp3300 = 2;
-    fixed32 dp2_auxn_det = 3;
-    fixed32 dp2_auxp_det = 4;
-    fixed32 dp1_auxn_det = 5;
-    fixed32 dp1_auxp_det = 6;
+message source_presence_response {
+    fixed32 hdmi2 = 1;
+    fixed32 hdmi1 = 2;
+    fixed32 dp2 = 3;
+    fixed32 dp1 = 4;
 }
 
 message sysmon_response {
