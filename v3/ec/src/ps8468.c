@@ -128,7 +128,14 @@ static void dp1_hpd_cb(const struct device *dev, struct gpio_callback *cb,
 {
         uint8_t port = 1;
 
-        k_msgq_put(&ps8468_msgq, &port, K_NO_WAIT);
+        /*
+         * Despite configuring the interrupt for rising edge, we seem to
+         * get interrupts on both edges. Make sure we only post on a
+         * rising edge.
+         */
+        if (gpio_get_level(dp1_mcu_hpd) != 0) {
+                k_msgq_put(&ps8468_msgq, &port, K_NO_WAIT);
+        }
 }
 
 static struct gpio_callback dp2_hpd_cb_data;
@@ -138,7 +145,10 @@ static void dp2_hpd_cb(const struct device *dev, struct gpio_callback *cb,
 {
         uint8_t port = 2;
 
-        k_msgq_put(&ps8468_msgq, &port, K_NO_WAIT);
+        /* Only post on a rising edge. */
+        if (gpio_get_level(dp2_mcu_hpd) != 0) {
+                k_msgq_put(&ps8468_msgq, &port, K_NO_WAIT);
+        }
 }
 
 /**
