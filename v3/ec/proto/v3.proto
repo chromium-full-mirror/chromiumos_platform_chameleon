@@ -35,6 +35,9 @@ service it68051_service {
     // Control the HPD output from the IT68051
     rpc set_hpd (it68051_hpd_request) returns (Empty);
 
+    // Query the HPD output from the IT68051
+    rpc get_hpd (it68051_port_num_request) returns (it68051_hpd_response);
+
     // Select one of the pre-defined EDIDs
     rpc set_edid_idx (it68051_edid_idx_request) returns (Empty);
 
@@ -124,6 +127,11 @@ message it68051_hpd_request {
     it68051_port_num port = 1;
     // Set to zero to de-assert HPD, non-zero to assert
     fixed32 on_off = 2;
+}
+
+message it68051_hpd_response {
+    // Zero if HPD is not asserted, non-zero if it is
+    fixed32 on_off = 1;
 }
 
 message it68051_edid_idx_request {

@@ -54,6 +54,24 @@ it68051_service::select_port(const ::it68051_port_num_request &request,
 	return ::pw::OkStatus();
 }
 
+::pw::Status it68051_service::get_hpd(const ::it68051_port_num_request &request,
+				      ::it68051_hpd_response &response)
+{
+	/* Translate from protobuf's enum to IT68051 C API enum */
+	enum it68051_port port;
+	if (request.port == it68051_port_num_PORT2) {
+		port = PORT2;
+	} else if (request.port == it68051_port_num_PORT1) {
+		port = PORT1;
+	} else {
+		return ::pw::Status::InvalidArgument();
+	}
+
+	response.on_off = it68051_get_hpd(port) ? 1 : 0;
+
+	return ::pw::OkStatus();
+}
+
 ::pw::Status
 it68051_service::set_edid_idx(const ::it68051_edid_idx_request &request,
 			      ::Empty &response)
