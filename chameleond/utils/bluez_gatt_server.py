@@ -54,6 +54,8 @@ class GATTServer(object):
       self.peripheral_type = PeripheralKit.KEYBOARD
     elif 'PHONE' in self.device_type:
       self.peripheral_type = PeripheralKit.PHONE
+    elif 'FAST_PAIR' in self.device_type:
+      self.peripheral_type = PeripheralKit.FAST_PAIR
 
     # Choose application using args
     if 'MOUSE' in self.device_type or 'KEYBOARD' in self.device_type:
@@ -130,6 +132,7 @@ class GATTServer(object):
     FLAGS_ID = 0x01
     APPEARANCE_ID = 0x19
     ADV_SERVICE_ID = 0x03
+    ADV_SERVICE_DATA_ID = 0x16
 
     # Assign local name based on peripheral type
     local_name = PERIPHERAL_DEVICE_NAME[self.peripheral_type]
@@ -141,9 +144,6 @@ class GATTServer(object):
     # Appearance - based on peripheral
     appearance_data = PERIPHERAL_DEVICE_APPEARANCE[self.peripheral_type]
 
-    # Service UUIDs - advertise HID service
-    service_uuid_data = [0x12, 0x18]
-
     # Data structure is as follows
     # total len | attr 1 len, attr 1 id, attr 1 data | attr2 ...
 
@@ -152,7 +152,15 @@ class GATTServer(object):
     data.extend(self._FormatDataField(FULL_LOCAL_NAME_ID, local_name_data))
     data.extend(self._FormatDataField(FLAGS_ID, flag_data))
     data.extend(self._FormatDataField(APPEARANCE_ID, appearance_data))
-    data.extend(self._FormatDataField(ADV_SERVICE_ID, service_uuid_data))
+
+    if 'FAST_PAIR' in self.device_type:
+      # Advertise Fast Pair service with our test model ID.
+      data.extend(self._FormatDataField(ADV_SERVICE_DATA_ID,
+                                        [0x2c, 0xfe, 0x38, 0x35, 0x67]))
+    else:
+      # Advertise HID service
+      data.extend(self._FormatDataField(ADV_SERVICE_ID, [0x12, 0x18]))
+
 
     # Pad the packet with zeros to make bluez happy
     data.extend([0] * (31 - len(data)))
