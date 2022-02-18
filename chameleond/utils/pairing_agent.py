@@ -41,7 +41,7 @@ class Agent(dbus.service.Object):
 
   def __init__(self, *args, **kwargs):
     super(Agent, self).__init__(*args, **kwargs)
-    self._passkey = None
+    self.passkey = None
     self._pin = None
 
 
@@ -50,7 +50,11 @@ class Agent(dbus.service.Object):
 
 
   def SetPasskey(self, passkey):
-    self._passkey = dbus.UInt32(passkey)
+    self.passkey = dbus.UInt32(passkey)
+
+
+  def DoesPasskeyMatch(self, other_passkey):
+    return self.passkey is not None and self.passkey == other_passkey
 
 
   def SetTrusted(self, path):
@@ -84,7 +88,7 @@ class Agent(dbus.service.Object):
   def RequestPasskey(self, device):
     logging.info('RequestPasskey (%s)', device)
     self.SetTrusted(device)
-    return self._passkey or self.PASSKEY
+    return self.passkey or self.PASSKEY
 
 
   @dbus.service.method(AGENT_INTERFACE, in_signature='ouq', out_signature='')
@@ -102,6 +106,7 @@ class Agent(dbus.service.Object):
   def RequestConfirmation(self, device, passkey):
     logging.info('RequestConfirmation (%s, %06d)', device, passkey)
     self.SetTrusted(device)
+    self.SetPasskey(passkey)
 
 
   @dbus.service.method(AGENT_INTERFACE, in_signature='o', out_signature='')
