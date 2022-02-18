@@ -95,10 +95,10 @@ class BluezPeripheral(PeripheralKit):
     self._setup_dbus_loop()
 
     self.remote_address = None
+    self.device_type = None
     self._address = None
     self._bluez_service = None
     self._service = None
-    self._device_type = None
     self._gatt_server = None
 
     # Bluez DBus constants - npnext
@@ -381,15 +381,15 @@ class BluezPeripheral(PeripheralKit):
     """
 
     # Do nothing if we were already bound to this device
-    if self._device_type == device_type:
+    if self.device_type == device_type:
       return True
 
-    if self._device_type is not None:
-      error = 'Peripheral already bound to device: {}'.format(self._device_type)
+    if self.device_type is not None:
+      error = 'Peripheral already bound to device: {}'.format(self.device_type)
       logging.error(error)
       raise BluezPeripheralException(error)
 
-    self._device_type = device_type
+    self.device_type = device_type
 
     if 'BLE' in device_type:
       logging.info('Binding to BLE device!')
@@ -399,7 +399,7 @@ class BluezPeripheral(PeripheralKit):
       self.EnableBLE(True)
 
       # Establish and run gatt server
-      self._gatt_server = GATTServer(device_type)
+      self._gatt_server = GATTServer(self)
 
     else:
       logging.info('Binding to Classic device!')
@@ -409,14 +409,14 @@ class BluezPeripheral(PeripheralKit):
       self.EnableBLE(False)
 
       # Set device type and initiate service based on it
-      self._bluez_service = BluezService(self._device_type,
+      self._bluez_service = BluezService(self.device_type,
                                          self.GetLocalBluetoothAddress())
 
       self.Init()
 
 
     self.SetAdvertisedName(PERIPHERAL_DEVICE_NAME[self.GetBaseDeviceType(\
-                                                  self._device_type)])
+                                                  self.device_type)])
 
     logging.info('Bluetooth peripheral now bound to %s', device_type)
 
@@ -516,8 +516,8 @@ class BluezPeripheral(PeripheralKit):
     self.SetDiscoverable(True)
 
     # Set class based on device we're emulating
-    if self._device_type and 'BLE' not in self._device_type:
-      self.SetClassOfService(PERIPHERAL_DEVICE_CLASS[self._device_type])
+    if self.device_type and 'BLE' not in self.device_type:
+      self.SetClassOfService(PERIPHERAL_DEVICE_CLASS[self.device_type])
 
     return True
 
@@ -742,7 +742,7 @@ class BluezPeripheral(PeripheralKit):
     logging.info('Attempting to connect to %s', self.remote_address)
     device = self.GetDeviceWithAddress(self.remote_address)
 
-    if 'BLE' in self._device_type:
+    if 'BLE' in self.device_type:
       # Call connect directly through bluez device object
 
       if not device:

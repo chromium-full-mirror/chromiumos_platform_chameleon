@@ -35,7 +35,7 @@ mainloop = None
 class GATTServer(object):
   """Bluez gatt server implementation"""
 
-  def __init__(self, device_type='generic'):
+  def __init__(self, device=None):
     bus = dbus.SystemBus()
 
     adapter = self._FindAdapter(bus)
@@ -46,7 +46,7 @@ class GATTServer(object):
     service_manager = dbus.Interface(
         bus.get_object(BLUEZ_SERVICE_NAME, adapter), GATT_MANAGER_IFACE)
 
-    self.device_type = device_type
+    self.device_type = 'generic' if not device else device.device_type
     self.peripheral_type = None
     if 'MOUSE' in self.device_type:
       self.peripheral_type = PeripheralKit.MOUSE
