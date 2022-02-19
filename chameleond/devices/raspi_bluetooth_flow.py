@@ -446,3 +446,13 @@ class RaspiBLEFastPair(RaspiFlow, BluezPeripheral):
 
     return PERIPHERAL_DEVICE_CLASS[PeripheralKit.FAST_PAIR] \
            & CLASS_OF_SERVICE_MASK
+
+
+  def SetAntispoofingKeyPem(self, key_pem):
+    """Set the anti-spoofing key for the Fast Pair serivce"""
+
+    if self._gatt_server is None or self._gatt_server.app is None:
+      logging.warn("Failed to set anti-spoofing key. Service doesn't exist.")
+      return
+
+    self._gatt_server.app.SetAntiSpoofingKeyPem(key_pem)
