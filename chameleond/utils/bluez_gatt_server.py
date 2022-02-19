@@ -22,6 +22,7 @@ except ImportError:
 
 from .bluez_le_hid_service import HIDApplication
 from .bluez_le_better_together_service import PhoneLEBetterTogetherApplication
+from .bluez_le_fast_pair_service import FastPairLEApplication
 from .bluetooth_peripheral_kit import PeripheralKit
 from .example_gatt_server import Application, BLUEZ_SERVICE_NAME, \
     DBUS_OM_IFACE, GATT_MANAGER_IFACE
@@ -64,6 +65,9 @@ class GATTServer(object):
     elif 'PHONE' in self.device_type:
       self.app = PhoneLEBetterTogetherApplication(bus, self.device_type)
       logging.info('%s LE application starting...', self.device_type)
+    elif 'FAST_PAIR' in self.device_type:
+      self.app = FastPairLEApplication(bus, device)
+      logging.info('Fast Pair application starting...')
 
     else:
       # Default to generic application provided in example
