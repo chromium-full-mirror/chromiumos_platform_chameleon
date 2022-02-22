@@ -59,6 +59,8 @@ def main():
                       help='host address of Chameleond')
   parser.add_argument('--port', type=int, dest='port', default=9992,
                       help='port number of Chameleond')
+  parser.add_argument('--port_id', type=int, dest='port_id', default=None,
+                      help='video port number on the chameleon to use as a source')
   parser.add_argument('--replug', dest='replug', action='store_true',
                       help='unplug and plug before capturing screen')
   parser.add_argument('--edid_file', type=str, dest='edid_file', default=None,
@@ -83,9 +85,13 @@ def main():
 
   chameleon = six.moves.xmlrpc_client.ServerProxy(
       'http://%s:%d' % (options.host, options.port))
-  inputs = chameleon.ProbeInputs()
-  main_input = inputs[0]
-  print('Use the main port:', chameleon.GetConnectorType(main_input))
+
+  main_input = options.port_id
+  if main_input is None:
+    inputs = chameleon.ProbeInputs()
+    # get the first one that's probing
+    main_input = inputs[0]
+  print('Use port %d:' % options.port_id, chameleon.GetConnectorType(main_input))
 
   was_plugged = chameleon.IsPlugged(main_input)
 
@@ -103,9 +109,11 @@ def main():
     time.sleep(1)
 
   if not chameleon.IsPlugged(main_input):
-    print('Plugging...')
+    print('Plugging... ', end="", flush=True)
     chameleon.Plug(main_input)
+    print('Wait for input stable... ', end="", flush=True)
     chameleon.WaitVideoInputStable(main_input, 30)
+    print('stable!')
 
   try:
     width, height = chameleon.DetectResolution(main_input)
