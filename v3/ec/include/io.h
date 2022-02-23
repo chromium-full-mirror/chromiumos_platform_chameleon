@@ -88,6 +88,16 @@ enum gpio_signal {
 	dp2_out_sw,
 	dp2_out_pd_l,
 	dp2_out_mode,
+	pcie_perst_l,
+	pcie_wake_l,
+	pcie_rsvd1,
+	pcie_rsvd2,
+	pcie_rsvd3,
+	pcie_rsvd4,
+	som_a34,
+	som_a21,
+	som_a98,
+	som_a104,
 };
 
 /**

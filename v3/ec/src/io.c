@@ -104,6 +104,16 @@ static struct gpio_info gpios[] = {
 	GPIO(dp_cfg, dp2_out_sw),
 	GPIO(dp_cfg, dp2_out_pd_l),
 	GPIO(dp_cfg, dp2_out_mode),
+	GPIO(pcie, pcie_perst_l),
+	GPIO(pcie, pcie_wake_l),
+	GPIO(pcie, pcie_rsvd1),
+	GPIO(pcie, pcie_rsvd2),
+	GPIO(pcie, pcie_rsvd3),
+	GPIO(pcie, pcie_rsvd4),
+	GPIO(pcie, som_a34),
+	GPIO(pcie, som_a21),
+	GPIO(pcie, som_a98),
+	GPIO(pcie, som_a104),
 };
 
 /*

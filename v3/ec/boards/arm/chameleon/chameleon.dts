@@ -456,6 +456,60 @@
 			label = "DP2_OUT_MODE";
 		};
 	};
+
+	pcie {
+		compatible = "gpio-keys";
+
+		pcie_perst_l {
+			gpios = <&gpiog 14 GPIO_INPUT_PULL_UP>;
+			label = "PCIE_PERST_L";
+		};
+
+		pcie_wake_l {
+			gpios = <&gpiog 15 GPIO_OUTPUT_HIGH>;
+			label = "PCIE_WAKE_L";
+		};
+
+		pcie_rsvd1 {
+			gpios = <&gpioc 9 GPIO_OUTPUT_HIGH>;
+			label = "PCIE_RSVD1";
+		};
+
+		pcie_rsvd2 {
+			gpios = <&gpiod 3 GPIO_OUTPUT_HIGH>;
+			label = "PCIE_RSVD2";
+		};
+
+		pcie_rsvd3 {
+			gpios = <&gpiod 4 GPIO_OUTPUT_HIGH>;
+			label = "PCIE_RSVD3";
+		};
+
+		pcie_rsvd4 {
+			gpios = <&gpiod 5 GPIO_OUTPUT_HIGH>;
+			label = "PCIE_RSVD4";
+		};
+
+		som_a34 {
+			gpios = <&gpiof 12 GPIO_INPUT>;
+			label = "SOM_A34";
+		};
+
+		som_a21 {
+			gpios = <&gpiof 13 GPIO_OUTPUT_LOW>;
+			label = "SOM_A21";
+		};
+
+		som_a98 {
+			gpios = <&gpiof 14 GPIO_INPUT>;
+			label = "SOM_A98";
+		};
+
+		som_a104 {
+			gpios = <&gpiof 15 GPIO_OUTPUT_LOW>;
+			label = "SOM_A104";
+		};
+	};
 };
 
 &clk_hse {
