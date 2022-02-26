@@ -60,6 +60,8 @@ class ChameleondDriver(ChameleondInterface):
   _DEFAULT_FRAME_INDEX = 0
   _DEFAULT_FRAME_LIMIT = 1
 
+  edid_database: dict # {edid_id: edid_bytes}
+
   NETWORK_INTERFACE = "eth0"
 
   EC_SERIAL_PORT = "/dev/ttyS0"
@@ -84,6 +86,8 @@ class ChameleondDriver(ChameleondInterface):
       dest_enum = EC_PROTO.videomux_set_request.videomux_dest
       self.videomux_direction = dest_enum.RX if self.is_ite else dest_enum.FPGA
 
+      self.edid = None
+
   chameleon_parallel_framebuffer = V4L("/dev/video0")
   PORTS = [
     #Port("DP1",        video_dev=V4L("/dev/video1")),
@@ -103,6 +107,7 @@ class ChameleondDriver(ChameleondInterface):
     super().__init__(*args, **kwargs)
 
     self.frame_buffer = []
+    self.edid_database = {}
 
     self.ec_serial = serial.Serial(self.EC_SERIAL_PORT, 115200, timeout=0.01)
     self.ec_client = pw_hdlc.rpc.HdlcRpcClient(
@@ -201,6 +206,97 @@ class ChameleondDriver(ChameleondInterface):
     """
     return self.PORTS[port_id].has_video
 
+  def CreateEdid(self, edid):
+    """Creates an internal record of EDID using the given byte array.
+
+    Args:
+      edid: A byte array of EDID data, wrapped in a xmlrpclib.Binary object.
+
+    Returns:
+      An edid_id.
+    """
+
+    # Find a spot
+    edid_id = 0
+    while edid_id in self.edid_database:
+      edid_id += 1
+
+    self.edid_database[edid_id] = edid.data
+
+    logging.info(f"CreateEdid [{edid_id=}]={edid.data[:16]!r}...")
+
+    return edid_id
+
+  def DestroyEdid(self, edid_id):
+    """Destroys the internal record of EDID. The internal data will be freed.
+
+    Args:
+      edid_id: The ID of the EDID, which was created by CreateEdid().
+    """
+    del self.edid_database[edid_id]
+    logging.info(f"DestroyEdid {edid_id=}")
+
+  def ReadEdid(self, port_id):
+    """Reads the EDID content of the selected video input on Chameleon.
+
+    Args:
+      port_id: The ID of the video input port.
+
+    Returns:
+      A byte array of EDID data, wrapped in a xmlrpclib.Binary object,
+      or None if the EDID is disabled.
+    """
+    # We're going to return what chameleond set this last,
+    # Don't bother reading it from real hardware since we're in the habit of
+    # overwriting (via _send_cached_edid_to_hardware) whatever it is there
+    # every time we .Plug()
+    port = self.PORTS[port_id]
+    logging.info(f"ReadEdid {port} {port.edid[:16]!r}...")
+    return port.edid
+
+  def ApplyEdid(self, port_id, edid_id):
+    """Applies the EDID to the selected video input.
+
+    Note that this method doesn't pulse the HPD line. Should call Plug(),
+    Unplug(), or FireHpdPulse() later.
+
+    Args:
+      port_id: The ID of the video input port.
+      edid_id: The ID of the EDID.
+    """
+    port = self.PORTS[port_id]
+    logging.info(f"ApplyEdid {port} {edid_id=} {self.edid_database.keys()=}")
+    assert port.has_video
+
+    edid_bytes = self.edid_database[edid_id]
+
+    # We need to potentially pad it so it's 256 bytes (b/219231626)
+    edid_bytes = edid_bytes.ljust(256, b'\0')
+
+    port.edid = edid_bytes
+    if self.IsPlugged(port_id):
+      self._send_cached_edid_to_hardware(port)
+
+  def _send_cached_edid_to_hardware(self, port, maybe=False):
+    """Actually send EDID cached by python to the hardware.
+
+    Code from ApplyEdid can't always override the edid in the hardware due to
+    the ways muxes are configured. Eg: setting ITE_HDMI1 edid could override
+    ITE_DP2 if done the naive way.
+
+    So we defer the sending till the Plug event so we're muxed correctly first.
+
+    Args:
+      port: Port() instance
+    """
+    if port.edid is None:
+      logging.warning(f"We're not sure what EDID to use for {port}, leaving what the hardware has (either default or previous).")
+      return
+    if port.is_ite:
+      self.it68051_service.write_edid(raw_edid=port.edid)
+    else:
+      raise NotImplementedError("Need to tell the FPGA Logic")
+
   def IsPlugged(self, port_id):
     """Returns true if the port is emulated as plugged.
 
@@ -255,6 +351,7 @@ class ChameleondDriver(ChameleondInterface):
         self.it68051_service.set_hpd(port=port.ite_port, on_off=1)
       else:
         raise NotImplementedError("Need to tell the FPGA Logic")
+      self._send_cached_edid_to_hardware(port)
 
     # If we switch v4l frameworks, perhaps re-open the device here
 
@@ -268,6 +365,7 @@ class ChameleondDriver(ChameleondInterface):
     logging.info(f"Unplug {port}")
     if port.has_video:
       # TODO: disconnect edid
+      port.edid = None
       # TODO: disconnect ddc
       # TODO: Perhaps just videomux away? if we can figure out a way
       #    self.videomux_service.all_off()
