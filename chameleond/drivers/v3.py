@@ -309,7 +309,10 @@ class ChameleondDriver(ChameleondInterface):
 
     # wait for v4l to show signs of life
     # just this alone seems to work great
-    port.video_dev.get_frame(timeout=timeout)
+    buf = None
+    while not buf:
+      buf = port.video_dev.get_frame(timeout=timeout)
+      # TODO: lower timeout by elapsed time
 
     return True
 
@@ -433,6 +436,7 @@ class ChameleondDriver(ChameleondInterface):
       frame = dev.get_frame()
       self.frame_buffer.append(frame)
       logging.debug (f"frame[{i}] len={len(frame)} {frame[:20].hex()}...")
+      assert frame, "We should have gotten something from V4L"
 
   def ReadCapturedFrame(self, frame_index):
     """Reads the content of the captured frame from the buffer.
