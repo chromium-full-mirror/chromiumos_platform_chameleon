@@ -10,7 +10,7 @@
         path: '{{playbook_dir}}/intermediate/'
         patterns: '*.rbf'
       register: fpga_rbf_files
-      tags: fpga
+      tags: fpga, update
 
     - name: Find preloader-mkpimage.bin
       ansible.builtin.find:
