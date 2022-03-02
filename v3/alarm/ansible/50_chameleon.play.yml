@@ -92,6 +92,25 @@
         name: pigweed
       tags: python, pip
 
+    - name: Copy chameleond.service
+      ansible.builtin.copy:
+        src: '{{playbook_dir}}/files/chameleond.service'
+        dest: /etc/systemd/system
+      tags: chameleond_service, provision
+
+    - name: Set username in chameleond.service
+      ansible.builtin.replace:
+        path: /etc/systemd/system/chameleond.service
+        regexp: 'USERNAME_HERE'
+        replace: '{{username}}'
+      tags: chameleond_service, provision
+
+    - name: Enable chameleond service
+      ansible.builtin.systemd:
+        name: chameleond
+        enabled: yes
+      tags: chameleond_service, provision
+
 - name: Chameleon user things
   hosts: archlinuxarm
   vars:
