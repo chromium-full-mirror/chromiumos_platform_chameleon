@@ -8,6 +8,8 @@ archlinuxarm: # hosts targeted by alarm-ansible
 
     host_username: your_host_username
     ssh_key:     '/home/{{host_username}}/.ssh/id_rsa'
+    # or perhaps use the chromeos test keys instead:
+    #ssh_key:     '/home/{{host_username}}/cros/src/third_party/chromiumos-overlay/chromeos-base/chromeos-ssh-testkeys/files/testing_rsa'
     ssh_key_pub: '{{ssh_key}}.pub'
     ansible_ssh_private_key_file: '{{ssh_key}}'
 
