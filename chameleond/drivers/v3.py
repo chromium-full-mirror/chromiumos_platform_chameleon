@@ -120,6 +120,10 @@ class ChameleondDriver(ChameleondInterface):
     self.videomux_service = self.ec_client.rpcs()["videomux_service"]
     self.it68051_service = self.ec_client.rpcs()["it68051_service"]
 
+  def Reset(self):
+    """Resets Chameleon board."""
+    pass
+
   def GetMacAddress(self):
     """Gets the MAC address of this Chameleon.
 
@@ -251,8 +255,8 @@ class ChameleondDriver(ChameleondInterface):
     # overwriting (via _send_cached_edid_to_hardware) whatever it is there
     # every time we .Plug()
     port = self.PORTS[port_id]
-    logging.info(f"ReadEdid {port} {port.edid[:16]!r}...")
-    return port.edid
+    logging.info(f"ReadEdid {port} {port.edid=!r}")
+    return xmlrpc.client.Binary(port.edid)
 
   def ApplyEdid(self, port_id, edid_id):
     """Applies the EDID to the selected video input.
@@ -574,3 +578,15 @@ class ChameleondDriver(ChameleondInterface):
     x, y, width, height = self._AutoFillArea(port_id, x, y, width, height)
     self.CaptureVideo(port_id, self._DEFAULT_FRAME_LIMIT, x, y, width, height)
     return self.ReadCapturedFrame(self._DEFAULT_FRAME_INDEX)
+
+  def HasAudioBoard(self):
+    """Returns True if there is an audio board.
+
+    Returns:
+      True if there is an audio board. False otherwise.
+    """
+    try:
+      return self.audio_board is not None
+    except AttributeError:
+      # what's that?
+      return False
