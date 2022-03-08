@@ -456,3 +456,13 @@ class RaspiBLEFastPair(RaspiFlow, BluezPeripheral):
       return
 
     self._gatt_server.app.SetAntiSpoofingKeyPem(key_pem)
+
+
+  def AddAccountKey(self, account_key):
+    """Adds an account key to the Fast Pair GATT service"""
+
+    if self._gatt_server is None or self._gatt_server.app is None:
+      logging.warn("Failed to add account key. Service doesn't exist.")
+      return
+
+    self._gatt_server.app.AddAccountKey(account_key)

@@ -153,16 +153,16 @@ class GATTServer(object):
 
     # Create data structure
     data = []
-    data.extend(self._FormatDataField(FULL_LOCAL_NAME_ID, local_name_data))
-    data.extend(self._FormatDataField(FLAGS_ID, flag_data))
-    data.extend(self._FormatDataField(APPEARANCE_ID, appearance_data))
 
     if 'FAST_PAIR' in self.device_type:
-      # Advertise Fast Pair service with our test model ID.
-      data.extend(self._FormatDataField(ADV_SERVICE_DATA_ID,
-                                        [0x2c, 0xfe, 0x38, 0x35, 0x67]))
+      data.extend(self._FormatDataField(FLAGS_ID, flag_data))
+      data.extend(
+          self._FormatDataField(ADV_SERVICE_DATA_ID,
+                                [0x2c, 0xfe] + self.app.GetServiceData()))
     else:
-      # Advertise HID service
+      data.extend(self._FormatDataField(FULL_LOCAL_NAME_ID, local_name_data))
+      data.extend(self._FormatDataField(FLAGS_ID, flag_data))
+      data.extend(self._FormatDataField(APPEARANCE_ID, appearance_data))
       data.extend(self._FormatDataField(ADV_SERVICE_ID, [0x12, 0x18]))
 
 

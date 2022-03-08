@@ -13,6 +13,7 @@ except ImportError:
 
 from base64 import b64encode
 import logging
+from math import floor
 import dbus
 from os import urandom
 
@@ -33,8 +34,16 @@ class FastPairLEApplication(LEApplication):
     self.AddService(self._service)
 
 
+  def GetServiceData(self):
+    return self._service.GetServiceData()
+
+
   def SetAntiSpoofingKeyPem(self, key_pem):
     self._service.SetAntiSpoofingKeyPem(key_pem)
+
+
+  def AddAccountKey(self, account_key):
+    self._service.AddAccountKey(account_key.data)
 
 
 class FastPairService(Service):
@@ -61,6 +70,39 @@ class FastPairService(Service):
 
     self._anti_spoofing_key = None
     self._shared_secret = None
+
+
+  def GetServiceData(self):
+    if len(self._account_keys) < 1:
+      logging.info('Returning model ID service data')
+      # Model ID for this test device
+      return [0x38, 0x35, 0x67]
+
+    # https://developers.google.com/nearby/fast-pair/spec#advertising_payload_fast_pair_account_data
+    size_of_filter = floor((1.2 * len(self._account_keys)) + 3)
+    account_key_filter = [0] * size_of_filter
+    salt = urandom(1)
+
+    for key in self._account_keys:
+      v = key + salt
+
+      digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+      digest.update(v)
+      hash_v = digest.finalize()
+
+      for i in range(0, len(hash_v), 4):
+        piece = int.from_bytes(hash_v[i:i + 4], 'big')
+        m = piece % (size_of_filter * 8)
+        account_key_filter[m // 8] |= (1 << (m % 8))
+
+    service_data = [0]
+    service_data.append(size_of_filter << 4)
+    service_data += account_key_filter
+    service_data.append(17)  # Salt header and length (1)
+    service_data.append(int.from_bytes(salt, 'big'))
+
+    logging.info('Returning account key filter service data')
+    return service_data
 
 
   def SetAntiSpoofingKeyPem(self, key_pem):
@@ -107,6 +149,18 @@ class FastPairService(Service):
     return True
 
 
+  def SetSharedSecretFromAccountKeys(self, encrypted_bytes):
+    for account_key in self._account_keys:
+      cipher = Cipher(
+          algorithms.AES(account_key), modes.ECB(), backend=default_backend())
+      decrypted_bytes = cipher.decryptor().update(bytes(encrypted_bytes))
+
+      if len(decrypted_bytes) != 0:
+        self._shared_secret = account_key
+        return True
+
+      return False
+
   def Decrypt(self, encrypted_bytes):
     logging.info('Attempting to decrypt %d bytes', len(encrypted_bytes))
 
@@ -131,25 +185,31 @@ class FastPairService(Service):
     return cipher.encryptor().update(bytes(bytes_to_encrypt))
 
 
-  def AddAccountKey(self, value):
+  def AddAccountKey(self, account_key):
+    if len(self._account_keys) == self.MAX_ACCOUNT_KEYS:
+      self._account_keys.pop(0)
+
+    self._account_keys.append(account_key)
+
+
+  def AddEncryptedAccountKey(self, value):
     if self._shared_secret is None:
-      logging.warn('Ignoring AddAccountKey call. No shared secret set.')
+      logging.warn(
+          'Ignoring AddEncryptedAccountKey call. No shared secret set.')
       return
 
     if len(value) != self.ACCOUNT_KEY_LENGTH:
-      logging.warn('Ignoring AddAccountKey call. Invalid length')
+      logging.warn('Ignoring AddEncryptedAccountKey call. Invalid length')
       return
 
     decrypted_account_key = self.Decrypt(value)
 
     if decrypted_account_key is None:
-      logging.warn('Ignoring AddAccountKey call. Failed to decrypt value.')
+      logging.warn(
+          'Ignoring AddEncryptedAccountKey call. Failed to decrypt value.')
       return
 
-    if len(self._account_keys) == self.MAX_ACCOUNT_KEYS:
-      self._account_keys.pop(0)
-
-    self._account_keys.append(decrypted_account_key)
+    self.AddAccountKey(decrypted_account_key)
 
 
 class ModelIDChrc(Characteristic):
@@ -177,7 +237,8 @@ class KeyBasedPairingChrc(Characteristic):
   RESPONSE_TYPE = 0X01
   SALT_BYTES_LENGTH = 9
   KEY_BASED_PAIRING_REQUEST_TYPE = 0X0
-  ENCRYPTED_REQUEST_BYTES_LENGTH = 80
+  ENCRYPTED_REQUEST_BYTES_LENGTH = 16
+  REQUEST_WITH_KEY_LENGTH = 80
 
   def __init__(self, bus, index, service):
     Characteristic.__init__(
@@ -275,16 +336,27 @@ class KeyBasedPairingChrc(Characteristic):
           'Ignoring WriteValue because of no active notify session')
       return
 
-    if len(value) != self.ENCRYPTED_REQUEST_BYTES_LENGTH:
-      logging.warn('Ignoring write because of invalid length.')
+    valid_length = (
+        len(value) == self.ENCRYPTED_REQUEST_BYTES_LENGTH or
+        len(value) == self.REQUEST_WITH_KEY_LENGTH)
+
+    if not valid_length:
+      logging.warn('Ignoring WriteValue because of invalid length')
       return
 
-    encrypted_request = value[:16]
-    public_key = value[16:]
+    encrypted_request = value[:self.ENCRYPTED_REQUEST_BYTES_LENGTH]
 
-    if not self.service.SetSharedSecretFromPublicKey(public_key):
-      logging.warn('Ignoring write - Failed to compute shared secret')
-      return
+    if len(value) == self.REQUEST_WITH_KEY_LENGTH:
+      public_key = value[self.ENCRYPTED_REQUEST_BYTES_LENGTH:]
+
+      if not self.service.SetSharedSecretFromPublicKey(public_key):
+        logging.warn('Ignoring write - Failed to compute shared secret')
+        return
+
+    else:
+      if not self.service.SetSharedSecretFromAccountKeys(encrypted_request):
+        logging.warn('Ignoring write - Failed to find shared account key')
+        return
 
     decrypted_bytes = self.service.Decrypt(encrypted_request)
 
@@ -438,4 +510,4 @@ class AccountKeyChrc(Characteristic):
       logging.warn('Ignoring write - Invalid length.')
       return
 
-    self.service.AddAccountKey(value)
+    self.service.AddEncryptedAccountKey(value)
