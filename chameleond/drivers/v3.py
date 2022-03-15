@@ -227,7 +227,7 @@ class ChameleondDriver(ChameleondInterface):
 
     self.edid_database[edid_id] = edid.data
 
-    logging.info(f"CreateEdid [{edid_id=}]={edid.data[:16]!r}...")
+    logging.info(f"CreateEdid [edid_id={edid_id}]={edid.data[:16]!r}...")
 
     return edid_id
 
@@ -238,7 +238,7 @@ class ChameleondDriver(ChameleondInterface):
       edid_id: The ID of the EDID, which was created by CreateEdid().
     """
     del self.edid_database[edid_id]
-    logging.info(f"DestroyEdid {edid_id=}")
+    logging.info(f"DestroyEdid edid_id={edid_id}")
 
   def ReadEdid(self, port_id):
     """Reads the EDID content of the selected video input on Chameleon.
@@ -255,7 +255,7 @@ class ChameleondDriver(ChameleondInterface):
     # overwriting (via _send_cached_edid_to_hardware) whatever it is there
     # every time we .Plug()
     port = self.PORTS[port_id]
-    logging.info(f"ReadEdid {port} {port.edid=!r}")
+    logging.info(f"ReadEdid {port} port.edid={port.edid!r}")
     return xmlrpc.client.Binary(port.edid)
 
   def ApplyEdid(self, port_id, edid_id):
@@ -269,7 +269,8 @@ class ChameleondDriver(ChameleondInterface):
       edid_id: The ID of the EDID.
     """
     port = self.PORTS[port_id]
-    logging.info(f"ApplyEdid {port} {edid_id=} {self.edid_database.keys()=}")
+    logging.info(f"ApplyEdid {port} edid_id={edid_id}"
+                 f"self.edid_database.keys()={self.edid_database.keys()}")
     assert port.has_video
 
     edid_bytes = self.edid_database[edid_id]
@@ -401,7 +402,7 @@ class ChameleondDriver(ChameleondInterface):
       otherwise, False.
     """
     port = self.PORTS[port_id]
-    logging.info(f"WaitVideoInputStable {port} {timeout=}")
+    logging.info(f"WaitVideoInputStable {port} timeout={timeout}")
     assert port.has_video
 
     if port.is_ite:
@@ -526,7 +527,8 @@ class ChameleondDriver(ChameleondInterface):
       height: The height of the area of crop.
     """
 
-    logging.info(f"CaptureVideo {self.PORTS[port_id]}, ({x=}, {y=}, {width=}, {height=})")
+    logging.info(f"CaptureVideo {self.PORTS[port_id]}, "
+                 f"(x={x}, y={y}, width={width}, height={height})")
 
     # TODO: Make use of x, y, width, height to crop in software
 
