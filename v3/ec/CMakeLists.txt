@@ -42,6 +42,11 @@ pw_proto_library(
     INPUTS proto/v3.options
 )
 
+add_custom_command(OUTPUT version.h
+                   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/getversion.sh
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/)
+add_custom_target(getversion ALL DEPENDS version.h)
+
 FILE(GLOB app_sources src/*.c src/*.cc)
 FILE(GLOB ite_private_sources private/ite/src/*.c)
 target_include_directories(app PRIVATE include)

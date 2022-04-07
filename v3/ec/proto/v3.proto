@@ -12,6 +12,9 @@ service board_service {
     // Determine whether a source is connected or not (based on the
     // state of the DisplayPort AUX pins and the HDMI power pins)
     rpc get_source_presence (Empty) returns (source_presence_response);
+
+    // Get the version numbers of the build
+    rpc get_code_version (Empty) returns (board_service_code_version_response);
 }
 
 service videomux_service {
@@ -50,6 +53,11 @@ service it68051_service {
 
 message board_service_version_response {
     fixed32 version = 1;
+}
+
+message board_service_code_version_response {
+    string ec_ver = 1;
+    string ite_ver = 2;
 }
 
 message source_presence_response {

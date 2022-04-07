@@ -1,2 +1,5 @@
 it68051_raw_edid_request.raw_edid	max_size:256
 it68051_raw_edid_request.raw_edid	fixed_length:true
+# Provide enough room for tag, count, 40-char git hash, and possible "-dirty"
+board_service_code_version_response.ec_ver	max_length:63
+board_service_code_version_response.ite_ver	max_length:63

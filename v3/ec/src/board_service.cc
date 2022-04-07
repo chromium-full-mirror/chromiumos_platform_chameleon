@@ -13,6 +13,7 @@
 #include "misc_io.h"
 #include "source_presence.h"
 #include "sysmon.h"
+#include "version.h"
 
 // Method definitions for board_service.
 ::pw::Status
@@ -58,5 +59,17 @@ board_service::get_source_presence(const ::Empty &request,
 	response.hdmi1 = gpio_get_level(hdmi1_pp3300);
 	response.dp2 = get_dp2_present() ? 1 : 0;
 	response.dp1 = get_dp1_present() ? 1 : 0;
+	return ::pw::OkStatus();
+}
+
+::pw::Status
+board_service::get_code_version(const ::Empty &request,
+				::board_service_code_version_response &response)
+{
+	static_cast<void>(request);
+
+	strncpy(response.ec_ver, EC_VER, 63);
+	strncpy(response.ite_ver, ITE_VER, 63);
+
 	return ::pw::OkStatus();
 }
