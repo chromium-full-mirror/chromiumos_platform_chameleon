@@ -91,14 +91,19 @@
         opts: -L "chameleon_fs"
         state: present
 
-    - name: Mount partitions
+    - name: Create fs dir structure and mount everything in its proper spot
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build'
+        warn: false # silence mkdir warning
+                    # mount module would work better too, but that's also
+                    # unsuitable without touching the local /etc/fstab
         cmd: |
           mkdir -p sd &&
           mount {{ sd_dev }}p3 sd &&
-          mkdir -p sd/boot &&
-          mount {{ sd_dev }}p1 sd/boot
+          btrfs subvolume create sd/root &&
+          mkdir -p sd/root/mnt/fs &&
+          mkdir -p sd/root/boot &&
+          mount {{ sd_dev }}p1 sd/root/boot
 
     - name: Install /etc/fstab
       ansible.builtin.copy:
@@ -121,12 +126,18 @@
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build'
         cmd: |
-          rsync --archive --hard-links --acls --xattrs --sparse -recursive chroot/* sd/
+          rsync --archive --hard-links --acls --xattrs --sparse -recursive chroot/* sd/root/
           sync
+
+    - name: Snapshot root
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}/build/sd'
+        cmd: |
+          btrfs subvolume snapshot -r root snapshot-$(date -Iminutes)
 
     - name: Unmount partitions
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build'
         cmd: |
-          umount -R sd/boot
+          umount -R sd/root/boot
           umount -R sd
