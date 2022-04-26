@@ -118,6 +118,7 @@ validate_wbs_packages_installation() {
     PA_DEFAULT_CONF="/usr/local/etc/pulse/default.pa"
     PA_BT_POLICY="load-module module-bluetooth-policy"
     PA_BT_POLICY_OPTS="hfgw=false"
+    PA_SUSPEND="load-module module-suspend-on-idle"
     local wbs_name="$(get_latest_wbs_bundle_name)"
     local wbs_tarball="${DIST_PATH}/${wbs_name}"
 
@@ -126,6 +127,8 @@ validate_wbs_packages_installation() {
     echo "The latest ${wbs_tarball} is downloaded."
 
     if tar xf "${wbs_tarball}" -C / > /dev/null; then
+        # Customize the pulseaudio config here.
+
         # One of the PulseAudio modules, module-bluetooth-policy, will
         # automatically load the module-loopback upon detected HSP/HFP
         # activities. Update the PulseAudio default setting not to load the
@@ -135,6 +138,16 @@ validate_wbs_packages_installation() {
             eval "sed -ie 's/${PA_BT_POLICY}.*/& ${PA_BT_POLICY_OPTS}/g' "\
                 "${PA_DEFAULT_CONF}"
         fi
+
+        # One of the PulseAudio modules, module-suspend-on-idle, will
+        # trigger device disconnection if a SCO connection takes too long
+        # to create on some models, e.g., asurada/spherion. Comment out
+        # the module to avoid the unexpected disconnection
+        if ! grep -qie "#.*${PA_SUSPEND}" "${PA_DEFAULT_CONF}"; then
+            eval "sed -ie 's/${PA_SUSPEND}/#${PA_SUSPEND}/g' "\
+                "${PA_DEFAULT_CONF}"
+        fi
+
         echo "Customized packages in ${wbs_name} installed"
     else
         echo "Error in installing customized packages in ${wbs_name}!"
