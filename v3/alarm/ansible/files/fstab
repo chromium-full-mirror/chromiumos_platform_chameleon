@@ -6,10 +6,7 @@
 # Originally generated with `genfstab -L`
 
 # /dev/mmcblk0p3
-LABEL=chameleon_fs   /     btrfs rw,relatime,ssd,space_cache=v2,subvol=/,discard=async      0 0
+LABEL=chameleon_fs   /       btrfs rw,relatime,ssd,space_cache=v2,subvol=/root,discard=async      0 0
 
 # /dev/mmcblk0p1
-LABEL=chml_boot      /boot vfat  rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro    0 2
-
-# /dev/mmcblk0p2
-LABEL=chameleon_swap none  swap  defaults        0 0
+LABEL=chml_boot      /boot   vfat  rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro    0 2

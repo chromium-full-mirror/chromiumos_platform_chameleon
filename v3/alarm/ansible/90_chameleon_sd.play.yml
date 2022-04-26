@@ -19,31 +19,29 @@
           # always successful no matter what
           exit 0
 
-    - name: dd uboot preloader onto sd card
-      ansible.builtin.shell: |
-        dd if={{ item.path }} of={{ sd_dev }}
-        partprobe /dev/mmcblk0
-      with_items: "{{ preloader_file['files'] }}"
-      tags: uboot, wipe # TODO: This needs to be changed so it doesn't overwrite existing partition table
+    - name: Wipe existing sd partition table
+      ansible.builtin.shell:
+        cmd: |
+          wipefs -a {{ sd_dev }}
+      tags: wipe
 
     - name: Create /boot partition
       community.general.parted:
         device: '{{ sd_dev }}'
         number: 1
-        # sigh, parted won't actually mkfs, so what's the point of this fs_type argument?
-        # see tasks later on for the actual format call
+        # sigh, parted won't actually mkfs, so what's the point of this fs_type
+        # argument? see tasks later on for the actual format call
         fs_type: fat32
         part_start: 2MB # leave some room after preloader
         part_end: 500MB
         state: present
 
-    - name: Create swap partition
+    - name: Create uboot preloader partition
       community.general.parted:
         device: '{{ sd_dev }}'
         number: 2
-        fs_type: linux-swap
         part_start: 500MB
-        part_end: 3000MB
+        part_end: 600MB
         state: present
 
     - name: Create rootfs partition
@@ -51,18 +49,25 @@
         device: '{{ sd_dev }}'
         number: 3
         fs_type: btrfs
-        part_start: 3000MB
+        part_start: 600MB
         state: present
+
+    - name: Set Uboot preloader partition type to 'a2'
+      ansible.builtin.shell:
+        cmd: |
+          printf 't\n2\na2\nw\n' | fdisk {{ sd_dev }}
+      tags: uboot
+
+    - name: dd uboot preloader onto sd card partition
+      ansible.builtin.shell: |
+        dd if={{ item.path }} of={{ sd_dev }}p2
+        partprobe {{ sd_dev }}
+      with_items: "{{ preloader_file['files'] }}"
+      tags: uboot
 
     - name: Wipe /boot partition
       community.general.filesystem:
         dev: '{{ sd_dev }}p1'
-        state: absent
-      tags: wipe
-
-    - name: Wipe swap partition
-      community.general.filesystem:
-        dev: '{{ sd_dev }}p2'
         state: absent
       tags: wipe
 
@@ -77,13 +82,6 @@
         dev: '{{ sd_dev }}p1'
         fstype: vfat
         opts: -F 32 -n "chml_boot" # label has to be under 11 characters
-        state: present
-
-    - name: Format swap filesystem
-      community.general.filesystem:
-        dev: '{{ sd_dev }}p2'
-        fstype: swap
-        opts: -L "chameleon_swap"
         state: present
 
     - name: Format rootfs filesystem
