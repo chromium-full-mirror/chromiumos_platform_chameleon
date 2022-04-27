@@ -27,6 +27,8 @@ class it68051_service : public pw_rpc::nanopb::it68051_service::Service<it68051_
   ::pw::Status set_edid_idx( const ::it68051_edid_idx_request& request, ::Empty& response);
 
   ::pw::Status write_edid( const ::it68051_raw_edid_request& request, ::Empty& response);
+
+  ::pw::Status get_link_status( const ::Empty& request, ::it68051_link_status_response& response);
 };
 
 #endif

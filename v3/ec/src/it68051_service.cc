@@ -112,3 +112,12 @@ it68051_service::write_edid(const ::it68051_raw_edid_request &request,
 
 	return ::pw::OkStatus();
 }
+
+::pw::Status
+it68051_service::get_link_status(const ::Empty &request,
+				 ::it68051_link_status_response &response)
+{
+	static_cast<void>(request);
+	response.active = it68051_get_link_active();
+	return ::pw::OkStatus();
+}

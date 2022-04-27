@@ -49,6 +49,9 @@ service it68051_service {
 
     // Write a block of 256 bytes to the EDID RAM
     rpc write_edid (it68051_raw_edid_request) returns (Empty);
+
+    // Query the link status of the IT68051
+    rpc get_link_status(Empty) returns (it68051_link_status_response);
 }
 
 message board_service_version_response {
@@ -156,4 +159,8 @@ message it68051_edid_idx_request {
 message it68051_raw_edid_request {
     // RAW_EDID gives 256 bytes for the EDID RAM
     bytes raw_edid = 1;
+}
+
+message it68051_link_status_response {
+    bool active = 1;
 }
