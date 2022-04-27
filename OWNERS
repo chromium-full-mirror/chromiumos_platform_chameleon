@@ -1,5 +1,5 @@
 set noparent
-include /BLUETOOTH_OWNERS
+include chromiumos/third_party/autotest:/BLUETOOTH_OWNERS
 
 # Google contributors
 cychiang@chromium.org
