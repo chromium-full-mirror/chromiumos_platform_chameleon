@@ -464,6 +464,10 @@ class ChameleondDriver(ChameleondInterface):
     for i, port in enumerate(self.PORTS):
       if port.has_video:
         connected = getattr(payload, port.external_name.lower())
+        if port.connector_type == "HDMI":
+          # HACK(b/220139622): Temporarly lie, hw issue on proto2
+          # otherwise autotest gets mad
+          connected = False
       if connected:
         port_ids.append(i)
 
