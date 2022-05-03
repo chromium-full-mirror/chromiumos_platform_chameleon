@@ -409,16 +409,15 @@ class BluetoothAudio(BluezPeripheral):
           'Trying to start audio playing process when it is still running.')
       return False
 
-    device_number = self.GetBluezSinkHFPDevice(audio_profile)
+    device_number = self._PollForCondition(
+        lambda: self.GetBluezSinkHFPDevice(audio_profile),
+        desc='GetBluezSinkHFPDevice')
     if device_number is None:
       logging.error('Failed to get the device number of bluez_sink for HFP')
       return False
 
-
     self._profile = test_data
     file_path = test_data['device_file']
-
-
 
     sample_format = test_data['format'].lower().replace('_', '')
 
