@@ -413,9 +413,12 @@ class ChameleondDriver(ChameleondInterface):
     # wait for v4l to show signs of life
     # just this alone seems to work great
     buf = None
-    while not buf:
-      buf = port.video_dev.get_frame(timeout=timeout)
-      # TODO: lower timeout by elapsed time
+    try:
+      while not buf:
+        buf = port.video_dev.get_frame(timeout=timeout)
+        # TODO: lower timeout by elapsed time
+    except subprocess.TimeoutExpired:
+      return False
 
     return True
 

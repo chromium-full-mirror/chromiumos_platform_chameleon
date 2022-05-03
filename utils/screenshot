@@ -108,14 +108,16 @@ def main():
     chameleon.DestroyEdid(edid_id)
     time.sleep(1)
 
-  if not chameleon.IsPlugged(main_input):
-    print('Plugging... ', end="", flush=True)
-    chameleon.Plug(main_input)
-    print('Wait for input stable... ', end="", flush=True)
-    chameleon.WaitVideoInputStable(main_input, 30)
-    print('stable!')
-
   try:
+    if not chameleon.IsPlugged(main_input):
+      print('Plugging... ', end="", flush=True)
+      chameleon.Plug(main_input)
+      print('Wait for input stable... ', end="", flush=True)
+      if chameleon.WaitVideoInputStable(main_input, 30):
+        print('stable!')
+      else:
+        raise Exception("Timeout while WaitVideoInputStable()")
+
     width, height = chameleon.DetectResolution(main_input)
     print('Detected screen size %dx%d' % (width, height))
     if area_args:
