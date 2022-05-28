@@ -415,8 +415,8 @@ class BluezPeripheral(PeripheralKit):
       self.Init()
 
 
-    self.SetAdvertisedName(PERIPHERAL_DEVICE_NAME[self.GetBaseDeviceType(\
-                                                  self.device_type)])
+    self.SetAdapterAlias(PERIPHERAL_DEVICE_NAME[self.GetBaseDeviceType(
+        self.device_type)])
 
     logging.info('Bluetooth peripheral now bound to %s', device_type)
 
@@ -612,7 +612,7 @@ class BluezPeripheral(PeripheralKit):
     return self.Init()
 
 
-  def SetAdvertisedName(self, name):
+  def SetAdapterAlias(self, name):
     self._set_hci_prop('org.bluez.Adapter1', 'Alias', dbus.String(name))
 
   def SetDiscoverable(self, discoverable):
