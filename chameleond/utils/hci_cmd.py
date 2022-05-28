@@ -167,6 +167,36 @@ class HciCommands(object):
 
     return cmd
 
+  @staticmethod
+  def set_local_bluetooth_address(addr):
+    """Sets the bluetooth address.
+
+    Use this command carefully. The changed address is probably NOT detected
+    by bluez and the info cached in chameleond is also not updated.
+    After use, the address should be reset back to default to make sure
+    chameleond functions correctly; Otherwise a reboot would be needed.
+
+    This is a vendor command which is not guaranteed to be working on every
+    platform. So far it is only tested on Raspberry Pi 4 Model B Rev 1.4.
+
+    Args:
+      addr: A str representing the new address. E.g., '11:22:33:AA:BB:CC'.
+
+    Returns:
+      The HCI command parameters if a valid address is given; Otherwise None.
+    """
+    addr_bytes = addr.split(':')
+
+    if len(addr_bytes) != 6:
+      return None
+    try:
+      if not all(0x00 <= int(b, 16) <= 0xff for b in addr_bytes):
+        return None
+    except ValueError:
+      return None
+
+    return ['0x3f', '0x0001'] + addr_bytes[::-1]
+
 
 class HciTool(object):
   """Wrapper for executing hcitool."""

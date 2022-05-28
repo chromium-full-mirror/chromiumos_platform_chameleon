@@ -81,6 +81,7 @@ class GATTServer(object):
         error_handler=self._RegisterAppErrCB)
 
     # Start with discoverable enabled
+    self._adv_local_name = PERIPHERAL_DEVICE_NAME[self.peripheral_type]
     self._discoverable = True
     self._ConfigureAdvertisements()
 
@@ -139,8 +140,7 @@ class GATTServer(object):
     ADV_SERVICE_DATA_ID = 0x16
 
     # Assign local name based on peripheral type
-    local_name = PERIPHERAL_DEVICE_NAME[self.peripheral_type]
-    local_name_data = [ord(ch) for ch in local_name]
+    local_name_data = [ord(ch) for ch in self._adv_local_name]
 
     # LE only, general discoverable
     flag_data = [0x06]
@@ -217,6 +217,13 @@ class GATTServer(object):
 
     if discoverable != prev_discoverable:
       self._ConfigureAdvertisements()
+
+  def SetAdvLocalName(self, adv_local_name):
+    self._adv_local_name = adv_local_name
+    self._ConfigureAdvertisements()
+
+  def GetAdvLocalName(self):
+    return self._adv_local_name
 
   def _PropertyChanged(self, *args, **kwargs):
     """Called when a property changes on the bluez d-bus interface

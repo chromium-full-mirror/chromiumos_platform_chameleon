@@ -621,8 +621,8 @@ class BluezPeripheral(PeripheralKit):
 
     # Set discoverable timeout to 0 so that it won't expire.
     if discoverable:
-        self._set_hci_prop('org.bluez.Adapter1', 'DiscoverableTimeout',
-                           dbus.UInt32(0))
+      self._set_hci_prop('org.bluez.Adapter1', 'DiscoverableTimeout',
+                         dbus.UInt32(0))
     # Also set discoverable in gatt server if relevant
     if self._gatt_server:
       self._gatt_server.SetDiscoverable(discoverable)
@@ -635,6 +635,42 @@ class BluezPeripheral(PeripheralKit):
   def GetPinCode(self):
     return '0000'
 
+  def AdvertiseWithNamesAndAddresses(self, name_and_addr, duration):
+    """Advertises local names and addresses for duration time one by one.
+
+    After this function returned, the local name and address will be reset back
+    to default and discoverable will be turned off.
+
+    Args:
+      name_and_addr: A list of (name, addr). Each tuple describes the local name
+        and the address for the device to advertise.
+      duration: The time (in seconds) for a (name, addr) to be advertised.
+    """
+
+    def set_addr(addr):
+      tool = HciTool(sudo=True)
+      cmd = HciCommands.set_local_bluetooth_address(addr)
+      if cmd is None:
+        raise ValueError('invalid BT address: {}'.format(addr))
+      tool.add_command(cmd)
+      tool.run_commands()
+
+    old_name = self._gatt_server.GetAdvLocalName()
+    old_addr = self.GetLocalBluetoothAddress()
+    self.SetDiscoverable(False)
+
+    try:
+      for name, addr in name_and_addr:
+        self._gatt_server.SetAdvLocalName(name)
+        set_addr(addr)
+
+        self.SetDiscoverable(True)
+        time.sleep(duration)
+        self.SetDiscoverable(False)
+    finally:
+      self._gatt_server.SetAdvLocalName(old_name)
+      set_addr(old_addr)
+      self.SetDiscoverable(False)
 
   def GetLocalBluetoothAddress(self):
     """Get the builtin Bluetooth MAC address.
