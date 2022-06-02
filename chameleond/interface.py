@@ -104,13 +104,14 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
     raise NotImplementedError('ProbeOutputs')
 
   def GetConnectorType(self, port_id):
-    """Returns the human readable string for the connector type.
+    """Returns the string for the connector type.
 
     Args:
       port_id: The ID of the input/output port.
 
     Returns:
       A string, like "HDMI", "DP", "MIC", etc.
+      This value will be used later in tests, so it cannot be arbitrary.
     """
     raise NotImplementedError('GetConnectorType')
 

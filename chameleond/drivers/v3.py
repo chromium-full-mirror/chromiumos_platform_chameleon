@@ -77,6 +77,7 @@ class ChameleondDriver(ChameleondInterface):
       self.external_name = self.name.removeprefix("ITE_")
       if self.name[-1].isdigit():
         self.port_num = int(self.name[-1])
+      self.connector_type = self.external_name.removesuffix(str(self.port_num))
 
       self.has_video = self.video_dev is not None
       self.has_audio = self.audio_dev is not None
@@ -178,15 +179,16 @@ class ChameleondDriver(ChameleondInterface):
     return () # TODO(audio): None of them on v3 so far
 
   def GetConnectorType(self, port_id):
-    """Returns the human readable string for the connector type.
+    """Returns the string for the connector type.
 
     Args:
       port_id: The ID of the input/output port.
 
     Returns:
       A string, like "HDMI", "DP", "MIC", etc.
+      This value will be used later in tests, so it cannot be arbitrary.
     """
-    return self.PORTS[port_id].name
+    return self.PORTS[port_id].connector_type
 
   def HasAudioSupport(self, port_id):
     """Returns true if the port has audio support.
