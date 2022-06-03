@@ -148,7 +148,12 @@ class ChameleondDriver(ChameleondInterface):
 
   def Reset(self):
     """Resets Chameleon board."""
-    pass
+    logging.info("Reset()")
+
+    # Let's reset the EC!
+    rst_gpio = _check_output(["sudo", "gpiofind", "STM32_RST_L"])
+    _check_output(f"sudo gpioset -D open-drain {rst_gpio}=0", shell=True)
+    _check_output(f"sudo gpioset -D open-drain {rst_gpio}=1", shell=True)
 
   def GetMacAddress(self):
     """Gets the MAC address of this Chameleon.
