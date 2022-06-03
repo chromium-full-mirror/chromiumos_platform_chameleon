@@ -55,6 +55,32 @@
       with_items: "{{ hostvars['localhost']['uboot_scr_file']['files'] }}"
       tags: install, uboot
 
+    - name: Weaken sshd security for ChromeOS lab infra, cipher (b/233429241)
+      ansible.builtin.replace:
+        path: /etc/ssh/sshd_config
+        regexp: '(PubkeyAuthentication yes)\s+(# The default is to check.*)\n'
+        replace: |
+            \1
+            PubkeyAcceptedKeyTypes=+ssh-rsa # Hack(b/233429241) Lab SSPs still ssh from ubuntu 14.04
+
+            \2
+      tags: provision
+
+    - name: Weaken sshd security for ChromeOS lab infra, PermitRootLogin (b/230681207)
+      ansible.builtin.lineinfile:
+          dest: /etc/ssh/sshd_config
+          regexp: '^#PermitRootLogin'
+          line: 'PermitRootLogin yes'
+      tags: provision
+
+    - name: Install root@ authorized_key for ChromeOS lab infra (b/230681207)
+      ansible.posix.authorized_key:
+        user: 'root'
+        key: "{{ lookup('file', ssh_key_pub) }}"
+        state: present
+      register: authorized_keys
+      tags: user, ssh_key
+
     - name: Install more tools
       community.general.pacman:
         package:
