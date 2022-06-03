@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import logging
 import numpy
 import pathlib
+import pprint
 import pw_hdlc.rpc
 import pw_protobuf_compiler
 import serial
@@ -22,23 +23,22 @@ from chameleond.interface import ChameleondInterface
 EC_PROTO_PATH = (pathlib.Path(__file__)/"../../../v3/ec/proto/v3.proto").resolve()
 EC_PROTO = pw_protobuf_compiler.python_protos.Library.from_paths([EC_PROTO_PATH]).modules_by_package[""][0]
 
+def _check_output(args, encoding="utf-8", **kwargs):
+  return subprocess.check_output(args, encoding=encoding, **kwargs).strip()
+
 class V4L:
   def __init__(self, path):
     self.path = path
 
   def get_resolution(self):
-    list_formats = subprocess.run(
-        ["v4l2-ctl", "--list-formats-ext", "-d", self.path],
-        encoding="utf-8",
-        stdout=subprocess.PIPE,
-        check=True,
-    ).stdout.strip()
+    list_formats = _check_output(
+      ["v4l2-ctl", "--list-formats-ext", "-d", self.path])
 
     # last word will have the resolution in "widthxheight" format
     return tuple(int(d) for d in list_formats.split()[-1].split("x"))
 
   def get_frame(self, count=1, timeout=None):
-    return subprocess.run(
+    return _check_output(
       [
         "v4l2-ctl",
         "--stream-mmap",
@@ -46,10 +46,8 @@ class V4L:
         "--device", self.path,
         "--stream-to", "-"
       ],
-      stdout=subprocess.PIPE,
-      check=True,
-      timeout=timeout,
-    ).stdout
+      encoding=None, # these are raw bytes
+    )
 
   def __repr__(self):
     return f"{self.__class__.__name__}({self.path!r})"
@@ -120,6 +118,33 @@ class ChameleondDriver(ChameleondInterface):
     self.board_service = self.ec_client.rpcs()["board_service"]
     self.videomux_service = self.ec_client.rpcs()["videomux_service"]
     self.it68051_service = self.ec_client.rpcs()["it68051_service"]
+
+    logging.info("Versions:\n" +
+                 pprint.pformat(self._versions(), sort_dicts=False))
+
+  def _versions(self):
+    versions = {}
+
+    versions["chameleond"] = _check_output([
+      "git",
+      "-C", (pathlib.Path(__file__)/"..").resolve(),
+      "describe",
+      "--tags",
+      "--long",
+      "--dirty",
+    ])
+
+    status, payload = self.board_service.get_code_version()
+    for field, value in payload._fields.items():
+      versions[field.name] = value
+
+    status, payload = self.board_service.get_board_version()
+    versions["board"] = payload.version
+
+    #versions["os"] = # TODO(b/228830363)
+    #versions["fpga"] = # TODO(b/234872159)
+
+    return versions
 
   def Reset(self):
     """Resets Chameleon board."""
