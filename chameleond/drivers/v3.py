@@ -437,18 +437,32 @@ class ChameleondDriver(ChameleondInterface):
     logging.info(f"WaitVideoInputStable {port} timeout={timeout}")
     assert port.has_video
 
-    if port.is_ite:
-      # TODO: Poll the EC with new api to see if we have a connection
-      pass
-      # TODO: lower timeout by elapsed time
+    end_time = time.time() + timeout
 
-    # wait for v4l to show signs of life
-    # just this alone seems to work great
+    if port.is_ite:
+      try:
+        # poll the EC for the it68051 link status
+        # but we don't want to spam the log with each poll
+        logging.disable(logging.INFO)
+
+        while time.time() < end_time:
+          status, response = self.it68051_service.get_link_status()
+          if response.active:
+            break
+          time.sleep(0.1)
+
+        # we either timed out, or EC thinks we have a link
+        if not response.active:
+          # timeout :(
+          return False
+      finally:
+        logging.disable(logging.NOTSET)
+
+    # Make sure v4l can give us at least 1 good frame
     buf = None
     try:
       while not buf:
-        buf = port.video_dev.get_frame(timeout=timeout)
-        # TODO: lower timeout by elapsed time
+        buf = port.video_dev.get_frame(timeout=end_time-time.time())
     except subprocess.TimeoutExpired:
       return False
 
