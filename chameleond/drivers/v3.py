@@ -144,6 +144,12 @@ class ChameleondDriver(ChameleondInterface):
     #versions["os"] = # TODO(b/228830363)
     #versions["fpga"] = # TODO(b/234872159)
 
+    versions["linux"] = _check_output(["pacman", "--query", "linux"])
+    versions["last_pacman_upgrade"] = _check_output(
+      "cat /var/log/pacman.log | grep upgraded | tail -n 1",
+      shell=True,
+    )
+
     return versions
 
   def Reset(self):
