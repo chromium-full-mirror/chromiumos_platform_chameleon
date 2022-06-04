@@ -120,35 +120,59 @@ class ChameleondDriver(ChameleondInterface):
     self.it68051_service = self.ec_client.rpcs()["it68051_service"]
 
     logging.info("Versions:\n" +
-                 pprint.pformat(self._versions(), sort_dicts=False))
+                  pprint.pformat(self._versions(), sort_dicts=False))
 
   def _versions(self):
     versions = {}
 
-    versions["chameleond"] = _check_output([
-      "git",
-      "-C", (pathlib.Path(__file__)/"..").resolve(),
-      "describe",
-      "--tags",
-      "--long",
-      "--dirty",
-    ])
+    try:
+      status, payload = self.board_service.get_board_version()
+      versions["board"] = payload.version
+    except Exception as e:
+      versions["board"] = repr(e)
 
-    status, payload = self.board_service.get_code_version()
-    for field, value in payload._fields.items():
-      versions[field.name] = value
+    try:
+      status, payload = self.board_service.get_code_version()
+      for field, value in payload._fields.items():
+        versions[field.name] = value
+    except Exception as e:
+      versions["ec_ver"] = repr(e)
 
-    status, payload = self.board_service.get_board_version()
-    versions["board"] = payload.version
-
-    #versions["os"] = # TODO(b/228830363)
     #versions["fpga"] = # TODO(b/234872159)
 
-    versions["linux"] = _check_output(["pacman", "--query", "linux"])
-    versions["last_pacman_upgrade"] = _check_output(
-      "cat /var/log/pacman.log | grep upgraded | tail -n 1",
-      shell=True,
-    )
+    try:
+      versions["linux"] = _check_output(["pacman", "--query", "linux"])
+    except Exception as e:
+      versions["linux"] = repr(e)
+
+    try:
+      versions["last_pacman_upgrade"] = _check_output(
+        "cat /var/log/pacman.log | grep upgraded | tail -n 1",
+        shell=True,
+      )
+    except Exception as e:
+      versions["last_pacman_upgrade"] = repr(e)
+
+    try:
+      ansible_log = [line.strip()
+                    for line in open("/var/log/alarm-ansible").readlines()]
+      versions["ansible_first"] = ansible_log[0]
+      versions["ansible_last"] = ansible_log[-1]
+    except Exception as e:
+      versions["ansible_first"] = repr(e)
+      versions["ansible_last"] = repr(e)
+
+    try:
+      versions["chameleond"] = _check_output([
+        "git",
+        "-C", (pathlib.Path(__file__)/"..").resolve(),
+        "describe",
+        "--tags",
+        "--long",
+        "--dirty",
+      ])
+    except Exception as e:
+      versions["chameleond"] = repr(e)
 
     return versions
 
