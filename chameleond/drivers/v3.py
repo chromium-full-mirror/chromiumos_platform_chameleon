@@ -482,7 +482,12 @@ class ChameleondDriver(ChameleondInterface):
     logging.info(f"WaitVideoInputStable {port} timeout={timeout}")
     assert port.has_video
 
-    end_time = time.time() + timeout
+    if timeout is not None:
+      end_time = time.time() + timeout
+    else:
+      # infinite timeout
+      end_time = None
+      logging.warning("This will block forever until there's an input, even further XMLRPC calls will block.")
 
     if port.is_ite:
       try:
@@ -490,7 +495,7 @@ class ChameleondDriver(ChameleondInterface):
         # but we don't want to spam the log with each poll
         logging.disable(logging.INFO)
 
-        while time.time() < end_time:
+        while (end_time is None) or (time.time() < end_time):
           status, response = self.it68051_service.get_link_status()
           if response.active:
             break
@@ -507,7 +512,10 @@ class ChameleondDriver(ChameleondInterface):
     buf = None
     try:
       while not buf:
-        buf = port.video_dev.get_frame(timeout=end_time-time.time())
+        v4l_frame_timeout = None
+        if end_time is not None:
+          v4l_frame_timeout = end_time - time.time()
+        buf = port.video_dev.get_frame(timeout=v4l_frame_timeout)
     except subprocess.TimeoutExpired:
       return False
 
