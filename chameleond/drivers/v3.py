@@ -24,7 +24,13 @@ EC_PROTO_PATH = (pathlib.Path(__file__)/"../../../v3/ec/proto/v3.proto").resolve
 EC_PROTO = pw_protobuf_compiler.python_protos.Library.from_paths([EC_PROTO_PATH]).modules_by_package[""][0]
 
 def _check_output(args, encoding="utf-8", **kwargs):
-  return subprocess.check_output(args, encoding=encoding, **kwargs).strip()
+  out = subprocess.check_output(args, encoding=encoding, **kwargs)
+  if encoding is None:
+    # do not touch it since it's probably binary image data from v4l2-ctl
+    return out
+  else:
+    # let's crop the whitespace since it's a text output we want to parse
+    return out.strip()
 
 class V4L:
   def __init__(self, path):
@@ -37,7 +43,7 @@ class V4L:
     # last word will have the resolution in "widthxheight" format
     return tuple(int(d) for d in list_formats.split()[-1].split("x"))
 
-  def get_frame(self, count=1, timeout=None):
+  def get_frame(self, count=1, timeout=5):
     return _check_output(
       [
         "v4l2-ctl",
@@ -47,6 +53,7 @@ class V4L:
         "--stream-to", "-"
       ],
       encoding=None, # these are raw bytes
+      timeout=timeout,
     )
 
   def __repr__(self):
@@ -507,6 +514,8 @@ class ChameleondDriver(ChameleondInterface):
           return False
       finally:
         logging.disable(logging.NOTSET)
+
+    logging.info("EC says VideoStable, what about V4L?")
 
     # Make sure v4l can give us at least 1 good frame
     buf = None
