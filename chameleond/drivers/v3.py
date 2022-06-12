@@ -11,6 +11,7 @@ import pathlib
 import pprint
 import pw_hdlc.rpc
 import pw_protobuf_compiler
+import pw_rpc.callback_client.errors
 import serial
 import subprocess
 import time
@@ -116,10 +117,15 @@ class ChameleondDriver(ChameleondInterface):
     self.edid_database = {}
 
     self.ec_serial = serial.Serial(self.EC_SERIAL_PORT, 115200, timeout=0.01)
+    callback_client_impl = pw_hdlc.rpc.callback_client.Impl(
+        default_unary_timeout_s=1.0,
+        default_stream_timeout_s=1.0,
+    )
     self.ec_client = pw_hdlc.rpc.HdlcRpcClient(
       read = lambda: self.ec_serial.read(4096),
       paths_or_modules = [EC_PROTO],
       channels = pw_hdlc.rpc.default_channels(self.ec_serial.write),
+      client_impl = callback_client_impl,
     )
 
     self.board_service = self.ec_client.rpcs()["board_service"]
@@ -191,6 +197,20 @@ class ChameleondDriver(ChameleondInterface):
     rst_gpio = _check_output(["sudo", "gpiofind", "STM32_RST_L"])
     _check_output(f"sudo gpioset -D open-drain {rst_gpio}=0", shell=True)
     _check_output(f"sudo gpioset -D open-drain {rst_gpio}=1", shell=True)
+
+    # Block until we can talk to it
+    for attempt in range(5):
+      try:
+        self.board_service.get_board_version()
+        break # yay!
+      except pw_rpc.callback_client.errors.RpcTimeout as e:
+        # The EC probably has not booted yet
+        last_error = e
+        continue # try again
+    else:
+      # if we got to the end of the loop and we haven't
+      # called "break" sucessfully
+      raise last_error
 
   def GetMacAddress(self):
     """Gets the MAC address of this Chameleon.
