@@ -518,8 +518,7 @@ class ChameleondDriver(ChameleondInterface):
     if timeout is not None:
       end_time = time.time() + timeout
     else:
-      # infinite timeout
-      end_time = None
+      end_time = float("inf")
       logging.warning("This will block forever until there's an input, even further XMLRPC calls will block.")
 
     if port.is_ite:
@@ -528,7 +527,7 @@ class ChameleondDriver(ChameleondInterface):
         # but we don't want to spam the log with each poll
         logging.disable(logging.INFO)
 
-        while (end_time is None) or (time.time() < end_time):
+        while time.time() < end_time:
           status, response = self.it68051_service.get_link_status()
           if response.active:
             break
@@ -536,24 +535,26 @@ class ChameleondDriver(ChameleondInterface):
 
         # we either timed out, or EC thinks we have a link
         if not response.active:
-          # timeout :(
+          logging.warning("WaitVideoInputStable timed out using the EC")
           return False
       finally:
         logging.disable(logging.NOTSET)
 
-    logging.info("EC says VideoStable, what about V4L?")
+    logging.info(f"EC says VideoStable, what about V4L? {end_time - time.time():.2f} seconds left")
 
     # Make sure v4l can give us at least 1 good frame
     buf = None
     try:
       while not buf:
         v4l_frame_timeout = None
-        if end_time is not None:
+        if end_time != float("inf"):
           v4l_frame_timeout = end_time - time.time()
         buf = port.video_dev.get_frame(timeout=v4l_frame_timeout)
     except subprocess.TimeoutExpired:
+      logging.warning("WaitVideoInputStable timed out at V4L")
       return False
 
+    logging.info(f"Video is now stable! {end_time - time.time():.2f} seconds to spare")
     return True
 
   def IsPhysicalPlugged(self, port_id):
@@ -617,7 +618,9 @@ class ChameleondDriver(ChameleondInterface):
     """
     port = self.PORTS[port_id]
     assert port.has_video
-    return port.video_dev.get_resolution()
+    resolution = port.video_dev.get_resolution()
+    logging.info(f"DetectResolution {port} => {resolution}")
+    return resolution
 
   def _AutoFillArea(self, port_id, x, y, width, height):
     """Verifies the area argument correctness and fills the default values.
