@@ -212,6 +212,12 @@ class ChameleondDriver(ChameleondInterface):
       # called "break" sucessfully
       raise last_error
 
+    # Clear EDIDs cached in chameleond
+    for port in self.PORTS:
+      if port.has_video:
+        port.edid = None
+    self.edid_database = {}
+
   def GetMacAddress(self):
     """Gets the MAC address of this Chameleon.
 
