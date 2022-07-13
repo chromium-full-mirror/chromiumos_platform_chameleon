@@ -41,7 +41,6 @@ check_git_tree_clean:
 	    echo "Git work tree should be clean."; \
 	    echo "Please commit your changes and make chameleon in order to" \
 	         "keep a record in the commit history on chameleon hosts."; \
-	    exit 1; \
 	fi
 
 .PHONY: check_git_commit_HEAD
@@ -106,6 +105,11 @@ PLATFORM = $(shell awk -F= '/CHROMEOS_RELEASE_NAME/ {print $$2}' \
 # Valid value: true / false.
 NEEDS_SYSTEM_UPDATE ?= 'false'
 
+SETUP_SUFFIX =
+ifeq ($(PLATFORM), cyclone5)
+	SETUP_SUFFIX = --cyclone5
+endif
+
 .PHONY: install
 install:
 	@mkdir -p $(DESTDIR)
@@ -121,11 +125,11 @@ else
 endif
 
 ifeq ($(PY_VERSION), python3)
-	@echo python3 setup.py install -f
-	@python3 setup.py install -f
+	@echo python3 setup.py install -f $(SETUP_SUFFIX)
+	@python3 setup.py install -f $(SETUP_SUFFIX)
 else
-	@echo python2 setup.py install -f
-	@python setup.py install -f
+	@echo python2 setup.py install -f $(SETUP_SUFFIX)
+	@python setup.py install -f $(SETUP_SUFFIX)
 endif
 
 ifeq ($(PLATFORM), Chrome OS)

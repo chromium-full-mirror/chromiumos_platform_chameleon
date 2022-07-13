@@ -3,9 +3,21 @@
 # found in the LICENSE file.
 """Setup script to distribute and install Chameleond library and scripts."""
 
+import sys
+
 # Needs to import setup from setuptools instead of distutils.core
 # in order to use the install_requires argument.
 from setuptools import setup
+
+
+install_requires = ['pyserial', 'schedule', 'future']
+
+# cryptography is for bluetooth only, which is not required on cyclone5
+# platform.
+if '--cyclone5' not in sys.argv:
+  install_requires += ['cryptography==2.6.1']
+else:
+  sys.argv.remove('--cyclone5')
 
 setup(
     name='chameleond',
@@ -20,7 +32,7 @@ setup(
     license='Chromium',
     description='Server to communicate and control Chameleon board.',
     long_description='Server to communicate and control Chameleon board.',
-    install_requires=['cryptography==2.6.1', 'pyserial', 'schedule', 'future'],
+    install_requires=install_requires,
     scripts=['utils/lock_u_boot_console', 'utils/run_chameleond',
              'utils/run_displayd', 'utils/run_stream_server',
              'chameleond/utils/server_time', 'utils/run_scheduler',
