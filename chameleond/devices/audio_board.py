@@ -211,7 +211,8 @@ class _JackPlugger(object):
 
   bit      11     10      9      8
   ---------------------------------
-  pin   stat1  stat0   cmd1   cmd0
+  pin   stat1  stat0   cmd1   cmd0   (Model 1)
+  pin   stat0  stat1   cmd1   cmd0   (Model 2)
 
   =================================
 
@@ -233,8 +234,10 @@ class _JackPlugger(object):
   """
   # The I/O expander index is 1.
   _INDEX = 1
-  # The mapping from register name to bit offset.
-  _BIT_MAP = {'cmd0': 8, 'cmd1': 9, 'stat0': 10, 'stat1': 11}
+  # The mapping from register name to bit offset. The current design of jack
+  # pluggers is different from 2018. The stat0 and stat1 are opposite.
+  _MODEL_2018_BIT_MAP = {'cmd0': 8, 'cmd1': 9, 'stat0': 10, 'stat1': 11}
+  _MODEL_CUR_BIT_MAP = {'cmd0': 8, 'cmd1': 9, 'stat0': 11, 'stat1': 10}
   # The mapping from plug state to string.
   _STATE_TO_STR = {True: 'Plug', False: 'Unplug'}
   _DELAY_AFTER_PLUG_UNPLUG = 4
@@ -246,9 +249,38 @@ class _JackPlugger(object):
       io_controller: An _AudioBoardIOController object.
     """
     self._io_controller = io_controller
+    self._bit_map = self._DetectBitMap()
     self.Reset()
 
     logging.info('_JackPlugger initialized')
+
+  def _DetectBitMap(self):
+    # Try to plug the jack
+    self._io_controller.SetBit(self._INDEX, self._MODEL_2018_BIT_MAP['cmd0'], 0)
+    self._io_controller.SetBit(self._INDEX, self._MODEL_2018_BIT_MAP['cmd1'], 1)
+    time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
+    plug_v0 = self._io_controller.ReadBit(self._INDEX,
+                                          self._MODEL_2018_BIT_MAP['stat0'])
+    plug_v1 = self._io_controller.ReadBit(self._INDEX,
+                                          self._MODEL_2018_BIT_MAP['stat1'])
+
+    # Try to unplug the jack
+    self._io_controller.SetBit(self._INDEX, self._MODEL_2018_BIT_MAP['cmd0'], 1)
+    self._io_controller.SetBit(self._INDEX, self._MODEL_2018_BIT_MAP['cmd1'], 0)
+    time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
+    unplug_v0 = self._io_controller.ReadBit(self._INDEX,
+                                            self._MODEL_2018_BIT_MAP['stat0'])
+    unplug_v1 = self._io_controller.ReadBit(self._INDEX,
+                                            self._MODEL_2018_BIT_MAP['stat1'])
+
+    logging.info('Detecting jack plugger model. Plug: (%d %d), Unplug: (%d %d)',
+                 plug_v0, plug_v1, unplug_v0, unplug_v1)
+    if (plug_v0, plug_v1, unplug_v0, unplug_v1) == (0, 1, 1, 0):
+      return self._MODEL_2018_BIT_MAP
+    elif (plug_v0, plug_v1, unplug_v0, unplug_v1) == (1, 0, 0, 1):
+      return self._MODEL_CUR_BIT_MAP
+    else:
+      raise _JackPluggerException('No valid jack plugger detected.')
 
   def Reset(self):
     """Unplugs the jack and checks status."""
@@ -268,8 +300,8 @@ class _JackPlugger(object):
     else:
       values = (1, 0)
 
-    self._io_controller.SetBit(self._INDEX, self._BIT_MAP['cmd0'], values[0])
-    self._io_controller.SetBit(self._INDEX, self._BIT_MAP['cmd1'], values[1])
+    self._io_controller.SetBit(self._INDEX, self._bit_map['cmd0'], values[0])
+    self._io_controller.SetBit(self._INDEX, self._bit_map['cmd1'], values[1])
 
   def _GetPlugState(self):
     """Gets plugger current state.
@@ -280,8 +312,8 @@ class _JackPlugger(object):
     Raises:
       _JackPluggerException if motor status can not be queried.
     """
-    value0 = self._io_controller.ReadBit(self._INDEX, self._BIT_MAP['stat0'])
-    value1 = self._io_controller.ReadBit(self._INDEX, self._BIT_MAP['stat1'])
+    value0 = self._io_controller.ReadBit(self._INDEX, self._bit_map['stat0'])
+    value1 = self._io_controller.ReadBit(self._INDEX, self._bit_map['stat1'])
 
     if (value0, value1) == (0, 1):
       return True
@@ -678,8 +710,8 @@ class AudioBoard(chameleon_device.ChameleonDevice):
       raise AudioBoardException('Can not initialize audio board')
     try:
       self._jack_plugger = _JackPlugger(self._io_controller)
-    except _JackPluggerException:
-      logging.error('Can not access jack plugger.')
+    except _JackPluggerException as err:
+      logging.error('Can not access jack plugger: %s', err)
       self._jack_plugger = None
 
     self._bluetooth_ctrl = _BluetoothController(self._io_controller)
