@@ -81,43 +81,28 @@
       register: authorized_keys
       tags: user, ssh_key
 
-    - name: Install more tools
+    - name: Install some userspace packages
       community.general.pacman:
         package:
           - i2c-tools
           - dfu-util
-          - protobuf
-          - opencv
+          - python-pyserial
+          - python-cffi
+          - python-numpy
         state: present
-      tags: install
+      tags: install, python
 
-    - name: Install tools from the AUR
+    - name: Build and install more packages from the AUR
       vars:
         ansible_become_user: '{{username}}'
       community.general.pacman:
         executable: 'pikaur'
+        extra_args: '--mflags=--nocheck' # some packages have $CARCH mismatches
         package:
-          - stm32flash
+          - python-pigweed
           - libgpiod
+          - stm32flash
       tags: install, pikaur
-
-    - name: Install python things
-      community.general.pacman:
-        package:
-          - python-pyserial
-          - python-sphinx
-          - python-wheel
-          - python-cffi
-          - python-numpy
-          - python-opencv
-        state: present
-      tags: install, python
-
-    - name: Install pigweed
-      # as root, in case our tools need sudo
-      ansible.builtin.pip:
-        name: pigweed
-      tags: python, pip
 
     - name: Copy chameleond.service
       ansible.builtin.copy:
