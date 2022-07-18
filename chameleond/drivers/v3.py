@@ -146,7 +146,7 @@ class ChameleondDriver(ChameleondInterface):
 
     try:
       status, payload = self.board_service.get_code_version()
-      for field, value in payload._fields.items():
+      for field, value in payload.ListFields():
         versions[field.name] = value
     except Exception as e:
       versions["ec_ver"] = repr(e)
