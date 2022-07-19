@@ -41,6 +41,7 @@ check_git_tree_clean:
 	    echo "Git work tree should be clean."; \
 	    echo "Please commit your changes and make chameleon in order to" \
 	         "keep a record in the commit history on chameleon hosts."; \
+	    exit 1; \
 	fi
 
 .PHONY: check_git_commit_HEAD
