@@ -390,7 +390,7 @@ class ChameleondDriver(ChameleondInterface):
 
     port.edid = edid_bytes
     if self.IsPlugged(port_id):
-      self._send_cached_edid_to_hardware(port)
+      raise DriverError("Too late to send EDID now, unplug first")
 
   def _send_cached_edid_to_hardware(self, port, maybe=False):
     """Actually send EDID cached by python to the hardware.
@@ -463,10 +463,15 @@ class ChameleondDriver(ChameleondInterface):
       )
       if port.is_ite:
         self.it68051_service.select_port(port=port.ite_port)
+      else:
+        raise NotImplementedError("Need to tell the FPGA Logic")
+
+      self._send_cached_edid_to_hardware(port)
+
+      if port.is_ite:
         self.it68051_service.set_hpd(port=port.ite_port, on_off=1)
       else:
         raise NotImplementedError("Need to tell the FPGA Logic")
-      self._send_cached_edid_to_hardware(port)
 
     # If we switch v4l frameworks, perhaps re-open the device here
 
