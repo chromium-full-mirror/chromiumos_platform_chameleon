@@ -1,0 +1,42 @@
+# U-Boot: Chameleon
+# Maintainer: Alexandru M Stan <amstan@chromium.org>
+
+buildarch=4
+
+_version=v3-fsi-0-g43f3f1d
+pkgname=fpga-bitstream-chameleonv3
+pkgver=$(echo ${_version}|sed "s/-/_/g")
+pkgrel=1
+pkgdesc="FPGA Bitstream for Chameleon v3"
+arch=('armv7h')
+url='https://chrome-internal.googlesource.com/chromeos/platform/video-chameleon'
+license=('Custom')
+provides=('fpga-bitstream')
+makedepends=('uboot-tools')
+_fpga_types=(
+  '270-3'
+  '480-2'
+)
+source=('fpga.its')
+for type in "${_fpga_types[@]}"; do source+=("${_version}-${type}.rbf"); done
+sha256sums=('e42cf2dddc07c837a42302c8143ab5c80abe49f2de8714c083244d6ff30404fd'
+            '39feda6f7871a45f8541abda03697c002032cca5cf85c43f5801098910f8d368'
+            'b6757b5839af51abf01f5fc6478890e6c641bb86445ce34ef435824f7fdefe34')
+
+build() {
+  for type in "${_fpga_types[@]}"; do
+    sed "s/RBF/${_version}-${type}.rbf/" < fpga.its > ${_version}-${type}.its
+    mkimage -E -f ${_version}-${type}.its fpga-${_version}-${type}.itb
+  done
+}
+
+package() {
+  install *.itb -Dt "${pkgdir}"/boot/
+
+  # Make links to the latest version so u-boot doesn't need to know the
+  # particular version numbered filename but can still get to it.
+  cd "${pkgdir}"/boot/
+  for type in "${_fpga_types[@]}"; do
+    ln -s fpga-${_version}-${type}.itb fpga-${type}.itb
+  done
+}
