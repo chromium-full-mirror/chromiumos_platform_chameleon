@@ -5,26 +5,19 @@
   tags: chameleon, chameleon_alarm, check_intermediate
 
   tasks:
-    - name: Find fpga .rbf files
+    - name: Find fpga-bitstream*.pkg* files nearby
       ansible.builtin.find:
-        path: '{{playbook_dir}}/intermediate/'
-        patterns: '*.rbf'
-      register: fpga_rbf_files
+        path: '{{playbook_dir}}/../fpga-bitstream-chameleonv3/'
+        patterns: 'fpga-bitstream*.pkg*'
+      register: fpga_pkg_files
       tags: fpga, update
 
-    - name: Find preloader-mkpimage.bin
+    - name: Find uboot*.pkg* files nearby
       ansible.builtin.find:
-        path: '{{playbook_dir}}/intermediate/'
-        patterns: 'preloader-mkpimage.bin'
-      register: preloader_file
-      tags: chameleon_sd, uboot
-
-    - name: Find uboot.scr
-      ansible.builtin.find:
-        path: '{{playbook_dir}}/intermediate/'
-        patterns: 'uboot.scr'
-      register: uboot_scr_file
-      tags: chameleon_sd, uboot
+        path: '{{playbook_dir}}/../uboot-chameleonv3/'
+        patterns: "uboot-chameleonv3-{{ fpga_type }}*.pkg*"
+      register: uboot_pkg_files
+      tags: uboot, update
 
     - name: Find linux*.pkg* files nearby
       ansible.builtin.find:
@@ -36,7 +29,6 @@
     - name: Assert that everything required is there
       ansible.builtin.assert:
         that:
-          - fpga_rbf_files.matched
-          - preloader_file.matched
-          - uboot_scr_file.matched
+          - fpga_pkg_files.matched
+          - uboot_pkg_files.matched
           - kernel_pkg_files.matched

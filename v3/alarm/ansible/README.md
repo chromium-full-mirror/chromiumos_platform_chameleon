@@ -43,14 +43,11 @@ plays.
 Make sure you have the prerequisite files in `intermediate/`, you might find
 those in the Golden Images folder, here's an example of what I have in there:
 
-* `17bc30ecba4bd6e2a276a1a9a773a6acebac4281.10AS027E4F29E3LG.rbf`
-* `17bc30ecba4bd6e2a276a1a9a773a6acebac4281.10AS048E3F29I2SG.rbf`
 * `2022-02-09-ec.bin`
-* `preloader-mkpimage.bin`
-* `uboot.scr` - created by running `make sd` in the uboot config folder
 
-It will also try looking for kernel prebuilts in `../linux-enclustra/*.pkg*`.
-TODO: Cross compile them if they don't exist.
+It will also try looking for chameleon binary packages in each of the other
+non-ansible folders in alarm/. Make sure they exist or ansible will
+remind you pretty early.
 
 Once you have an sd card produced, boot it on a real chameleon and adjust the
 end of `inventory.yml` with the new "chameleon" host so you can finish the `ec`

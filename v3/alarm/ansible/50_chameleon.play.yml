@@ -9,8 +9,7 @@
       ansible.builtin.copy:
         src: '{{ item.path }}'
         dest: /var/cache/pacman/pkg
-      # excluding mercury-aa1, since that one will conflict with chameleon
-      with_items: "{{ hostvars['localhost']['kernel_pkg_files']['files'] | rejectattr('path', 'search', 'mercury_aa1') }}"
+      with_items: "{{ hostvars['localhost']['kernel_pkg_files']['files'] }}"
       register: kernel_pkg_files
       tags: install, kernel, update
 
@@ -29,31 +28,40 @@
         package:
           - "{{ item.dest }}"
         state: present
-      with_items: "{{ kernel_pkg_files['results'] }}"
+      with_items: "{{ kernel_pkg_files['results']}}"
       tags: install, kernel, update
 
-    - name: Upload fpga rbf
+    - name: Upload chameleon uboot packages
       ansible.builtin.copy:
         src: '{{ item.path }}'
-        dest: /boot
-      with_items: "{{ hostvars['localhost']['fpga_rbf_files']['files'] }}"
-      register: fpga_rbf_files
-      tags: install, fpga, update
+        dest: /var/cache/pacman/pkg
+      with_items: "{{ hostvars['localhost']['uboot_pkg_files']['files'] }}"
+      register: uboot_pkg_files
+      tags: install, uboot, update
 
-    - name: Enable the correct fpga rbf
-      ansible.builtin.copy:
-        remote_src: yes
-        src: '{{ item.dest }}'
-        dest: /boot/fpga.rbf
-      with_items: "{{ fpga_rbf_files['results'] | selectattr('dest', 'search', fpga_type) }}"
-      tags: install, fpga, update
+    - name: Install chameleon uboot package
+      community.general.pacman:
+        package:
+          - "{{ item.dest }}"
+        state: present
+      with_items: "{{ uboot_pkg_files['results'] }}"
+      tags: install, uboot, update
 
-    - name: Upload uboot.scr
+    - name: Upload chameleon fpga bitstream package
       ansible.builtin.copy:
         src: '{{ item.path }}'
-        dest: /boot
-      with_items: "{{ hostvars['localhost']['uboot_scr_file']['files'] }}"
-      tags: install, uboot
+        dest: /var/cache/pacman/pkg
+      with_items: "{{ hostvars['localhost']['fpga_pkg_files']['files'] }}"
+      register: fpga_pkg_files
+      tags: install, fpga, update
+
+    - name: Install chameleon fpga bitstream package
+      community.general.pacman:
+        package:
+          - "{{ item.dest }}"
+        state: present
+      with_items: "{{ fpga_pkg_files['results'] }}"
+      tags: install, fpga, update
 
     - name: Weaken sshd security for ChromeOS lab infra, cipher (b/233429241)
       ansible.builtin.replace:

@@ -31,16 +31,16 @@
         number: 1
         # sigh, parted won't actually mkfs, so what's the point of this fs_type
         # argument? see tasks later on for the actual format call
-        fs_type: fat32
-        part_start: 2MB # leave some room after preloader
-        part_end: 500MB
+        fs_type: ext4
+        part_start: 2MB
+        part_end: 590MB
         state: present
 
-    - name: Create uboot preloader partition
+    - name: Create u-boot spl partition
       community.general.parted:
         device: '{{ sd_dev }}'
         number: 2
-        part_start: 500MB
+        part_start: 590MB
         part_end: 600MB
         state: present
 
@@ -52,17 +52,17 @@
         part_start: 600MB
         state: present
 
-    - name: Set Uboot preloader partition type to 'a2'
+    - name: Set u-boot spl partition type to 'a2'
       ansible.builtin.shell:
         cmd: |
           printf 't\n2\na2\nw\n' | fdisk {{ sd_dev }}
+          partprobe {{ sd_dev }}
       tags: uboot
 
-    - name: dd uboot preloader onto sd card partition
+    - name: dd u-boot spl onto sd card partition
       ansible.builtin.shell: |
-        dd if={{ item.path }} of={{ sd_dev }}p2
+        dd if={{playbook_dir}}/build/chroot/boot/u-boot-splx4.sfp of={{ sd_dev }}p2
         partprobe {{ sd_dev }}
-      with_items: "{{ preloader_file['files'] }}"
       tags: uboot
 
     - name: Wipe /boot partition
@@ -80,15 +80,15 @@
     - name: Format /boot filesystem
       community.general.filesystem:
         dev: '{{ sd_dev }}p1'
-        fstype: vfat
-        opts: -F 32 -n "chml_boot" # label has to be under 11 characters
+        fstype: ext4
+        opts: -L chameleon_boot
         state: present
 
     - name: Format rootfs filesystem
       community.general.filesystem:
         dev: '{{ sd_dev }}p3'
         fstype: btrfs
-        opts: -L "chameleon_fs"
+        opts: -L chameleon_fs
         state: present
 
     - name: Create fs dir structure and mount everything in its proper spot
