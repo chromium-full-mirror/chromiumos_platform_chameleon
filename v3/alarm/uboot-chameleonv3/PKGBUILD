@@ -1,0 +1,43 @@
+# U-Boot: Chameleon
+# Maintainer: Alexandru M Stan <amstan@chromium.org>
+
+buildarch=4
+
+# FPGA_TYPE_DEFAULT=270_2
+# FPGA_TYPE_DEFAULT=270_3
+FPGA_TYPE_DEFAULT=480_2
+FPGA_TYPE=${FPGA_TYPE:=${FPGA_TYPE_DEFAULT}}
+
+pkgname=uboot-chameleonv3-${FPGA_TYPE}
+pkgver=v2022.01
+pkgrel=1 # This needs to be incremented with every change to this file
+_commit=e54f614c471993f7e2d492dacf253a6aae8ee989 # CHROMIUM: arm: dts: chameleonv3: Add 270-2 variant
+provides=('uboot-chameleonv3')
+conflicts=('uboot-chameleonv3')
+pkgdesc="U-Boot for Chameleon v3"
+arch=('armv7h')
+url='https://chromium.googlesource.com/chromiumos/third_party/u-boot/'
+license=('GPL2')
+makedepends=('bc' 'dtc')
+optdepends=('linux: need to boot a kernel'
+            'fpga-bitstream: Required to configure the Arria10 SOC so we can boot')
+source=("https://chromium.googlesource.com/chromiumos/third_party/u-boot/+archive/${_commit}.tar.gz"
+        'u-boot.txt')
+sha256sums=('SKIP' # gerrit produces non reproducible archives
+            '25f0d34a8805545337d9c9d96f1700cd9cd5e6e072c27bf35dad7766b5db5026')
+
+build() {
+  make distclean
+  make socfpga_chameleonv3_defconfig
+  make EXTRAVERSION=-${pkgrel} DEVICE_TREE=socfpga_arria10_chameleonv3_${FPGA_TYPE}
+}
+
+package() {
+  backup=("boot/uboot.txt")
+  install=u-boot.install
+
+  install ../u-boot.txt -Dt "${pkgdir}"/boot/
+
+  install u-boot.img -Dt "${pkgdir}"/boot/
+  install spl/u-boot-splx4.sfp -Dt "${pkgdir}"/boot/
+}

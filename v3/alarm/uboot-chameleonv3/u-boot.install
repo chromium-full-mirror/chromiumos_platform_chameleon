@@ -1,0 +1,45 @@
+flash_spl() {
+  echo "Preparing to flash SPL..."
+  # But let's make sure it's safe before we go dding...
+
+  rootfs=$(mount|grep " / " | awk 'NR==1 {print $1;}')
+  disk=$(lsblk --noheadings --paths --output PKNAME ${rootfs})
+  echo "Rootfs at ${rootfs} on disk \"${disk}\""
+  if [[ "${disk}" != "/dev/mmcblk0" ]]; then
+    echo "Not booted from /dev/mmcblk0. Aborting"
+    return
+    # NOTE: we might be in the choot here, but ansible flashes the spl
+    # manually anyway when creating the final sd card image, so it's ok
+    # if flashing is skipped the first time the uboot package is installed.
+  fi
+
+  spl_part=$(lsblk --noheadings --output PARTTYPE,PATH ${disk} |
+             grep 0xa2 | awk 'NR==1 {print $2;}')
+  if [[ -z ${spl_part} ]]; then
+    echo "Could not find SPL partition (type 0xa2) on ${disk}. Here's what's available:"
+    lsblk --output +PARTTYPE,PARTTYPENAME,FSTYPE ${disk}
+    echo "Aborting"
+    return
+  fi
+  echo "Found SPL partition at ${spl_part}"
+
+  spl_part_size=$(lsblk --noheadings --bytes --output SIZE ${spl_part})
+  if [[ ${spl_part_size} -gt 20000000 ]]; then
+    # limit at ~20MB, but ansible creates ~10MB partitions
+    echo "SPL partition is too big at ${spl_part_size} bytes. Let's be safe, Aborting"
+    return
+  fi
+
+  echo "Flashing!"
+  ( set -x ; # let's be dramatic by printing the dd command too
+    dd if=/boot/u-boot-splx4.sfp of=${spl_part}
+  )
+}
+
+post_install() {
+  flash_spl
+}
+
+post_upgrade() {
+  flash_spl
+}
