@@ -51,8 +51,9 @@
       tags: pikaur_boostrap
 
     - name: Update AUR packages with pikaur
-      # This could have been community.general.pacman with executable: pikaur
-      # But glinux's ansible doesn't support that option yet
-      ansible.builtin.shell: |
-        pikaur -Syua --noconfirm
+      community.general.pacman:
+        executable: 'pikaur'
+        extra_args: '--aur'
+        update_cache: yes
+        upgrade: yes
       tags: update

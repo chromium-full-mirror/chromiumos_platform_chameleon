@@ -92,12 +92,13 @@
       tags: install
 
     - name: Install tools from the AUR
-      # This could have been community.general.pacman with executable: pikaur
-      # But glinux's ansible doesn't support that option yet
       vars:
         ansible_become_user: '{{username}}'
-      ansible.builtin.shell: |
-        pikaur -S stm32flash libgpiod --noconfirm
+      community.general.pacman:
+        executable: 'pikaur'
+        package:
+          - stm32flash
+          - libgpiod
       tags: install, pikaur
 
     - name: Install python things
