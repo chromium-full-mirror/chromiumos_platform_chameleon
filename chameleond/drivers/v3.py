@@ -472,6 +472,13 @@ class ChameleondDriver(ChameleondInterface):
     logging.info(f"Plug {port}")
 
     if port.has_video:
+      if port.is_ite:
+        for other_port_id, other_port in enumerate(self.PORTS):
+          if port is other_port:
+            continue
+          if other_port.is_ite and self.IsPlugged(other_port_id):
+              raise ChameleondError(f"Port {other_port} already connected, don't want to disconnect it.")
+
       # set routing via the EC
       self.videomux_service.set(
         **{port.external_name.lower(): port.videomux_direction}
