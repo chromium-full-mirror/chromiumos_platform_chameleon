@@ -84,6 +84,7 @@
     - name: Install some userspace packages
       community.general.pacman:
         package:
+          - v4l-utils
           - i2c-tools
           - dfu-util
           - python-pyserial
