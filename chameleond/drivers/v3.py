@@ -393,7 +393,9 @@ class ChameleondDriver(ChameleondInterface):
 
     port.edid = edid_bytes
     if self.IsPlugged(port_id):
-      raise ChameleondError("Too late to send EDID now, unplug first")
+      self._send_cached_edid_to_hardware(port)
+      if port.is_ite:
+        logging.warning("Might be too late to send EDID to ITE chip after port's been plugged.")
 
   def _send_cached_edid_to_hardware(self, port, maybe=False):
     """Actually send EDID cached by python to the hardware.
