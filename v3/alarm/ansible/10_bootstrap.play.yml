@@ -96,6 +96,7 @@
           - networkmanager
           - openssh
           - btrfs-progs
+          - parted
           - arch-install-scripts
           - python-setuptools
           - python-pip
