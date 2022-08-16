@@ -24,6 +24,9 @@ from chameleond.interface import ChameleondInterface
 EC_PROTO_PATH = (pathlib.Path(__file__)/"../../../v3/ec/proto/v3.proto").resolve()
 EC_PROTO = pw_protobuf_compiler.python_protos.Library.from_paths([EC_PROTO_PATH]).modules_by_package[""][0]
 
+class ChameleondError(Exception):
+  pass
+
 def _check_output(args, encoding="utf-8", **kwargs):
   out = subprocess.check_output(args, encoding=encoding, **kwargs)
   if encoding is None:
@@ -390,7 +393,7 @@ class ChameleondDriver(ChameleondInterface):
 
     port.edid = edid_bytes
     if self.IsPlugged(port_id):
-      raise DriverError("Too late to send EDID now, unplug first")
+      raise ChameleondError("Too late to send EDID now, unplug first")
 
   def _send_cached_edid_to_hardware(self, port, maybe=False):
     """Actually send EDID cached by python to the hardware.
@@ -644,14 +647,14 @@ class ChameleondDriver(ChameleondInterface):
       A tuple of (x, y, width, height)
 
     Raises:
-      DriverError if the area is not specified correctly.
+      ChameleondError if the area is not specified correctly.
     """
     if (x, y, width, height) == (None, ) * 4:
       return (None, None) + self.DetectResolution(port_id)
     elif (x, y) == (None, ) * 2 or None not in (x, y, width, height):
       return (x, y, width, height)
     else:
-      raise DriverError("Some of area arguments are not specified.")
+      raise ChameleondError("Some of area arguments are not specified.")
 
   def CaptureVideo(self, port_id, total_frame, x=None, y=None, width=None,
                    height=None):
