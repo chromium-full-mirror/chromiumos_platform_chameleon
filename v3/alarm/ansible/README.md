@@ -33,12 +33,8 @@ Define your inventory (at least for the machine settings), see
 inventory_template.yml for more details on how or where to put them.
 
 ```bash
-alarm/ansible% sudo ansible-playbook -i inventory.yml *.play*.yml -v -e "sd_dev=/dev/mmcblk0"
+alarm/ansible% sudo ansible-playbook -i inventory.yml *.play*.yml -v
 ```
-
-**WARNING:** Make sure you get the `sd_dev` parameter correct, it WILL start
-dd-ing and repartitioning that device as root during the `chameleon_sd` tagged
-plays.
 
 Make sure you have the prerequisite files in `intermediate/`, you might find
 those in the Golden Images folder, here's an example of what I have in there:
@@ -49,9 +45,10 @@ It will also try looking for chameleon binary packages in each of the other
 non-ansible folders in alarm/. Make sure they exist or ansible will
 remind you pretty early.
 
-Once you have an sd card produced, boot it on a real chameleon and adjust the
-end of `inventory.yml` with the new "chameleon" host so you can finish the `ec`
-flashing tasks (see next section on how to restrict the tasks to just that tag).
+Once you have an sd card image produced, dd it to an sd card, then boot it
+on a real chameleon and adjust the end of `inventory.yml` with the new
+"chameleon" host so you can finish the `ec` flashing tasks (see next
+section on how to restrict the tasks to just that tag).
 
 ### Tags
 
@@ -71,8 +68,7 @@ Some tags of interest:
   chameleond git repo, ec
 * `chameleon` - anything tagged with this is our application specific stuff
   that's extra from "upstream"
-* `chameleon_sd` - creates sd card from chroot, requires the
-  `-e "sd_dev=/dev/mmcblk...` argument for the destination.
+* `chameleon_sd` - creates sd card image from chroot
 * `chameleon_device` - tasks that can be ran on any chameleon installation
   (either a chroot or a real device)
 * `ec` - flashing ec

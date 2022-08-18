@@ -129,6 +129,12 @@
         enabled: yes
       tags: chameleond_service, provision
 
+    - name: Install /etc/fstab
+      ansible.builtin.copy:
+        src: '{{playbook_dir}}/files/fstab'
+        dest: '/etc/fstab'
+      tags: provision
+
 - name: Chameleon user things
   hosts: archlinuxarm
   vars:

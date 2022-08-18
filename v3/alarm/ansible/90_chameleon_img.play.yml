@@ -1,7 +1,10 @@
-- name: Install chameleon from chroot to sd card
+- name: Install chameleon from chroot to sd card image
   hosts: localhost
   vars:
     ansible_become: yes
+    chroot_dir: '{{playbook_dir}}/build/chroot'
+    sd_img: '{{playbook_dir}}/build/chameleon_{{fpga_type}}.img'
+    sd_root: '{{playbook_dir}}/build/sd/root'
   tags: chameleon, chameleon_sd
 
   tasks:
@@ -9,36 +12,24 @@
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build'
         cmd: |
-          # source devices
-          umount -R {{ sd_dev }}p1
-          umount -R {{ sd_dev }}p3
-
-          # taget
-          umount -R sd/
-
+          umount -R sd
+          umount -R sd/root/boot
           # always successful no matter what
           exit 0
-
-    - name: Wipe existing sd partition table
-      ansible.builtin.shell:
-        cmd: |
-          wipefs -a {{ sd_dev }}
-      tags: wipe
-
+    - name: Allocate img.sd file
+      ansible.builtin.shell: |
+        dd if=/dev/zero of={{ sd_img }} bs=1M count=3500
     - name: Create /boot partition
       community.general.parted:
-        device: '{{ sd_dev }}'
+        device: '{{ sd_img }}'
         number: 1
-        # sigh, parted won't actually mkfs, so what's the point of this fs_type
-        # argument? see tasks later on for the actual format call
         fs_type: ext4
-        part_start: 2MB
         part_end: 590MB
         state: present
 
     - name: Create u-boot spl partition
       community.general.parted:
-        device: '{{ sd_dev }}'
+        device: '{{ sd_img }}'
         number: 2
         part_start: 590MB
         part_end: 600MB
@@ -46,47 +37,39 @@
 
     - name: Create rootfs partition
       community.general.parted:
-        device: '{{ sd_dev }}'
+        device: '{{ sd_img }}'
         number: 3
         fs_type: btrfs
         part_start: 600MB
         state: present
 
+    - name: losetup
+      ansible.builtin.shell: |
+        losetup -fP --show {{ sd_img }}
+      register: losetup
+
     - name: Set u-boot spl partition type to 'a2'
-      ansible.builtin.shell:
-        cmd: |
-          printf 't\n2\na2\nw\n' | fdisk {{ sd_dev }}
-          partprobe {{ sd_dev }}
+      ansible.builtin.shell: |
+        printf 't\n2\na2\nw\n' | fdisk {{losetup.stdout}}
+        partprobe {{losetup.stdout}}
       tags: uboot
 
     - name: dd u-boot spl onto sd card partition
       ansible.builtin.shell: |
-        dd if={{playbook_dir}}/build/chroot/boot/u-boot-splx4.sfp of={{ sd_dev }}p2
-        partprobe {{ sd_dev }}
+        dd if={{playbook_dir}}/build/chroot/boot/u-boot-splx4.sfp of={{losetup.stdout}}p2
+        partprobe {{losetup.stdout}}
       tags: uboot
-
-    - name: Wipe /boot partition
-      community.general.filesystem:
-        dev: '{{ sd_dev }}p1'
-        state: absent
-      tags: wipe
-
-    - name: Wipe rootfs partition
-      community.general.filesystem:
-        dev: '{{ sd_dev }}p3'
-        state: absent
-      tags: wipe
 
     - name: Format /boot filesystem
       community.general.filesystem:
-        dev: '{{ sd_dev }}p1'
+        dev: '{{losetup.stdout}}p1'
         fstype: ext4
         opts: -L chameleon_boot
         state: present
 
     - name: Format rootfs filesystem
       community.general.filesystem:
-        dev: '{{ sd_dev }}p3'
+        dev: '{{losetup.stdout}}p3'
         fstype: btrfs
         opts: -L chameleon_fs
         state: present
@@ -99,17 +82,11 @@
                     # unsuitable without touching the local /etc/fstab
         cmd: |
           mkdir -p sd &&
-          mount {{ sd_dev }}p3 sd &&
+          mount {{losetup.stdout}}p3 -o subvol=/ sd &&
           btrfs subvolume create sd/root &&
           mkdir -p sd/root/mnt/fs &&
           mkdir -p sd/root/boot &&
-          mount {{ sd_dev }}p1 sd/root/boot
-
-    - name: Install /etc/fstab
-      ansible.builtin.copy:
-        remote_src: yes
-        src: '{{playbook_dir}}/files/fstab'
-        dest: '{{playbook_dir}}/build/chroot/etc/fstab'
+          mount {{losetup.stdout}}p1 sd/root/boot
 
     - name: Cleanup chroot source before copying
       # Less stuff to copy
@@ -128,12 +105,7 @@
         cmd: |
           rsync --archive --hard-links --acls --xattrs --sparse -recursive chroot/* sd/root/
           sync
-
-    - name: Snapshot root
-      ansible.builtin.shell:
-        chdir: '{{playbook_dir}}/build/sd'
-        cmd: |
-          btrfs subvolume snapshot -r root snapshot-$(date -Iminutes)
+      tags: copy
 
     - name: Unmount partitions
       ansible.builtin.shell:
@@ -141,3 +113,16 @@
         cmd: |
           umount -R sd/root/boot
           umount -R sd
+      tags: cleanup
+
+    - name: Cleanup losetup
+      ansible.builtin.shell: |
+        losetup -d {{losetup.stdout}}
+      tags: cleanup
+
+    - name: Compress image
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}/build'
+        cmd: |
+         tar --zstd -cf "{{ sd_img }}.tar.zst" "chameleon_{{fpga_type}}.img"
+      tags: compress
