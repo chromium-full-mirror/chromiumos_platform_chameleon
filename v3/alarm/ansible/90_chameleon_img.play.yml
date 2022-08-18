@@ -94,9 +94,7 @@
         chdir: '{{playbook_dir}}/build'
         cmd: |
           umount -R chroot
-          rm -Rf chroot/var/cache/pacman/pkg/*
           rm -Rf chroot/home/*/.cache/*
-        removes: chroot/var/cache/pacman/pkg/*
       tags: cleanup
 
     - name: Rsync rootfs from chroot to sd card

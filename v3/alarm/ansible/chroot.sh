@@ -14,6 +14,10 @@ if ! mountpoint -q "$chrootdir"; then
   mount -o bind "$chrootdir" "$chrootdir"
 fi
 
+# let's speed up package downloads/builds on subsequent runs by caching them
+chmod 777 $chrootdir/var/cache/pacman/pkg # so the user inside the chroot has write permissions
+mount -o bind "$chrootdir/../cache/" "$chrootdir/var/cache/pacman/pkg"
+
 # arch-chroot is available in the arch-install-scripts package,
 # Including on debian!
 arch-chroot "$chrootdir" "$@"
