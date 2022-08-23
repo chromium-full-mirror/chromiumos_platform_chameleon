@@ -9,7 +9,12 @@ alias ls='ls --color=auto'
 
 # fix history to be long and to remember better
 shopt -s histappend
-PROMPT_COMMAND='history -a'
 
-# official "chameleon green" prompt
-PS1='\[\033[00;32m\]\u@\h\[\033[00m\]:\[\033[01;32m\]\w\[\033[01;33m\]\$\[\033[00m\] '
+# git prompt
+source /usr/share/git/completion/git-prompt.sh
+GIT_PS1_SHOWDIRTYSTATE=1
+GIT_PS1_SHOWUNTRACKEDFILES=1
+GIT_PS1_SHOWCOLORHINTS=1
+
+# official "chameleon green" prompt + history + git
+PROMPT_COMMAND='history -a; __git_ps1 "\[\033[00;32m\]\u@\h\[\033[00m\]:\[\033[01;32m\]\w" "\[\033[01;33m\]\$\[\033[00m\] " "\033[00;32m (%s\033[00;32m)"'
