@@ -20,18 +20,22 @@ all:
     # Where to put stuff
     chameleon_dir: '/home/{{username}}/chameleon/'
 
-archlinuxarm: # hosts targeted by alarm-ansible
-  vars:
-
+archlinuxarm: # hosts targeted by most alarm-ansible scripts
   hosts:
     # 'archlinuxarm-chroot:' host is dynamically added at the end of first playbook
 
     # In theory this project can be used without any inventory in this section
     # but if you want to provision over ssh you can do it by uncommenting
-    # the following
+    # some of the example chameleon_physical hosts below
 
-    #chameleon:
-      #ansible_host: yourchameleon.lan
-      #ansible_user: alarm     # halfway through you need to restart the playbooks with the proper {{username}} instead of alarm
-      #ansible_ssh_pass: alarm # then delete this line, since ssh keys will be installed
-      #ansible_python_interpreter: '/usr/bin/python'
+  children:
+    chameleon_physical: # hosts targeted by scripts wanting to run on a real chameleon
+      vars:
+        ansible_python_interpreter: '/usr/bin/python' # silences a warning
+        ansible_user: '{{username}}'
+      hosts:
+        #lan-chameleon: # chameleon on your lan
+          #ansible_host: yourchameleon.lan
+
+        #some-lab-chameleon:
+          #ansible_host: chromeos15-rowxxxxx-rackxxxxx-hostxxxx-chameleon.cros.corp.google.com

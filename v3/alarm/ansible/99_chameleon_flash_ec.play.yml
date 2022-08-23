@@ -12,7 +12,7 @@
       register: ec_files
 
 - name: Program EC on a real chameleon host
-  hosts: chameleon
+  hosts: chameleon_physical
   vars:
     ansible_become: yes
   tags: chameleon, ec, update
