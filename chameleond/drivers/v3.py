@@ -154,7 +154,15 @@ class ChameleondDriver(ChameleondInterface):
     except Exception as e:
       versions["ec_ver"] = repr(e)
 
-    #versions["fpga"] = # TODO(b/234872159)
+    try:
+      versions["uboot"] = _check_output(["pacman", "--query", "uboot-chameleonv3"])
+    except Exception as e:
+      versions["uboot"] = repr(e)
+
+    try:
+      versions["fpga"] = _check_output(["pacman", "--query", "fpga-bitstream"])
+    except Exception as e:
+      versions["fpga"] = repr(e)
 
     try:
       versions["linux"] = _check_output(["pacman", "--query", "linux"])
