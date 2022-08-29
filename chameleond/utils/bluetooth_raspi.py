@@ -32,6 +32,7 @@ except ImportError:
   pass
 
 
+from . import bluetooth_socket
 from chameleond.utils import pairing_agent
 from chameleond.utils import system_tools
 from chameleond.utils.raspi_bluez_service import BluezService
@@ -722,6 +723,86 @@ class BluezPeripheral(PeripheralKit):
         obj = self._dbus_system_bus.get_object(DBUS_BLUEZ_SERVICE_IFACE, path)
         return dbus.Interface(obj, DBUS_BLUEZ_DEVICE_IFACE)
     return None
+
+
+  def GetRandomAddress(self):
+    """Read the random address of BT
+
+    @return: random address of BT or empty string when failed
+    """
+    cmd = 'cat /sys/kernel/debug/bluetooth/hci0/random_address'
+    address = os.popen(cmd).read().strip().upper()
+    return address
+
+
+  def SetPrivacy(self, enable):
+    """Set the LE privacy state to ON/OFF
+
+    @param enable: Whether to set LE privacy to True/False.
+
+    @return: True if able to set privacy
+    """
+    _control = bluetooth_socket.BluetoothControlSocket()
+    if not self.AdapterPowerOff():
+      logging.error('Unable to power off adapter')
+      return False
+    if not _control.set_privacy(0, enable):
+      logging.error('Unable to set privacy state')
+      return False
+    if not self.AdapterPowerOn():
+      logging.error('Unable to power on adapter')
+      return False
+    return True
+
+
+  def SetAdvertising(self, enable):
+    """Set the whether advertising via LE.
+
+    @param enable: Whether controller should advertise via LE.
+
+    @return: True if new setting success
+    """
+    _control = bluetooth_socket.BluetoothControlSocket()
+    if not _control.set_advertising(0, enable):
+      logging.error('Unable to set LE advertising {}'.format(enable))
+      return False
+    return True
+
+
+  def SetRPATimeout(self, timeout):
+    """Set the timeout value for random private address
+
+    @param timeout: Number of seconds after which
+                    BT random private address will change
+
+    @return: True if new timeout success
+    """
+    if not str(timeout).isdigit():
+      logging.error('Timeout must be a number')
+      return False
+    if int(timeout) < 30 or int(timeout) > 3600:
+      logging.error('Timeout must be in range [30, 3600]s')
+      return False
+
+    cmd = 'echo {} > /sys/kernel/debug/bluetooth/hci0/rpa_timeout'.format(timeout)
+    err = os.system(cmd)
+    if err != 0:
+      logging.error('Unable to update RPA timeout. Err {}'.format(err))
+      return False
+    return True
+
+
+  def GetRPATimeout(self):
+    """Read the timeout value for random private address
+
+    @return: timeout value as integer
+    """
+    cmd = 'cat /sys/kernel/debug/bluetooth/hci0/rpa_timeout'
+    timeout = os.popen(cmd).read()
+    if timeout == "":
+        logging.error("Fail not exist or timeout not defined.")
+        return 0
+    return int(timeout)
 
 
   def GetRemoteConnectedBluetoothAddress(self):

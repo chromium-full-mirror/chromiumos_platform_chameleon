@@ -9,6 +9,7 @@ import fcntl
 import logging
 import socket
 import struct
+import os
 
 
 # Constants from lib/mgmt.h in BlueZ source
@@ -912,6 +913,26 @@ class BluetoothControlSocket(BluetoothSocket):
 
         (name, short_name) = struct.unpack_from('<249s11s', memoryview(data))
         return (name.decode().rstrip('\0'), short_name.decode().rstrip('\0'))
+
+
+    def set_privacy(self, index, enable):
+        """Set the LE privacy state of a controller.
+
+        @param index: Controller index.
+        @param enable: Whether privacy should be enabled.
+
+        @return New controller settings on success, None on failure.
+        """
+        irk = os.urandom(16)
+        msg_data = struct.pack('<B16s', enable, irk)
+        (status, data) = self.send_command_and_wait(MGMT_OP_SET_PRIVACY,
+                                                    index,
+                                                    msg_data,
+                                                    expected_length=4)
+        if status != MGMT_STATUS_SUCCESS:
+            return None
+        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        return current_settings
 
 
     def start_discovery(self, index, address_type):
