@@ -788,6 +788,10 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
     """Unplugs audio jack to disconnect audio board and Cros device."""
     raise NotImplementedError('AudioBoardAudioJackUnplug')
 
+  def AudioBoardAudioJackReset(self):
+    """Set audio jack to default state."""
+    raise NotImplementedError('AudioBoardAudioJackReset')
+
   def AudioBoardResetBluetooth(self):
     """Resets bluetooth module on audio board."""
     raise NotImplementedError('AudioBoardResetBluetooth')

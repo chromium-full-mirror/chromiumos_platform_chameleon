@@ -1247,6 +1247,12 @@ class ChameleondDriver(ChameleondInterface):
     self.audio_board.SetJackPlugger(False)
 
   @_DeviceMethod(ids.AUDIO_BOARD)
+  def AudioBoardAudioJackReset(self):
+    """Resets audio jack to default state."""
+    logging.info('Resets audio jack to default state.')
+    self.audio_board.ResetJackPlugger()
+
+  @_DeviceMethod(ids.AUDIO_BOARD)
   def AudioBoardResetBluetooth(self):
     """Resets bluetooth module on audio board."""
     logging.info('Resets bluetooth module on audio board.')

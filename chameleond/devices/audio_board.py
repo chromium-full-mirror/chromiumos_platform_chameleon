@@ -722,8 +722,7 @@ class AudioBoard(chameleon_device.ChameleonDevice):
     """Resets audio buses."""
     for bus in list(self._audio_buses.values()):
       bus.Reset()
-    if self.HasJackPlugger():
-      self._jack_plugger.Reset()
+    self.ResetJackPlugger()
 
   def SetConnection(self, bus_number, endpoint, enabled):
     """Connects or disconnects an endpoint on an audio bus.
@@ -779,6 +778,15 @@ class AudioBoard(chameleon_device.ChameleonDevice):
       bus_number: 1 or 2 for audio bus 1 or bus 2.
     """
     self._audio_buses[bus_number].Reset()
+
+  def ResetJackPlugger(self):
+    """Resets jack plugger status.
+
+    Raises:
+      AudioBoardException if there is no jack plugger on this audio board.
+    """
+    if self.HasJackPlugger():
+      self._jack_plugger.Reset();
 
   def HasJackPlugger(self):
     """If this audio board has jack plugger.
