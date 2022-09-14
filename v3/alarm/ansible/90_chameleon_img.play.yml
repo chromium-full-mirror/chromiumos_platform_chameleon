@@ -1,3 +1,21 @@
+- name: Preparing chameleon chroot for sd card deployment
+  hosts: archlinuxarm
+  vars:
+    ansible_become: yes
+  tags: chameleon, chameleon_sd
+  tasks:
+    - name: Save packages touching /boot
+      ansible.builtin.shell:
+        chdir: '/home/{{username}}/'
+        cmd: |
+          rm -Rf boot_pkg
+          mkdir boot_pkg
+          for pkg_name in $(pacman -Qoq /boot/*|uniq); do
+            pkg_file=/var/cache/pacman/pkg/${pkg_name}*
+            echo ${pkg_file}
+            cp ${pkg_file} boot_pkg/
+          done
+
 - name: Install chameleon from chroot to sd card image
   hosts: localhost
   vars:
