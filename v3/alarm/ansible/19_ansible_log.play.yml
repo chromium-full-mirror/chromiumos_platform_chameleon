@@ -1,13 +1,13 @@
-- name: Figure out ansible playbook git version
+- name: Figure out ansible run version
   hosts: localhost
   tags: update, ansible_log
   tasks:
-    - name: git describe
+    - name: get date and git describe
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}'
         cmd: |
-          git describe --tags --long --dirty
-      register: git_describe
+          echo {{ansible_date_time.iso8601}}-$(git describe --tags --long --dirty)
+      register: version
 
 - name: Note down this ansible incantation in a logfile on the device
   hosts: archlinuxarm
@@ -20,7 +20,6 @@
         path: /var/log/alarm-ansible
         create: yes
         line: >-
-          {{ansible_date_time.iso8601}}
-          {{hostvars['localhost']['git_describe'].stdout}}
+          {{hostvars['localhost']['version'].stdout}}
           tags={{ansible_run_tags}}
           skip-tags={{ansible_skip_tags}}
