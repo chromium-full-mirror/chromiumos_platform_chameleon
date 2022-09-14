@@ -1,6 +1,6 @@
 - name: Figure out ansible run version
   hosts: localhost
-  tags: update, ansible_log
+  tags: update, ansible_log, chameleon_sd
   tasks:
     - name: get date and git describe
       ansible.builtin.shell:

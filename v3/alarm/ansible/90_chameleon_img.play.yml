@@ -105,6 +105,18 @@
           sync
       tags: copy
 
+    - name: Snapshot root
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}/build/sd'
+        cmd: |
+          btrfs subvolume snapshot -r root {{hostvars['localhost']['version'].stdout}}
+
+    - name: Save snapshot as discrete file
+      ansible.builtin.shell:
+        chdir: '{{playbook_dir}}/build/sd'
+        cmd: |
+          btrfs send {{hostvars['localhost']['version'].stdout}} | zstd -c > {{playbook_dir}}/build/chameleon_{{fpga_type}}_{{hostvars['localhost']['version'].stdout}}.btrfs.zst
+
     - name: Unmount partitions
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build'
