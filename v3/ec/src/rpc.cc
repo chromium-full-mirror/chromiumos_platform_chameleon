@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Copyright 2021 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
@@ -98,8 +98,8 @@ static void rpc_task(void *unused1, void *unused2, void *unused3)
 	 */
 	for (;;) {
 		LOG_INF("Starting pw_rpc server");
-		pw::hdlc::ReadAndProcessPackets(server, hdlc_channel_output,
-						input_buffer);
+		pw::hdlc::ReadAndProcessPackets(server, input_buffer,
+						pw::hdlc::kDefaultRpcAddress);
 	}
 }
 
