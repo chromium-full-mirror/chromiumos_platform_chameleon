@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2020 The Chromium OS Authors. All rights reserved.
+ * Copyright 2020 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
@@ -127,6 +127,33 @@ static struct sysmon_adc_input scan_table[SYSMON_VMON_NUM_INPUTS] = {
 				.scale_factor = 1.0,
 				"CMON_BOARD" },
 
+	/* The DisplayPort AUX signals are not multiplexed, so the `sel`
+	 * value doesn't matter.
+	 */
+	[DP1_AUXN_DET] = { .sel = SYSMON_SEL_REGULATORS,
+			   .adc_num = 3,
+			   .channel = 5,
+			   .scale_factor = 1.0,
+			   "DP1_AUXN_DET" },
+	[DP1_AUXP_DET] = { .sel = SYSMON_SEL_REGULATORS,
+			   .adc_num = 1,
+			   .channel = 6,
+			   .scale_factor = 1.0,
+			   "DP1_AUXP_DET" },
+	[DP2_AUXP_DET] = { .sel = SYSMON_SEL_REGULATORS,
+			   .adc_num = 1,
+			   .channel = 16,
+			   .scale_factor = 1.0,
+			   "DP2_AUXP_DET" },
+	[DP2_AUXN_DET] = { .sel = SYSMON_SEL_REGULATORS,
+			   .adc_num = 1,
+			   .channel = 17,
+			   .scale_factor = 1.0,
+			   "DP2_AUXN_DET" },
+
+	/* The rest of the SYSMON values are multiplexed, so pay attention to
+	 * the value of `sel`.
+	 */
 	[SYSMON_VMON_PP1200] = { .sel = SYSMON_SEL_REGULATORS,
 				 .adc_num = 1,
 				 .channel = 1,

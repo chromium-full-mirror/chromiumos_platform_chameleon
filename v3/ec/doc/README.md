@@ -21,20 +21,8 @@ Ensure that you have sufficiently recent code
 $ cd ~/zephyrproject
 $ west update
 $ cd zephyr/
-$ git show 7b86137b6cca28c3d9c5f96b84a4408de198c8de
-commit 7b86137b6cca28c3d9c5f96b84a4408de198c8de
-Author: Yuval Peress <peress@google.com>
-Date:   Thu Dec 9 20:43:36 2021 -0700
-
-    fatal: fix missing extern "C"
-
-    This was causing an error when building with pigweed as a module.
-
-    Signed-off-by: Yuval Peress <peress@google.com>
+$ git checkout zephyr-v3.2.0
 ```
-
-If you do not see that commit in your tree, `git pull origin main` and then
-check again.
 
 ## Installing Pigweed
 
@@ -42,7 +30,8 @@ If `ls ~/chromiumos/src/third_party/pigweed` comes up empty, sync your repo
 to get the latest manifest and bring in the Pigweed repository.
 
 You also need to `pip install pigweed` so that the Pigweed RPC tools are
-installed.
+installed. If you have an older version of Pigweed installed,
+`pip3 install --upgrade pigweed`
 
 ## Building the application
 
@@ -115,7 +104,7 @@ connector) turns on and stays lit. The shell prompt (`$`) appears after the
 startup messages:
 
 ```
-*** Booting Zephyr OS build v2.7.0-rc3-2411-gf8cd20fa3e74  ***
+*** Booting Zephyr OS build zephyr-v3.2.0  ***
 
 $
 ```
@@ -261,60 +250,6 @@ VREF_CS2: 0.002417
 VREF_CS3: 0.003223
 ```
 
-## Clock Generator
-
-The Si5338 clock generator chip provides a 100 MHz clock to the FPGA SOM.
-There is no API for this; the initialization is done at startup using a
-`SYS_INIT` function.
-
-The Si5338 is fairly complex, and configuration is best done with Silicon
-Labs' [Clock Builder Pro software](https://www.silabs.com/products/development-tools/software/clockbuilder-pro-software).
-This is an MS Windows-only tool, so I ran it on my personal laptop, saved
-the project (it uses a binary format) and exported a C header file with all
-of the register settings.
-
-* Run the Clock Generator tool
-* Import the settings file and make any changes
-* Choose "Export"
-* Switch to the "Register File" tab
-
-![Register File tab](images/si5338-export1.png "Register File tab in Export Dialog")
-
-Use the file name that the program suggests, `Si5338-CLK24-Registers.h`.
-
-![Export Successful](images/si5338-export2.png "Export Successful")
-
-* Copy the file to your Linux system
-* Convert the file to UNIX-style line endings, `dos2unix Si5338-CLK24-Registers.h`
-* Modify the header file so that it will build with C++:
-
-* Add
-```
-#ifdef __cplusplus
-extern "C" {
-#endif
-```
-just before the `#define NUM_REGS_MAX`.
-
-* Add
-```
-#ifdef __cplusplus
-}
-#endif
-```
-at the end of the file.
-
-* Change register 6 from `{  6,0x08,0x1D},` to `{  6,0x00,0x1D},`. There doesn't
-appear to be a direct way to do this in the Clock Generator tool.
-
-Note `checkpatch.pl` will flag almost every line of the generated file;
-ignore the errors and continue.
-
-The clock output can be verified with an oscilloscope and either a very steady
-hand or some short wires to attach probes. When the board is in reset, the
-clock output is idle, but as soon as the `SYS_INIT` function runs, the clock
-output changes to a 100 MHz signal.
-
 ## FPGA power/boot sequence
 
 The STM32 controls the power enable and power-on-reset for the FPGA, and
@@ -443,12 +378,12 @@ semaphore.
 
 The `i2c_switch` shell command allows setting the switch value. Provide a value
 from 0 to 3 to select one of the buses, or a value outside that range to turn
-off all buses. The effect of the switch can be seen with `i2c scan I2C_1` (as
-provided by Zephyr's `i2c_shell.c`).
+off all buses. The effect of the switch can be seen with `i2c scan i2c@40005400`
+(as provided by Zephyr's `i2c_shell.c`).
 
 ```
 $ i2c_switch 2
-$ i2c scan I2C_1
+$ i2c scan i2c@40005400
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 00:             -- -- -- -- -- -- -- -- -- -- -- --
 10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -458,9 +393,9 @@ $ i2c scan I2C_1
 50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 60: -- -- -- -- 64 65 -- -- -- -- -- -- 6c 6d -- --
 70: -- -- -- 73 -- -- -- --
-5 devices found on I2C_1
+5 devices found on i2c@40005400
 $ i2c_switch 3
-$ i2c scan I2C_1
+$ i2c scan i2c@40005400
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 00:             -- -- -- -- -- -- -- -- -- -- -- --
 10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -470,8 +405,12 @@ $ i2c scan I2C_1
 50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 70: -- -- -- 73 -- -- -- --
-1 devices found on I2C_1
+1 devices found on i2c@40005400
 ```
+
+Note that `i2c@40005400` is the device node name for I2C_1, after
+[PR #48358](https://github.com/zephyrproject-rtos/zephyr/pull/48358) was
+merged.
 
 ## Video Mux Routing
 

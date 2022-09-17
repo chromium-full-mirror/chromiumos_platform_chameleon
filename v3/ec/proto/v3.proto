@@ -89,6 +89,10 @@ message sysmon_response {
     float vref_cs1 = 16;        //  VREF_CS1
     float vref_cs2 = 17;        //  VREF_CS2
     float vref_cs3 = 18;        //  VREF_CS3
+    float dp1_auxn_det = 19;    // DP1_AUXN_DET
+    float dp1_auxp_det = 20;    // DP1_AUXP_DET
+    float dp2_auxp_det = 21;    // DP2_AUXP_DET
+    float dp2_auxn_det = 22;    // DP2_AUXN_DET
 }
 
 message videomux_get_response {

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Copyright 2021 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
@@ -36,7 +36,6 @@ enum gpio_signal {
 	board_version_2,
 	board_version_1,
 	board_version_0,
-	si5338c_int,
 	exp_reset,
 	exp_irq,
 	gp213_it68051p1_ch_sel,
@@ -57,10 +56,6 @@ enum gpio_signal {
 	it68051_rst_l,
 	gp213_it68051p1_hpd,
 	i2c2_int_l,
-	dp1_auxp_det,
-	dp1_auxn_det,
-	dp2_auxp_det,
-	dp2_auxn_det,
 	hdmi1_pp3300,
 	hdmi2_pp3300,
 	dp1_mcu_hpd,
@@ -89,11 +84,12 @@ enum gpio_signal {
 	dp2_out_pd_l,
 	dp2_out_mode,
 	pcie_perst_l,
-	pcie_wake_l,
+	pcie_wake_l_b,
 	pcie_rsvd1,
 	pcie_rsvd2,
 	pcie_rsvd3,
 	pcie_rsvd4,
+	pcie_ref_clk_sel,
 	som_a34,
 	som_a21,
 	som_a98,

@@ -136,11 +136,6 @@
 			gpios = <&u78 13 GPIO_INPUT>;
 			label = "BOARD_VERSION_0";
 		};
-
-		si5338c_int {
-			gpios = <&gpiob 15 GPIO_INPUT>;
-			label = "SI5338C_INT";
-		};
 	};
 
 	i2c-switch {
@@ -252,7 +247,7 @@
 		compatible = "gpio-keys";
 
 		it68051_en {
-			gpios = <&gpiof 3 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpioe 7 GPIO_OUTPUT_HIGH>;
 			label = "IT68051_EN";
 		};
 
@@ -284,26 +279,6 @@
 
 	hotplug {
 		compatible = "gpio-keys";
-
-		dp1_auxp_det {
-			gpios = <&gpioe 5 GPIO_INPUT>;
-			label = "DP1_AUXP_DET";
-		};
-
-		dp1_auxn_det {
-			gpios = <&gpioe 6 GPIO_INPUT>;
-			label = "DP1_AUXN_DET";
-		};
-
-		dp2_auxp_det {
-			gpios = <&gpioe 7 GPIO_INPUT>;
-			label = "DP2_AUXP_DET";
-		};
-
-		dp2_auxn_det {
-			gpios = <&gpioe 8 GPIO_INPUT>;
-			label = "DP2_AUXN_DET";
-		};
 
 		hdmi1_pp3300 {
 			gpios = <&gpioe 9 GPIO_INPUT_PULL_DOWN>;
@@ -465,9 +440,9 @@
 			label = "PCIE_PERST_L";
 		};
 
-		pcie_wake_l {
+		pcie_wake_l_b {
 			gpios = <&gpiog 15 GPIO_OUTPUT_HIGH>;
-			label = "PCIE_WAKE_L";
+			label = "PCIE_WAKE_L_B";
 		};
 
 		pcie_rsvd1 {
@@ -490,8 +465,13 @@
 			label = "PCIE_RSVD4";
 		};
 
+		pcie_ref_clk_sel {
+			gpios = <&gpiod 8 GPIO_OUTPUT_HIGH>;
+			label = "PCIE_REF_CLK_SEL";
+		};
+
 		som_a34 {
-			gpios = <&gpiof 12 GPIO_INPUT>;
+			gpios = <&gpioe 8 GPIO_INPUT>;
 			label = "SOM_A34";
 		};
 
@@ -630,17 +610,18 @@
 };
 
 &adc1 {
-	pinctrl-0 = <&adc1_inp10_pc0 &adc1_inp11_pc1 &adc1_inp4_pc4
-		     &adc1_inp8_pc5>;
+	pinctrl-0 = <&adc1_inp16_pa0 &adc1_inp17_pa1 &adc1_inp10_pc0
+		     &adc1_inp11_pc1 &adc1_inp4_pc4 &adc1_inp8_pc5
+		     &adc1_inp6_pf12>;
 	pinctrl-names = "default";
 	status = "okay";
 };
 
 &adc3 {
 	/* These ADC inputs are only available on ADC3 */
-	pinctrl-0 = <&adc3_inp0_pc2 &adc3_inp1_pc3 &adc3_inp8_pf6
-		     &adc3_inp3_pf7 &adc3_inp7_pf8 &adc3_inp2_pf9
-		     &adc3_inp6_pf10>;
+	pinctrl-0 = <&adc3_inp0_pc2 &adc3_inp1_pc3 &adc3_inp5_pf3
+		     &adc3_inp8_pf6 &adc3_inp3_pf7 &adc3_inp7_pf8
+		     &adc3_inp2_pf9 &adc3_inp6_pf10>;
 	pinctrl-names = "default";
 	status = "okay";
 };

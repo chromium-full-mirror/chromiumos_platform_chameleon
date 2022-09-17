@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2022 The Chromium OS Authors. All rights reserved.
+ * Copyright 2022 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
@@ -18,9 +18,9 @@ extern "C" {
  * @brief Determing if DisplayPort 1 has a signal present
  *
  * Using the state of the AUX signals, determine if a DisplayPort source
- * is connected.
- * When AUXN==0 and AUXP==1, there is no source.
- * When AUXN==1 and AUXP==0, a source is connected.
+ * is connected. See b/245752990#comment4 for details. Basically, if
+ * AUXP < 0.25V, then there is a cable connected and a DisplayPort source
+ * is present.
  *
  * @retval true if DisplayPort source is connected
  * @retval false if there is no DisplayPort source

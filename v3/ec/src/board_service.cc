@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Copyright 2021 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  *
@@ -47,6 +47,10 @@ board_service::get_board_version(const ::Empty &request,
 	response.vref_cs1 = sysmon_get_val(SYSMON_SOM_VREF_CS1);
 	response.vref_cs2 = sysmon_get_val(SYSMON_SOM_VREF_CS2);
 	response.vref_cs3 = sysmon_get_val(SYSMON_SOM_VREF_CS3);
+	response.dp1_auxn_det = sysmon_get_val(DP1_AUXN_DET);
+	response.dp1_auxp_det = sysmon_get_val(DP1_AUXP_DET);
+	response.dp2_auxp_det = sysmon_get_val(DP2_AUXP_DET);
+	response.dp2_auxn_det = sysmon_get_val(DP2_AUXN_DET);
 	return ::pw::OkStatus();
 }
 

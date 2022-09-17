@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Copyright 2021 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
@@ -16,23 +16,26 @@
  * allow device tree to set the initial state.
  *
  * Note the raw defines (e.g. GPIO_OUTPUT) in this file are copies from
- * <drivers/gpio.h>
+ * <drivers/gpio.h>. I copied the values because I wanted to have the initial
+ * settings in the DTS. It turned out to be a terrible idea. "The risk I took
+ * was calculated, but man, am I bad at math."
+ * TODO(b/256325071) Don't copy the bit definitions.
  *
  * The combined defined (e.g. GPIO_OUT_LOW) have been renamed to fit with
  * gpio defined in platform/ec codebase.
  */
 
 /** Enables pin as input. */
-#define GPIO_INPUT              (1U << 8)
+#define GPIO_INPUT              (1U << 16)
 
 /** Enables pin as output, no change to the output state. */
-#define GPIO_OUTPUT             (1U << 9)
+#define GPIO_OUTPUT             (1U << 17)
 
 /* Initializes output to a low state. */
-#define GPIO_OUTPUT_INIT_LOW    (1U << 10)
+#define GPIO_OUTPUT_INIT_LOW    (1U << 18)
 
 /* Initializes output to a high state. */
-#define GPIO_OUTPUT_INIT_HIGH   (1U << 11)
+#define GPIO_OUTPUT_INIT_HIGH   (1U << 19)
 
 /* Configures GPIO pin as output and initializes it to a low state. */
 #define GPIO_OUTPUT_LOW         (GPIO_OUTPUT | GPIO_OUTPUT_INIT_LOW)

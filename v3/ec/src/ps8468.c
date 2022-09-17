@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Copyright 2021 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  *
@@ -23,7 +23,7 @@ LOG_MODULE_REGISTER(ps8468);
 
 #define PS8468_ADDR 0x0C
 
-static const struct device *i2c_dev;
+static const struct device *i2c_dev = DEVICE_DT_GET(DT_NODELABEL(i2c1));
 
 /**
  * @brief Configure the PS8468 device that corresponds to the given port
@@ -165,13 +165,6 @@ static int ps8468_init(const struct device *ptr)
         ARG_UNUSED(ptr);
 
         int ret;
-
-        /* Get the I2C device we'll use to access the PS8468 */
-        i2c_dev = device_get_binding("I2C_1");
-        if (!i2c_dev) {
-                LOG_ERR("%s: I2C_1 device not found.\n", __func__);
-                return -ENODEV;
-        }
 
         /* Configure DP1_HPD interrupt on a rising edge. */
         ret = gpio_pin_interrupt_configure(gpio_get_device(dp1_mcu_hpd),
