@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Copyright 2021 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
@@ -19,15 +19,14 @@ LOG_MODULE_REGISTER(io);
 
 struct gpio_info {
 	const char *const label;
-	const char *const dev_name;
 	const struct device *dev;
 	gpio_pin_t pin;
 	int flags;
 };
 
 #define GPIO(group, name)                                            \
-	[name] = { DT_LABEL(DT_PATH(group, name)),                   \
-		   DT_GPIO_LABEL(DT_PATH(group, name), gpios), NULL, \
+	[name] = { DT_PROP(DT_PATH(group, name), label),             \
+		   DEVICE_DT_GET(DT_GPIO_CTLR(DT_PATH(group, name), gpios)), \
 		   DT_GPIO_PIN(DT_PATH(group, name), gpios),         \
 		   DT_GPIO_FLAGS(DT_PATH(group, name), gpios) }
 
@@ -175,24 +174,14 @@ static int io_init_devices(const struct device *ptr)
 		 */
 		strncpy(dynamic_cmd_buffer[idx], gpios[idx].label, MAX_CMD_LEN);
 
-		/* Look up the device by name. */
-		gpios[idx].dev = device_get_binding(gpios[idx].dev_name);
-		if (!gpios[idx].dev) {
-			LOG_ERR("io_init_devices: "
-				"device_get_binding(%s) failed!\n",
-				gpios[idx].dev_name);
-			continue;
-		}
-
 		/* Configure the GPIO pin. */
 		int ret = gpio_pin_configure(gpios[idx].dev, gpios[idx].pin,
 					     gpios[idx].flags);
 		if (ret != 0) {
 			LOG_ERR("io_init_devices: "
-				"gpio_pin_configure(%s(*%p), %d(\"%s\"), 0x%x) "
+				"gpio_pin_configure(*%p, %d(\"%s\"), 0x%x) "
 				"failed, ret = %d\n",
-				gpios[idx].dev_name, gpios[idx].dev,
-				gpios[idx].pin, gpios[idx].label,
+				gpios[idx].dev, gpios[idx].pin, gpios[idx].label,
 				gpios[idx].flags, ret);
 		}
 	}
@@ -270,14 +259,8 @@ static int cmd_get(const struct shell *shell, size_t argc, char **argv)
 		/* No pin selected, do all */
 		for (enum gpio_signal signal = 0;
 		     signal < sizeof(gpios) / sizeof(gpios[0]); signal++) {
-			int alignment;
 			shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-				      "(%s.%d)%n", // %s = %d
-				      gpios[signal].dev_name, gpios[signal].pin,
-				      &alignment);
-			shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-				      "%*s = %d\n", 40 - alignment,
-				      gpios[signal].label,
+				      "%s = %d\n", gpios[signal].label,
 				      gpio_get_level(signal));
 		}
 		return 0;
