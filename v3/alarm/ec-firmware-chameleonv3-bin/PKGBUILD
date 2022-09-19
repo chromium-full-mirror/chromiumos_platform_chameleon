@@ -1,0 +1,29 @@
+# EC firmware image for Chameleon, repackaged from precompiled binary
+# Maintainer: Alexandru M Stan <amstan@chromium.org>
+
+buildarch=4
+
+pkgname=ec-firmware-chameleonv3-bin
+_version=v3-fsi-13-g4420a69
+pkgver=$(echo ${_version}|sed "s/-/_/g")
+pkgrel=1
+provides=('ec-firmware-chameleonv3')
+pkgdesc="EC Firmware for Chameleon v3"
+arch=('armv7h')
+url='https://chromium.googlesource.com/chromiumos/platform/chameleon/+/refs/heads/main/v3/ec/'
+license=('Custom')
+optdepends=('libgpiod: access the EC bootloader pins'
+            'stm32flash: speaks the bootloader protocol to flash the image')
+source=("${_version}.bin")
+sha256sums=('16c4efcfea57f36a69ecce39d5a7629b6db501157dc5ce9ae4e9a085d4f33c73')
+
+# build() {
+  # For now we'll just pre-build the image and include it in the source= array
+  # In the future we could run `west build -b chameleon` in here
+  # See b/246684278#comment1
+# }
+
+package() {
+  install=ec.install
+  install *.bin -Dt "${pkgdir}"/boot/
+}

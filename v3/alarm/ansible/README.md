@@ -47,8 +47,7 @@ remind you pretty early.
 
 Once you have an sd card image produced, dd it to an sd card, then boot it
 on a real chameleon and adjust the end of `inventory.yml` with the new
-"chameleon" host so you can finish the `ec` flashing tasks (see next
-section on how to restrict the tasks to just that tag).
+"chameleon" host.
 
 ### Tags
 
@@ -71,7 +70,7 @@ Some tags of interest:
 * `chameleon_sd` - creates sd card image from chroot
 * `chameleon_device` - tasks that can be ran on any chameleon installation
   (either a chroot or a real device)
-* `ec` - flashing ec
+* `ec` - installing and flashing ec
 
 ## GPG Checking
 

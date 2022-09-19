@@ -1,0 +1,41 @@
+flash_ec() {
+  pacman_version=$1 # includes -pkgrel
+  # crop it, since ec filename does not include it
+  # and use - instead of _ since that's how the .bin is named
+  version=$(echo ${pacman_version%-*}|sed "s/_/-/g")
+  filename="/boot/${version}.bin"
+
+  echo "Preparing to flash EC with ${filename}"
+
+  if ! boot0=$(gpiofind STM32_BOOT0); then
+    echo "Can't find STM32_BOOT0. Not on a chameleon?"
+    return
+  fi
+
+  if ! rst_l=$(gpiofind STM32_RST_L); then
+    echo "Can't find STM32_RST_L. Not on a chameleon?"
+    return
+  fi
+
+
+  echo "Flashing!"
+  ( set -x ; # let's be dramatic by printing the commands
+    systemctl kill chameleond
+    gpioset -D open-source ${boot0}=1 # program
+    gpioset -D open-drain ${rst_l}=0
+    gpioset -D open-drain ${rst_l}=1
+    stm32flash -f /dev/ttyS0 -w ${filename} -v -S 0x8000000 -b 1000000
+    gpioset -D open-source ${boot0}=0 # normal mode
+    gpioset -D open-drain ${rst_l}=0
+    gpioset -D open-drain ${rst_l}=1
+    systemctl start chameleond
+  )
+}
+
+post_install() {
+  flash_ec $1
+}
+
+post_upgrade() {
+  flash_ec $1
+}

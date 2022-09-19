@@ -47,6 +47,22 @@
       with_items: "{{ uboot_pkg_files['results'] }}"
       tags: install, uboot, update
 
+    - name: Upload chameleon ec packages
+      ansible.builtin.copy:
+        src: '{{ item.path }}'
+        dest: /var/cache/pacman/pkg
+      with_items: "{{ hostvars['localhost']['ec_pkg_files']['files'] }}"
+      register: ec_pkg_files
+      tags: install, ec, update
+
+    - name: Install chameleon ec package
+      community.general.pacman:
+        package:
+          - "{{ item.dest }}"
+        state: present
+      with_items: "{{ ec_pkg_files['results'] }}"
+      tags: install, ec, update
+
     - name: Upload chameleon fpga bitstream package
       ansible.builtin.copy:
         src: '{{ item.path }}'
