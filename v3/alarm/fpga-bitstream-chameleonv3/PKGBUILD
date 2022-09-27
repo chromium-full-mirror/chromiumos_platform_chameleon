@@ -1,9 +1,9 @@
-# U-Boot: Chameleon
+# FPGA Bitstream for Chameleon v3
 # Maintainer: Alexandru M Stan <amstan@chromium.org>
 
 buildarch=4
 
-_version=v3-fsi-0-g43f3f1d
+_version=v3-proto2-1-gd2c77f44
 pkgname=fpga-bitstream-chameleonv3
 pkgver=$(echo ${_version}|sed "s/-/_/g")
 pkgrel=1
@@ -14,14 +14,16 @@ license=('Custom')
 provides=('fpga-bitstream')
 makedepends=('uboot-tools')
 _fpga_types=(
+  '270-2'
   '270-3'
   '480-2'
 )
 source=('fpga.its')
 for type in "${_fpga_types[@]}"; do source+=("${_version}-${type}.rbf"); done
 sha256sums=('e42cf2dddc07c837a42302c8143ab5c80abe49f2de8714c083244d6ff30404fd'
-            '39feda6f7871a45f8541abda03697c002032cca5cf85c43f5801098910f8d368'
-            'b6757b5839af51abf01f5fc6478890e6c641bb86445ce34ef435824f7fdefe34')
+            '79e6f88a8c48a419dbc705753229ac9eaceee02db0dc61582dabe5f7c97f19a6'
+            '63fefad83932b690dc93dcddb59cf4ff0b542246637d49aaf60654130ffb5ad3'
+            'dbe8397d225023cd566998bacfab1788185e7db88b1a885971aca73756f5ab75')
 
 build() {
   for type in "${_fpga_types[@]}"; do
