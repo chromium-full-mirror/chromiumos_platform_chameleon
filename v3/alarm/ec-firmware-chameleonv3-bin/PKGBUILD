@@ -1,6 +1,8 @@
 # EC firmware image for Chameleon, repackaged from precompiled binary
 # Maintainer: Alexandru M Stan <amstan@chromium.org>
 
+# Before editing: see `v3/ec/release.sh` as it can update this automatically
+
 buildarch=4
 
 pkgname=ec-firmware-chameleonv3-bin

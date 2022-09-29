@@ -1,11 +1,80 @@
-# Arch Linux ARM
+# Chameleon v3 Arch Linux ARM OS
 
-On the "short term" (b/194399618) we're using Arch Linux ARM to run our
-Chameleon application on the board. See http://go/chameleon-v3-os for the
-implications.
+In this folder you will find all that's necessary to build an OS for
+Chameleon v3. This OS is based on Arch Linux ARM.
 
-In this folder you'll find a few thing necessary to build the OS image
-using Arch Linux ARM:
+## Components
 
-* `linux-enclustra`: PKGBUILD to compile the kernel packages
-* `ansible`: Scripts used to generate an sd card / maintain the os
+The **ansible/** folder contains higher level build automation on how to put
+everything together and create an image. This is similar to `build_image`
+from ChromeOS.
+
+The other folders represent individual custom **packages** that Chameleon uses.
+Each of those packages contain a [PKGBUILD](https://wiki.archlinux.org/title/PKGBUILD)
+file, containing instructions on how to build a package, similar to Gentoo's
+ebuild files.
+
+Finally, chameleond (sourced via the grandparent folder) is available to
+chameleon devices as a git cloned folder in `~cros/chameleon/` on each
+chameleon device. This allows quick iteraction on the high level code
+without needing to manually deploy each update.
+
+## Ansible
+
+The ansible automation playbooks are used to create, maintain and update
+any kind of Chameleon v3 OS deployment. See [ansible/README.md](ansible/README.md)
+for more details.
+
+## PKGBUILDs
+
+### Maintaining
+
+Edit PKGBUILD's `_commit` variable to point at a new commit from gerrit,
+preferably something that's already landed via the CQ as opposed to a WIP patch.
+
+If this is a binary package, you probably need to adjust its `_version` or
+`pkgver` directly.
+
+Make sure you [increment](https://wiki.archlinux.org/title/PKGBUILD#Version)
+the (`pkgver`-`pkgrel`) tuple every time the resulting output files are
+different (probably when anything in the package folder is
+touched) as this will be able to let users know they should update. You don't
+want to have the 2 packages with the same version number that have different
+behavior.
+
+sha256sums for the whole package can be regenerated using `makepkg -g`. Warning:
+set the ones for the .tar.gz from chromium.googlesource.com to `'SKIP'` since
+the file downloaded never sums to the same thing repeatedly. `--skipinteg` as a
+makepkg flag can be used during development so the checksum generation doesn't
+get annoying.
+
+### Compiling
+
+You will need an Arch Linux system to run [makepkg](https://wiki.archlinux.org/title/Makepkg).
+Chameleon itself counts, but could take **a long time** for packages that are
+more compile heavy (at least without [distcc](https://archlinuxarm.org/wiki/Distcc_Cross-Compiling)
+delegation to a compiler running on a beefy x86 workstation).
+
+```
+makepkg -s
+```
+
+If you do not have an Arch Linux instance, https://wiki.archlinux.org/title/Install_Arch_Linux_from_existing_Linux#From_a_host_running_another_Linux_distribution
+might be handy. In the future this part might be eased by more ansible scripts.
+
+If you're on an x86 system you need to use a cross-compiler and will need to
+provide more flags in front of makepkg:
+
+```
+CROSS_COMPILE='/usr/local/x-tools7h/arm-unknown-linux-gnueabihf/bin/' ARCH='arm' CARCH="armv7h" makepkg -s
+```
+
+A known working crosscompiler can be aquired the [archlinuxarm way](https://archlinuxarm.org/wiki/Distcc_Cross-Compiling)
+(click on [ARMv7l hard-float](https://archlinuxarm.org/builder/xtools/x-tools7h.tar.xz)).
+In theory the Chrome OS cross compiler can work too, but is untested.
+
+### Installing
+
+The makepkg invocation will result in a few packages (`*.pkg*`) in the package
+folder, upload them then install with `pacman -U` on a chameleon
+(or use the ansible scripts)

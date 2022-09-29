@@ -1,8 +1,33 @@
-# Arch Linux ARM Ansible Scripts
+# Chameleon v3 Ansible Scripts
 
-Used to generate a whole sd card image (Arch Linux ARM based) for a chameleon v3.
+The automation scripts in this folder have multiple purposes:
+1. create an SD card image
+2. atomically update a chameleon the officially supported way
+3. modify/update running chameleons for experiments
 
-The scripts can also be used to maintain/update current installs.
+The major use of these scripts is to generate a whole sd card image (Arch
+Linux ARM based) from scratch. This is done by grabbing a generic arch linux
+arm gzip, applying transforms (updating installing packages), then copying to a
+partitioned image.
+
+The above transforms can also be applied directly to an already setup chameleon.
+This is desired in quick and dirty setups, but might yield an unstable system as
+the updates are not stable (eg: you'll get an instantaneous snapshot of the all
+packages, therefore they might not be tested to work for chameleon purposes,
+unlike the regular official chameleon image releases. This might be handy if
+one doesn't want to wait for an official chameleon release just to fix/try
+fixing a tiny bug.
+
+For the more scalable updates you'll want to use some of the latter playbooks
+which update the whole chameleon in an atomic matter using a whole btrfs
+snapshot payload (which is similar to dding a fresh sd card every time,
+without needing to manually handle SD cards). The `update.py` script wraps
+those paybooks into something that's easy to invoke. **If you're a user just
+wondering how to update your chameleon, you're probably looking for this**:
+
+```
+./update.py --payload /tmp/chameleon_270_2_2023-01-18T04:36:00Z-v3-77-g7dee263.btrfs.zst chromeos8-row16-rack10-host9003-chameleon
+```
 
 The "upstream" of some of these files is https://github.com/amstan/alarm-ansible,
 they might eventually diverge though.
@@ -24,7 +49,7 @@ pikaur -S ansible qemu-user-static binfmt-qemu-static arch-install-scripts
 ### Debian / glinux
 
 ```bash
-sudo apt-get install ansible qemu-user-static arch-install-scripts arch-install-scripts
+sudo apt-get install ansible qemu-user-static arch-install-scripts
 ```
 
 ## How to run
