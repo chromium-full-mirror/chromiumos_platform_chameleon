@@ -8,7 +8,7 @@ pkgbase=linux-enclustra
 _kernelname=${pkgbase#linux}
 _desc="ARMv7 Enclustra"
 pkgver=5.14
-pkgrel=10 # This needs to be incremented with every change to this file
+pkgrel=11 # This needs to be incremented with every change to this file
 _commit=58a26311720fd30786db91eee918085157f2c44e # CHROMIUM: media: chv3-fb: Move zero resolution check to queue_setup
 arch=('armv7h')
 url="http://www.kernel.org/"
@@ -19,7 +19,7 @@ source=("https://chromium.googlesource.com/chromiumos/third_party/kernel/+archiv
         'config'
         '60-linux.hook')
 sha256sums=('SKIP' # gerrit produces non reproducible archives
-            '141db77427090a1f7aba5689606612f4a27492c4c25c15e9c94a9b8bf4c8db8e'
+            'da914aebbf5fb5f6a447ecc2719be54867ce367fa7a8c5c1364a3b15c1d01b02'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21')
 
 prepare() {
