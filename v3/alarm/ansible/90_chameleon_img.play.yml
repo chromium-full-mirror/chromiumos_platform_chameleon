@@ -1,5 +1,5 @@
 - name: Preparing chameleon chroot for sd card deployment
-  hosts: archlinuxarm
+  hosts: archlinuxarm-chroot
   vars:
     ansible_become: yes
   tags: chameleon, chameleon_sd
@@ -22,7 +22,8 @@
     ansible_become: yes
     chroot_dir: '{{playbook_dir}}/build/chroot'
     sd_img: '{{playbook_dir}}/build/chameleon_{{fpga_type}}.img'
-    sd_root: '{{playbook_dir}}/build/sd/root'
+    btrfs_snapshot: "chameleon_{{fpga_type}}_{{hostvars['localhost']['version'].stdout}}"
+    root_name: "rw_{{ btrfs_snapshot }}"
   tags: chameleon, chameleon_sd
 
   tasks:
@@ -31,7 +32,7 @@
         chdir: '{{playbook_dir}}/build'
         cmd: |
           umount -R sd
-          umount -R sd/root/boot
+          umount -R sd/*/boot
           # always successful no matter what
           exit 0
     - name: Allocate img.sd file
@@ -101,10 +102,11 @@
         cmd: |
           mkdir -p sd &&
           mount {{losetup.stdout}}p3 -o subvol=/ sd &&
-          btrfs subvolume create sd/root &&
-          mkdir -p sd/root/mnt/fs &&
-          mkdir -p sd/root/boot &&
-          mount {{losetup.stdout}}p1 sd/root/boot
+          btrfs subvolume create sd/{{ root_name }} &&
+          btrfs subvolume set-default sd/{{ root_name }} &&
+          mkdir -p sd/{{ root_name }}/mnt/fs &&
+          mkdir -p sd/{{ root_name }}/boot &&
+          mount {{losetup.stdout}}p1 sd/{{ root_name }}/boot
 
     - name: Cleanup chroot source before copying
       # Less stuff to copy
@@ -119,7 +121,7 @@
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build'
         cmd: |
-          rsync --archive --hard-links --acls --xattrs --sparse -recursive chroot/* sd/root/
+          rsync --archive --hard-links --acls --xattrs --sparse -recursive chroot/* sd/{{ root_name }}/
           sync
       tags: copy
 
@@ -127,19 +129,19 @@
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build/sd'
         cmd: |
-          btrfs subvolume snapshot -r root {{hostvars['localhost']['version'].stdout}}
+          btrfs subvolume snapshot -r {{ root_name }} {{ btrfs_snapshot }}
 
     - name: Save snapshot as discrete file
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build/sd'
         cmd: |
-          btrfs send {{hostvars['localhost']['version'].stdout}} | zstd -c > {{playbook_dir}}/build/chameleon_{{fpga_type}}_{{hostvars['localhost']['version'].stdout}}.btrfs.zst
+          btrfs send {{ btrfs_snapshot }} | zstd -c > {{playbook_dir}}/build/{{ btrfs_snapshot }}.btrfs.zst
 
     - name: Unmount partitions
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build'
         cmd: |
-          umount -R sd/root/boot
+          umount -R sd/*/boot
           umount -R sd
       tags: cleanup
 

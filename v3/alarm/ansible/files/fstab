@@ -4,7 +4,7 @@
 # <file system> <dir> <type> <options> <dump> <pass>
 
 # Probably /dev/mmcblk0p3
-LABEL=chameleon_fs   /       btrfs rw,relatime,ssd,space_cache=v2,subvol=/root,discard=async  0 0
+LABEL=chameleon_fs   /       btrfs rw,relatime,ssd,space_cache=v2,discard=async  0 0
 LABEL=chameleon_fs   /mnt/fs btrfs rw,relatime,ssd,space_cache=v2,subvol=/,discard=async      0 0
 
 # /dev/mmcblk0p1

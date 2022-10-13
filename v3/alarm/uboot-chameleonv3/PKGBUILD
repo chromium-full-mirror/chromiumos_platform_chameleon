@@ -10,7 +10,7 @@ FPGA_TYPE=${FPGA_TYPE:=${FPGA_TYPE_DEFAULT}}
 
 pkgname=uboot-chameleonv3-${FPGA_TYPE}
 pkgver=v2022.01
-pkgrel=1 # This needs to be incremented with every change to this file
+pkgrel=2 # This needs to be incremented with every change to this file
 _commit=e54f614c471993f7e2d492dacf253a6aae8ee989 # CHROMIUM: arm: dts: chameleonv3: Add 270-2 variant
 provides=('uboot-chameleonv3')
 conflicts=('uboot-chameleonv3')
@@ -24,7 +24,7 @@ optdepends=('linux: need to boot a kernel'
 source=("https://chromium.googlesource.com/chromiumos/third_party/u-boot/+archive/${_commit}.tar.gz"
         'u-boot.txt')
 sha256sums=('SKIP' # gerrit produces non reproducible archives
-            '25f0d34a8805545337d9c9d96f1700cd9cd5e6e072c27bf35dad7766b5db5026')
+            '81699f57bb1aadcdade6ffc6176845c8e101c16598a44227e2afdcc627e782b7')
 
 build() {
   make distclean

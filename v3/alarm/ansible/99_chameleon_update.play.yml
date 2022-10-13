@@ -1,0 +1,80 @@
+- name: Deploy update image onto a Chameleon
+  hosts: chameleon_physical
+  vars:
+    ansible_become: yes
+    update_payload_name: "{{ update_payload | mandatory | basename | regex_replace('\\.btrfs\\.zst*$','') }}"
+    new_rootfs_name: "rw_{{ update_payload_name }}"
+  tags: chameleon, ec, image_update
+
+  tasks:
+    - name: Check target fpga type via u-boot package
+      ansible.builtin.shell:
+        cmd: pacman -Qq uboot-chameleonv3
+      register: target_uboot
+
+    - name: Check that our target chameleon matches payload fpga type
+      ansible.builtin.assert:
+        that:
+          - target_uboot.stdout.rsplit("-", 1)[1] in update_payload_name
+        fail_msg: "Cannot find `{{target_uboot.stdout.rsplit('-', 1)[1]}}` in payload name `{{ update_payload_name }}`. Are you sure fpga type matches?"
+
+    - name: Stream payload to target
+      # This is annoying. Since ansible has no concept of streaming this
+      # gigantic file and keeps wanting to put it in temporary variables,
+      # we actually have to write the ssh command from scratch.
+      delegate_to: localhost
+      vars:
+        ansible_become: no
+      ansible.builtin.shell: |
+        cat {{ update_payload }} |
+        ssh {{ ansible_user }}@{{ ansible_host }} -i {{ ansible_ssh_private_key_file }} -C "
+          zstd -d | sudo btrfs receive /mnt/fs
+        "
+        exit 0 # for idempotency, eat up any errors
+
+    - name: Analyze arrived payload subvolume
+      ansible.builtin.shell: |
+        btrfs subvolume show /mnt/fs/{{ update_payload_name }}
+      register: subvolume_show
+
+    - name: Check that arrived payload is in one piece
+      ansible.builtin.assert:
+        that:
+          - subvolume_show.stdout is regex('Name:\s*' + update_payload_name)
+          - subvolume_show.stdout is regex('Flags:\s*readonly') # RO means it's finished
+        fail_msg: "Something wrong with the arrived payload subvolume."
+
+    - name: Create RW root subvolume from the new payload RO snapshot
+      ansible.builtin.shell: |
+        btrfs subvolume snapshot /mnt/fs/{{ update_payload_name }} /mnt/fs/{{ new_rootfs_name }}
+
+    - name: Change active rootfs to the new subvolume
+      ansible.builtin.shell: |
+        btrfs subvolume set-default /mnt/fs/{{ new_rootfs_name }}
+
+    - name: Rebooting to new subvolume
+      ansible.builtin.reboot:
+
+    - name: Where did we boot from?
+      ansible.builtin.shell: |
+        mount | grep " / "
+      register: mount_rootfs_line
+
+    - name: Check that we booted from the new payload
+      ansible.builtin.assert:
+        that:
+          - update_payload_name in mount_rootfs_line.stdout
+
+    - name: post-install boot_pkgs
+      ansible.builtin.shell:
+        chdir: "~{{username}}/boot_pkg/"
+        cmd: |
+          pacman -U * --noconfirm
+      tags: boot_pkg
+
+    - name: Rebooting after /boot got updated
+      ansible.builtin.reboot:
+      tags: boot_pkg
+
+    # TODO(b/254881017): Conditionally/optionally (based on user setting) cleanup old subvolumes
+      #tags: cleanup
