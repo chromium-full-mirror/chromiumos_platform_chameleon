@@ -448,7 +448,7 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
     raise NotImplementedError('GetCapturedFrameCount')
 
   def GetCapturedResolution(self):
-    """Gets the resolution of the captured frame.
+    """Gets the resolution of the last captured frame.
 
     If a cropping area is specified on capturing, returns the cropped
     resolution.

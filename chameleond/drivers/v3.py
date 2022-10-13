@@ -229,6 +229,8 @@ class ChameleondDriver(ChameleondInterface):
         port.edid = None
     self.edid_database = {}
 
+    self.frame_buffer.clear()
+
   def GetMacAddress(self):
     """Gets the MAC address of this Chameleon.
 
@@ -692,17 +694,40 @@ class ChameleondDriver(ChameleondInterface):
     logging.info(f"CaptureVideo {self.PORTS[port_id]}, "
                  f"(x={x}, y={y}, width={width}, height={height})")
 
-    # TODO: Make use of x, y, width, height to crop in software
-
     dev = self.PORTS[port_id].video_dev
     self.frame_buffer.clear()
 
     # TODO(amstan): pass total_frame to v4l2_ctl instead of a loop
     for i in range(total_frame):
-      frame = dev.get_frame()
+      raw_frame = numpy.frombuffer(dev.get_frame(), dtype=numpy.uint8)
+
+      # fully interpret dimensions, format is BGR32
+      frame = raw_frame.reshape(height, width, 4)
+
+      # convert to RGB24
+      frame = frame[...,(2,1,0)]
+
+      # TODO: Make use of x, y, width, height to crop in software
+
       self.frame_buffer.append(frame)
-      logging.debug (f"frame[{i}] len={len(frame)} {frame[:20].hex()}...")
-      assert frame, "We should have gotten something from V4L"
+
+      peek = frame.flatten()[:20].tobytes().hex()
+      logging.debug(f"frame[{i}] {frame.size=} {frame.shape=} {peek}...")
+
+      assert frame.size, "We should have gotten something from V4L"
+
+  def GetCapturedResolution(self):
+    """Gets the resolution of the last captured frame.
+
+    If a cropping area is specified on capturing, returns the cropped
+    resolution.
+
+    Returns:
+      A (width, height) tuple.
+    """
+
+    height, width, _channels = self.frame_buffer[-1].shape
+    return (width, height)
 
   def ReadCapturedFrame(self, frame_index):
     """Reads the content of the captured frame from the buffer.
@@ -710,19 +735,15 @@ class ChameleondDriver(ChameleondInterface):
     Args:
       frame_index: The index of the frame to read.
                    This is a little awkward on chameleonv3
-                   as there"s no global buffer.
+                   as there's no global buffer.
 
     Returns:
       A byte-array of the pixels, wrapped in a xmlrpclib.Binary object.
     """
 
-    # format is BGR32
-    frame = numpy.frombuffer(self.frame_buffer[frame_index], dtype=numpy.uint8)
+    frame_bytes = self.frame_buffer[frame_index].flatten().tobytes()
 
-    # convert to RGB24
-    frame = frame.reshape(-1,4)[:,0:3][:,::-1].flatten()
-
-    return xmlrpc.client.Binary(frame.tobytes())
+    return xmlrpc.client.Binary(frame_bytes)
 
   def DumpPixels(self, port_id, x=None, y=None, width=None, height=None):
     """Dumps the raw pixel array of the selected area.
