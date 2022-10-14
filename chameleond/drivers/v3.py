@@ -405,7 +405,7 @@ class ChameleondDriver(ChameleondInterface):
       if port.is_ite:
         logging.warning("Might be too late to send EDID to ITE chip after port's been plugged.")
 
-  def _send_cached_edid_to_hardware(self, port, maybe=False):
+  def _send_cached_edid_to_hardware(self, port):
     """Actually send EDID cached by python to the hardware.
 
     Code from ApplyEdid can't always override the edid in the hardware due to
