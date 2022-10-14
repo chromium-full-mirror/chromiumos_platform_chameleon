@@ -1,7 +1,5 @@
 - name: Look inside intermediate/ before we start building
   hosts: localhost
-  vars:
-    ansible_become: yes
   tags: chameleon, chameleon_alarm, check_intermediate
 
   tasks:
