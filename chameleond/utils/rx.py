@@ -260,15 +260,12 @@ class DpRx(i2c.I2cSlave):
     input_status = self.Get(self._REG_INPUT_STATUS)
     return bool(input_status & self._BIT_AUDIO_STABLE)
 
-  def WaitVideoInputStable(self, timeout=None):
+  def WaitVideoInputStable(self, timeout=_TIMEOUT_VIDEO_STABLE_PROBE):
     """Waits the video input stable or timeout.
 
     Returns:
       True if the video input is stable before timeout; otherwise, False.
     """
-    if timeout is None:
-      timeout = self._TIMEOUT_VIDEO_STABLE_PROBE
-
     try:
       common.WaitForCondition(
           self.IsVideoInputStable, True, self._DELAY_VIDEO_MODE_PROBE,
@@ -690,15 +687,12 @@ class HdmiRx(i2c.I2cSlave):
     status = self.Get(self._REG_AUDIO_STATUS)
     return bool(status & self._BIT_AUDIO_ON)
 
-  def WaitVideoInputStable(self, timeout=None):
+  def WaitVideoInputStable(self, timeout=_TIMEOUT_VIDEO_STABLE_PROBE):
     """Waits the video input stable or timeout.
 
     Returns:
       True if the video input is stable before timeout; otherwise, False.
     """
-    if timeout is None:
-      timeout = self._TIMEOUT_VIDEO_STABLE_PROBE
-
     try:
       common.WaitForCondition(
           self.IsVideoInputStable, True, self._DELAY_VIDEO_MODE_PROBE,
@@ -1022,14 +1016,12 @@ class VgaRx(i2c.I2cSlave):
     """Returns True if Hsync or Vsync is detected."""
     return bool(self.Get(self._REG_SYNC_DETECT) & self._BITS_SYNC_MASK)
 
-  def WaitVideoInputStable(self, timeout=None):
+  def WaitVideoInputStable(self, timeout=_TIMEOUT_CHECKING_STABLE):
     """Waits the video input stable or timeout.
 
     Returns:
       True if the video input is stable before timeout; otherwise, False.
     """
-    if timeout is None:
-      timeout = self._TIMEOUT_CHECKING_STABLE
     try:
       # Check if H-Sync/V-Sync recevied from the source.
       common.WaitForCondition(

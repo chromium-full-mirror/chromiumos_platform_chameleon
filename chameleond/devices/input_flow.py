@@ -657,10 +657,8 @@ class DpInputFlow(FpgaInputFlowWithAudio):
                    *(resolution_fpga + resolution_rx))
       return False
 
-  def WaitVideoOutputStable(self, timeout=None):
+  def WaitVideoOutputStable(self, timeout=_TIMEOUT_VIDEO_STABLE_PROBE):
     """Waits the video output stable or timeout."""
-    if timeout is None:
-      timeout = self._TIMEOUT_VIDEO_STABLE_PROBE
     try:
       common.WaitForCondition(
           self._IsFrameLocked, True, self._DELAY_VIDEO_MODE_PROBE, timeout)
@@ -980,14 +978,12 @@ class HdmiInputFlow(FpgaInputFlowWithAudio):
                    *(resolution_fpga + resolution_rx))
       return False
 
-  def WaitVideoOutputStable(self, timeout=None):
+  def WaitVideoOutputStable(self, timeout=_TIMEOUT_VIDEO_STABLE_PROBE):
     """Waits the video output stable or timeout.
 
     Raises:
       InputFlowError if timeout.
     """
-    if timeout is None:
-      timeout = self._TIMEOUT_VIDEO_STABLE_PROBE
     try:
       common.WaitForCondition(
           self._IsFrameLocked, True, self._DELAY_VIDEO_MODE_PROBE, timeout)
@@ -1180,14 +1176,12 @@ class VgaInputFlow(FpgaInputFlow):
     resolution2 = self._frame_manager.ComputeResolution()
     return resolution1 == resolution2 and 0 not in resolution1
 
-  def WaitVideoOutputStable(self, timeout=None):
+  def WaitVideoOutputStable(self, timeout=_TIMEOUT_CHECKING_STABLE):
     """Waits the video output stable or timeout.
 
     Raises:
       InputFlowError if timeout.
     """
-    if timeout is None:
-      timeout = self._TIMEOUT_CHECKING_STABLE
     try:
       # Wait a valid resolution and not floating.
       common.WaitForCondition(
