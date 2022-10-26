@@ -5,6 +5,7 @@
 """Chameleond Driver for Chameleon v3 hardware."""
 
 from dataclasses import dataclass
+import inspect
 import logging
 import numpy
 import pathlib
@@ -203,8 +204,6 @@ class ChameleondDriver(ChameleondInterface):
 
   def Reset(self):
     """Resets Chameleon board."""
-    logging.info("Reset()")
-
     # Let's reset the EC!
     rst_gpio = _check_output(["sudo", "gpiofind", "STM32_RST_L"])
     _check_output(f"sudo gpioset -D open-drain {rst_gpio}=0", shell=True)
@@ -359,8 +358,6 @@ class ChameleondDriver(ChameleondInterface):
 
     self.edid_database[edid_id] = edid.data
 
-    logging.info(f"CreateEdid [edid_id={edid_id}]={edid.data[:16]!r}...")
-
     return edid_id
 
   def DestroyEdid(self, edid_id):
@@ -370,7 +367,6 @@ class ChameleondDriver(ChameleondInterface):
       edid_id: The ID of the EDID, which was created by CreateEdid().
     """
     del self.edid_database[edid_id]
-    logging.info(f"DestroyEdid edid_id={edid_id}")
 
   def ReadEdid(self, port_id):
     """Reads the EDID content of the selected video input on Chameleon.
@@ -387,7 +383,6 @@ class ChameleondDriver(ChameleondInterface):
     # overwriting (via _send_cached_edid_to_hardware) whatever it is there
     # every time we .Plug()
     port = self.PORTS[port_id]
-    logging.info(f"ReadEdid {port} port.edid={port.edid!r}")
     return xmlrpc.client.Binary(port.edid)
 
   def ApplyEdid(self, port_id, edid_id):
@@ -401,8 +396,7 @@ class ChameleondDriver(ChameleondInterface):
       edid_id: The ID of the EDID.
     """
     port = self.PORTS[port_id]
-    logging.info(f"ApplyEdid {port} edid_id={edid_id}"
-                 f"self.edid_database.keys()={self.edid_database.keys()}")
+    logging.info(f"edid_database.keys()={list(self.edid_database.keys())}")
     assert port.has_video
 
     edid_bytes = self.edid_database[edid_id]
@@ -478,7 +472,6 @@ class ChameleondDriver(ChameleondInterface):
       port_id: The ID of the input/output port.
     """
     port = self.PORTS[port_id]
-    logging.info(f"Plug {port}")
 
     if port.has_video:
       if port.is_ite:
@@ -513,7 +506,6 @@ class ChameleondDriver(ChameleondInterface):
       port_id: The ID of the input/output port.
     """
     port = self.PORTS[port_id]
-    logging.info(f"Unplug {port}")
     if port.has_video:
       # TODO: disconnect edid
       port.edid = None
@@ -529,7 +521,6 @@ class ChameleondDriver(ChameleondInterface):
       port_id: The ID of the input/output port.
     """
     port = self.PORTS[port_id]
-    logging.info(f"UnplugHPD {port}")
     assert port.has_video
     if port.is_ite:
       self.it68051_service.set_hpd(port=port.ite_port, on_off=0)
@@ -548,7 +539,6 @@ class ChameleondDriver(ChameleondInterface):
       otherwise, False.
     """
     port = self.PORTS[port_id]
-    logging.info(f"WaitVideoInputStable {port} timeout={timeout}")
     assert port.has_video
 
     if timeout is not None:
@@ -643,7 +633,6 @@ class ChameleondDriver(ChameleondInterface):
       if connected:
         port_ids.append(i)
 
-    logging.info(f"ProbeInputs returning {[self.PORTS[p] for p in port_ids]}")
     return tuple(port_ids)
 
   def DetectResolution(self, port_id):
@@ -658,7 +647,6 @@ class ChameleondDriver(ChameleondInterface):
     port = self.PORTS[port_id]
     assert port.has_video
     resolution = port.video_dev.get_resolution()
-    logging.info(f"DetectResolution {port} => {resolution}")
     return resolution
 
   def _AutoFillArea(self, port_id, x, y, width, height):
@@ -711,8 +699,6 @@ class ChameleondDriver(ChameleondInterface):
     """
 
     x, y, width, height = self._AutoFillArea(port_id, x, y, width, height)
-    logging.info(f"CaptureVideo {self.PORTS[port_id]}, "
-                 f"(x={x}, y={y}, width={width}, height={height})")
 
     dev = self.PORTS[port_id].video_dev
     self.frame_buffer.clear()
@@ -794,3 +780,61 @@ class ChameleondDriver(ChameleondInterface):
     except AttributeError:
       # what's that?
       return False
+
+  def _fmt_var(self, value, name=None):
+    """Format method argument or return value so it's suitable for logging."""
+    if name == "port_id":
+      try:
+        port_id = value
+        port = self.PORTS[port_id]
+        fmt_str = f"{port_id} {port}"
+      except IndexError as e:
+        fmt_str = f"{port_id} IndexError"
+
+    elif isinstance(value, xmlrpc.client.Binary):
+      fmt_str = f"{value.data[:16]!r}"
+      if len(value.data) > 16:
+        fmt_str += "..."
+
+    else:
+      fmt_str = repr(value)
+
+    if name is None:
+      return fmt_str
+    else:
+      return f"{name}={fmt_str}"
+
+  def _dispatch(self, method_name, params):
+    """Dispatch wrapper to improve XMLRPC call logging
+
+    We'll log:
+      * Method names
+      * Nicely formatted method arguments
+      * Conditionally the return values
+      * Whole traceback of exceptions seen by clients
+    """
+
+    try:
+      method = getattr(self, method_name)
+
+      bound_params = inspect.signature(method).bind(*params)
+      bound_params.apply_defaults()
+
+      # format all arguments for logging
+      fmt_strings = [self._fmt_var(arg_value, name=arg_name)
+        for arg_name, arg_value in bound_params.arguments.items()]
+      logging.info(f"XMLRPC .{method_name}({', '.join(fmt_strings)})")
+
+      ret = method(*params)
+
+      # log what we returned
+      if ret is not None:
+        ret_str = self._fmt_var(ret)
+        logging.info(f'XMLRPC .{method_name} returned => {ret_str}')
+
+      return ret
+
+    except Exception:
+      logging.exception(f"Exception sent to XMLRPC client during .{method_name}:")
+      # logging.exception automatically prints the current traceback
+      raise
