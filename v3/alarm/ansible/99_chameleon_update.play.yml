@@ -45,8 +45,10 @@
         fail_msg: "Something wrong with the arrived payload subvolume."
 
     - name: Create RW root subvolume from the new payload RO snapshot
-      ansible.builtin.shell: |
-        btrfs subvolume snapshot /mnt/fs/{{ update_payload_name }} /mnt/fs/{{ new_rootfs_name }}
+      ansible.builtin.shell:
+        cmd: |
+          btrfs subvolume snapshot /mnt/fs/{{ update_payload_name }} /mnt/fs/{{ new_rootfs_name }}
+        creates: "/mnt/fs/{{ new_rootfs_name }}"
 
     - name: Change active rootfs to the new subvolume
       ansible.builtin.shell: |
