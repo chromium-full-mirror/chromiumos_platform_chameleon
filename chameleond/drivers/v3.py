@@ -618,13 +618,16 @@ class ChameleondDriver(ChameleondInterface):
       A tuple of port_id, for the input ports connected to DUT.
     """
 
+    status, payload = self.board_service.get_board_version()
+    board_version = payload.version
+
     status, payload = self.board_service.get_source_presence()
 
     port_ids = []
     for i, port in enumerate(self.PORTS):
       if port.has_video:
         connected = getattr(payload, port.external_name.lower())
-        if port.connector_type == "HDMI":
+        if port.connector_type == "HDMI" and board_version <= 2:
           # HACK(b/220139622): Temporarly lie, hw issue on proto2
           # otherwise autotest gets mad
           connected = False
