@@ -5,8 +5,8 @@
  * found in the LICENSE file.
  */
 
-#include <zephyr.h>
-#include <shell/shell.h>
+#include <zephyr/kernel.h>
+#include <zephyr/shell/shell.h>
 #include "io.h"
 #include "source_presence.h"
 #include "sysmon.h"

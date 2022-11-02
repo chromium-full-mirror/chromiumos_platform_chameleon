@@ -8,8 +8,8 @@
 #ifndef __IO_H
 #define __IO_H
 
-#include <zephyr.h>
-#include <drivers/gpio.h>
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
 
 #ifdef __cplusplus
 extern "C" {

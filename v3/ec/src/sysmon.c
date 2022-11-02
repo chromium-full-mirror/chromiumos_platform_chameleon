@@ -5,13 +5,13 @@
  * found in the LICENSE file.
  */
 
-#include <zephyr.h>
-#include <device.h>
-#include <devicetree.h>
-#include <drivers/adc.h>
-#include <drivers/gpio.h>
-#include <logging/log.h>
-#include <shell/shell.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/adc.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/shell/shell.h>
 #include "io.h"
 #include "sysmon.h"
 
@@ -32,7 +32,6 @@ enum sysmon_sel {
 };
 
 struct adc_hdl {
-	char *device_name;
 	const struct device *dev;
 	struct adc_channel_cfg channel_config;
 };
@@ -51,8 +50,7 @@ struct adc_hdl {
  */
 static struct adc_hdl adc_list[] = {
 	{
-		.device_name = DT_LABEL(DT_NODELABEL(adc1)),
-		.dev = NULL,
+		.dev = DEVICE_DT_GET(DT_NODELABEL(adc1)),
 		.channel_config = {
 			.gain = ADC_GAIN_1,
 			.reference = ADC_REF_INTERNAL,
@@ -61,8 +59,7 @@ static struct adc_hdl adc_list[] = {
 		},
 	},
 	{
-		.device_name = DT_LABEL(DT_NODELABEL(adc3)),
-		.dev = NULL,
+		.dev = DEVICE_DT_GET(DT_NODELABEL(adc3)),
 		.channel_config = {
 			.gain = ADC_GAIN_1,
 			.reference = ADC_REF_INTERNAL,
@@ -414,14 +411,6 @@ static int sysmon_init(const struct device *ptr)
 
 	/* Configure the ADCs. */
 	for (int idx = 0; idx < ARRAY_SIZE(adc_list); ++idx) {
-		adc_list[idx].dev =
-			device_get_binding(adc_list[idx].device_name);
-		if (adc_list[idx].dev == NULL) {
-			LOG_ERR("Cannot get device %s\n",
-				adc_list[idx].device_name);
-			return -ENODEV;
-		}
-
 		ret = adc_channel_setup(adc_list[idx].dev,
 					&adc_list[idx].channel_config);
 		if (ret < 0) {
@@ -439,7 +428,7 @@ static int sysmon_init(const struct device *ptr)
 	k_timer_start(&sysmon_timer, SYSMON_INTERVAL, SYSMON_INTERVAL);
 	return ret;
 }
-SYS_INIT(sysmon_init, APPLICATION, 50);
+//TODO(b/256933215) uncomment SYS_INIT(sysmon_init, APPLICATION, 50);
 
 /**
  * @brief Display all of the monitored values in a friendly format

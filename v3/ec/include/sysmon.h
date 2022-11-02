@@ -8,7 +8,7 @@
 #ifndef __SYSMON_H
 #define __SYSMON_H
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 
 #ifdef __cplusplus
 extern "C" {

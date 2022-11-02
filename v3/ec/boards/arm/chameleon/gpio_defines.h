@@ -16,9 +16,9 @@
  * allow device tree to set the initial state.
  *
  * Note the raw defines (e.g. GPIO_OUTPUT) in this file are copies from
- * <drivers/gpio.h>. I copied the values because I wanted to have the initial
- * settings in the DTS. It turned out to be a terrible idea. "The risk I took
- * was calculated, but man, am I bad at math."
+ * <zephyr/drivers/gpio.h>. I copied the values because I wanted to have the
+ * initial settings in the DTS. It turned out to be a terrible idea. "The risk
+ * I took was calculated, but man, am I bad at math."
  * TODO(b/256325071) Don't copy the bit definitions.
  *
  * The combined defined (e.g. GPIO_OUT_LOW) have been renamed to fit with

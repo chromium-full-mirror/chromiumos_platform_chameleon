@@ -8,7 +8,7 @@
 #ifndef __SOURCE_PRESENCE_H
 #define __SOURCE_PRESENCE_H
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 
 #ifdef __cplusplus
 extern "C" {
