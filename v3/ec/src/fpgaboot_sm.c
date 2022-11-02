@@ -1,14 +1,14 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2020 The Chromium OS Authors. All rights reserved.
+ * Copyright 2020 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
 
 #include <stdbool.h>
-#include <zephyr.h>
-#include <logging/log.h>
-#include <sys/__assert.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/sys/__assert.h>
 #include "fpgaboot_sm.h"
 
 LOG_MODULE_DECLARE(fpgaboot);

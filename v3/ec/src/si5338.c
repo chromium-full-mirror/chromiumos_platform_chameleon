@@ -8,10 +8,10 @@
  * generator chip. As such, there is only a SYS_INIT, and no public API.
  */
 
-#include <zephyr.h>
-#include <device.h>
-#include <drivers/i2c.h>
-#include <logging/log.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/i2c.h>
+#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(si5338);
 

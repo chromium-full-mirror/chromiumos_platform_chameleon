@@ -5,9 +5,9 @@
  * found in the LICENSE file.
  */
 
-#include <zephyr.h>
-#include <drivers/uart.h>
-#include <logging/log.h>
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/uart.h>
+#include <zephyr/logging/log.h>
 
 #include "pw_hdlc/rpc_channel.h"
 #include "pw_hdlc/rpc_packets.h"

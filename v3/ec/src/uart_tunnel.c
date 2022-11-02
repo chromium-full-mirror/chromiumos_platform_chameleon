@@ -1,13 +1,13 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Copyright 2021 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
 
-#include <zephyr.h>
-#include <drivers/uart.h>
-#include <shell/shell.h>
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/uart.h>
+#include <zephyr/shell/shell.h>
 
 const char *DEFAULT_UART = "UART_2";
 

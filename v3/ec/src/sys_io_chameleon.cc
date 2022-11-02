@@ -1,17 +1,17 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2022 The Chromium OS Authors. All rights reserved.
+ * Copyright 2022 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  *
  * Uses some patterns from subsys/console/getchar.c
  */
 
-#include <zephyr.h>
-#include <device.h>
-#include <console/tty.h>
-#include <drivers/uart.h>
-#include <logging/log.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/console/tty.h>
+#include <zephyr/drivers/uart.h>
+#include <zephyr/logging/log.h>
 
 #include "pw_sys_io/sys_io.h"
 

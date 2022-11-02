@@ -586,7 +586,6 @@
 	/* U77 I/O expander, config signals for PS8468 */
 	u77: pca95xx@20 {
 		compatible = "nxp,pca95xx";
-		label = "U77 - PCA95XX";
 		reg = <0x20>;
 		#gpio-cells = <2>;
 		gpio-controller;
@@ -595,7 +594,6 @@
 	/* U78 I/O expander, DP1 OUT config signals, plus misc I/O */
 	u78: pca95xx@21 {
 		compatible = "nxp,pca95xx";
-		label = "U78 - PCA95XX";
 		reg = <0x21>;
 		#gpio-cells = <2>;
 		gpio-controller;
@@ -604,7 +602,6 @@
 	/* U79 I/O expander DP2 OUT config, HDMI input reset, DP IN power */
 	u79: pca95xx@23 {
 		compatible = "nxp,pca95xx";
-		label = "U79 - PCA95XX";
 		reg = <0x23>;
 		#gpio-cells = <2>;
 		gpio-controller;
@@ -638,7 +635,7 @@
 
 &adc3 {
 	/* These ADC inputs are only available on ADC3 */
-	pinctrl-0 = <&adc3_inp0_pc2 &adc3_inp1_pc3 &adc3_inp8_pf6
+	pinctrl-0 = <&adc3_inp0_pc2_c &adc3_inp1_pc3_c &adc3_inp8_pf6
 		     &adc3_inp3_pf7 &adc3_inp7_pf8 &adc3_inp2_pf9
 		     &adc3_inp6_pf10>;
 	pinctrl-names = "default";

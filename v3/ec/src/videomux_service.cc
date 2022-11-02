@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright 2021 The Chromium OS Authors. All rights reserved.
+ * Copyright 2021 The ChromiumOS Authors
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  *
@@ -8,7 +8,7 @@
  * build/v3.protos/nanopb_rpc/proto/v3.rpc.pb.h
  */
 
-#include <sys/__assert.h>
+#include <zephyr/sys/__assert.h>
 #include "videomux_service.h"
 #include "videomux.h"
 

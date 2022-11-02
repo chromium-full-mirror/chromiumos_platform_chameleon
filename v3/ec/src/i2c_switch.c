@@ -5,15 +5,15 @@
  * found in the LICENSE file.
  */
 
-#include <zephyr.h>
-#include <device.h>
-#include <devicetree.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/i2c.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/shell/shell.h>
+#include <zephyr/sys/__assert.h>
 #include <stdlib.h>
-#include <drivers/gpio.h>
-#include <drivers/i2c.h>
-#include <logging/log.h>
-#include <shell/shell.h>
-#include <sys/__assert.h>
 #include "io.h"
 #include "i2c_switch.h"
 
