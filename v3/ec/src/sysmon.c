@@ -40,6 +40,14 @@ struct adc_hdl {
 #define STM_ADC_RESOLUTION 12
 
 /**
+ * @brief Define the ADCs in use.
+ */
+enum hardware_adc {
+	ADC1,
+	ADC3
+};
+
+/**
  * @brief Declare the ADCs this module uses and the configuration.
  *
  * Note that this module does not use ADC2.
@@ -49,7 +57,7 @@ struct adc_hdl {
  *    assertion.
  */
 static struct adc_hdl adc_list[] = {
-	{
+	[ADC1] = {
 		.dev = DEVICE_DT_GET(DT_NODELABEL(adc1)),
 		.channel_config = {
 			.gain = ADC_GAIN_1,
@@ -58,7 +66,7 @@ static struct adc_hdl adc_list[] = {
 			.channel_id = 15,
 		},
 	},
-	{
+	[ADC3] = {
 		.dev = DEVICE_DT_GET(DT_NODELABEL(adc3)),
 		.channel_config = {
 			.gain = ADC_GAIN_1,
@@ -109,17 +117,17 @@ static struct sysmon_adc_input scan_table[SYSMON_VMON_NUM_INPUTS] = {
 	 * so the `sel` value doesn't actually matter.
 	 */
 	[SYSMON_VMON_12V] = { .sel = SYSMON_SEL_REGULATORS,
-			      .adc_num = 0,
+			      .adc_num = ADC1,
 			      .channel = 10,
 			      .scale_factor = 12.0 / 3.0,
 			      .name = "12V" },
 	[SYSMON_CMON_SOM] = { .sel = SYSMON_SEL_REGULATORS,
-			      .adc_num = 0,
+			      .adc_num = ADC1,
 			      .channel = 11,
 			      .scale_factor = 1.0,
 			      .name = "CMON_SOM" },
 	[SYSMON_CMON_BOARD] = { .sel = SYSMON_SEL_REGULATORS,
-				.adc_num = 1,
+				.adc_num = ADC3,
 				.channel = 0,
 				.scale_factor = 1.0,
 				"CMON_BOARD" },
@@ -128,22 +136,22 @@ static struct sysmon_adc_input scan_table[SYSMON_VMON_NUM_INPUTS] = {
 	 * value doesn't matter.
 	 */
 	[DP1_AUXN_DET] = { .sel = SYSMON_SEL_REGULATORS,
-			   .adc_num = 3,
+			   .adc_num = ADC3,
 			   .channel = 5,
 			   .scale_factor = 1.0,
 			   "DP1_AUXN_DET" },
 	[DP1_AUXP_DET] = { .sel = SYSMON_SEL_REGULATORS,
-			   .adc_num = 1,
+			   .adc_num = ADC1,
 			   .channel = 6,
 			   .scale_factor = 1.0,
 			   "DP1_AUXP_DET" },
 	[DP2_AUXP_DET] = { .sel = SYSMON_SEL_REGULATORS,
-			   .adc_num = 1,
+			   .adc_num = ADC1,
 			   .channel = 16,
 			   .scale_factor = 1.0,
 			   "DP2_AUXP_DET" },
 	[DP2_AUXN_DET] = { .sel = SYSMON_SEL_REGULATORS,
-			   .adc_num = 1,
+			   .adc_num = ADC1,
 			   .channel = 17,
 			   .scale_factor = 1.0,
 			   "DP2_AUXN_DET" },
@@ -152,78 +160,78 @@ static struct sysmon_adc_input scan_table[SYSMON_VMON_NUM_INPUTS] = {
 	 * the value of `sel`.
 	 */
 	[SYSMON_VMON_PP1200] = { .sel = SYSMON_SEL_REGULATORS,
-				 .adc_num = 1,
+				 .adc_num = ADC3,
 				 .channel = 1,
 				 .scale_factor = 1.0,
 				 .name = "PP1200" },
 	[SYSMON_CMON_PP1200] = { .sel = SYSMON_SEL_REGULATORS,
-				 .adc_num = 0,
+				 .adc_num = ADC1,
 				 .channel = 4,
 				 .scale_factor = 1.0,
 				 .name = "CMON_PP1200" },
 	[SYSMON_CMON_PP3300] = { .sel = SYSMON_SEL_REGULATORS,
-				 .adc_num = 0,
+				 .adc_num = ADC1,
 				 .channel = 8,
 				 .scale_factor = 1.0,
 				 .name = "CMON_PP3300" },
 	[SYSMON_VMON_9V] = { .sel = SYSMON_SEL_REGULATORS,
-			     .adc_num = 1,
+			     .adc_num = ADC3,
 			     .channel = 3,
 			     .scale_factor = 9.0 / 2.25,
 			     .name = "VMON_9V" },
 	[SYSMON_VMON_5V] = { .sel = SYSMON_SEL_REGULATORS,
-			     .adc_num = 1,
+			     .adc_num = ADC3,
 			     .channel = 7,
 			     .scale_factor = 5.0 / 1.25,
 			     .name = "VMON_5V" },
 	[SYSMON_VMON_3V3] = { .sel = SYSMON_SEL_REGULATORS,
-			      .adc_num = 1,
+			      .adc_num = ADC3,
 			      .channel = 2,
 			      .scale_factor = 3.3 / 2.2,
 			      .name = "VMON_3V3" },
 	[SYSMON_VMON_PP1800] = { .sel = SYSMON_SEL_REGULATORS,
-				 .adc_num = 1,
+				 .adc_num = ADC3,
 				 .channel = 6,
 				 .scale_factor = 1.0,
 				 .name = "PP1800" },
 
 	[SYSMON_SOM_VMON] = { .sel = SYSMON_SEL_SOM,
-			      .adc_num = 1,
+			      .adc_num = ADC3,
 			      .channel = 1,
 			      .scale_factor = 1.0,
 			      .name = "SOM_VMON" },
 	[SYSMON_SOM_VMON_1V2] = { .sel = SYSMON_SEL_SOM,
-				  .adc_num = 0,
+				  .adc_num = ADC1,
 				  .channel = 4,
 				  .scale_factor = 1.0,
 				  .name = "SOM_VMON_1V2" },
 	[SYSMON_SOM_VMON_MGT] = { .sel = SYSMON_SEL_SOM,
-				  .adc_num = 0,
+				  .adc_num = ADC1,
 				  .channel = 8,
 				  .scale_factor = 1.0,
 				  .name = "SOM_VMON_MGT" },
 	[SYSMON_SOM_VMON_1V8A] = { .sel = SYSMON_SEL_SOM,
-				   .adc_num = 1,
+				   .adc_num = ADC3,
 				   .channel = 8,
 				   .scale_factor = 1.0,
 				   .name = "SOM_VMON_1V8A" },
 	[SYSMON_SOM_VMON_C8] = { .sel = SYSMON_SEL_SOM,
-				 .adc_num = 1,
+				 .adc_num = ADC3,
 				 .channel = 3,
 				 .scale_factor = 1.0,
 				 .name = "SOM_VMON_C8" },
 	[SYSMON_SOM_VREF_CS1] = { .sel = SYSMON_SEL_SOM,
-				  .adc_num = 1,
+				  .adc_num = ADC3,
 				  .channel = 7,
 				  .scale_factor = 1.0,
 				  .name = "VREF_CS1" },
 	[SYSMON_SOM_VREF_CS2] = { .sel = SYSMON_SEL_SOM,
-				  .adc_num = 1,
+				  .adc_num = ADC3,
 				  .channel = 2,
 				  .scale_factor = 1.0,
 				  .name = "VREF_CS2" },
 	[SYSMON_SOM_VREF_CS3] = { .sel = SYSMON_SEL_SOM,
-				  .adc_num = 1,
+				  .adc_num = ADC3,
 				  .channel = 6,
 				  .scale_factor = 1.0,
 				  .name = "VREF_CS3" },
@@ -344,6 +352,12 @@ static void sysmon_task(void *unused1, void *unused2, void *unused3)
 			idx = 0;
 		}
 
+		/* Double-check that the ADC is valid. `adc_num` is an array
+		 * index, not the actual ADC number in the datasheet.
+		 */
+		__ASSERT(scan_table[idx].adc_num < ARRAY_SIZE(adc_list),
+			 "Invalid adc_num, exceeds size of adc_list[]");
+
 		/* Read the ADCs one channel at a time. The Zephyr driver
 		 * for the STM32 ADC doesn't seem to like a sequence of more
 		 * than one ADC channel, even though the hardware supports it.
@@ -426,9 +440,10 @@ static int sysmon_init(const struct device *ptr)
 
 	/* Start the periodic timer for sysmon */
 	k_timer_start(&sysmon_timer, SYSMON_INTERVAL, SYSMON_INTERVAL);
+
 	return ret;
 }
-//TODO(b/256933215) uncomment SYS_INIT(sysmon_init, APPLICATION, 50);
+SYS_INIT(sysmon_init, APPLICATION, 50);
 
 /**
  * @brief Display all of the monitored values in a friendly format
