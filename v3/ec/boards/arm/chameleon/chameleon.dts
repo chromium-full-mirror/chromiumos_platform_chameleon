@@ -435,9 +435,9 @@
 	pcie {
 		compatible = "gpio-keys";
 
-		pcie_perst_l {
-			gpios = <&gpiog 14 GPIO_INPUT_PULL_UP>;
-			label = "PCIE_PERST_L";
+		pcie_perst {
+			gpios = <&gpiog 14 GPIO_INPUT>;
+			label = "PCIE_PERST";
 		};
 
 		pcie_wake_l_b {
@@ -446,22 +446,22 @@
 		};
 
 		pcie_rsvd1 {
-			gpios = <&gpioc 9 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpioc 9 GPIO_INPUT>;
 			label = "PCIE_RSVD1";
 		};
 
 		pcie_rsvd2 {
-			gpios = <&gpiod 3 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiod 3 GPIO_INPUT>;
 			label = "PCIE_RSVD2";
 		};
 
 		pcie_rsvd3 {
-			gpios = <&gpiod 4 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiod 4 GPIO_INPUT>;
 			label = "PCIE_RSVD3";
 		};
 
 		pcie_rsvd4 {
-			gpios = <&gpiod 5 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiod 5 GPIO_INPUT>;
 			label = "PCIE_RSVD4";
 		};
 
@@ -470,9 +470,9 @@
 			label = "PCIE_REF_CLK_SEL";
 		};
 
-		som_a34 {
-			gpios = <&gpioe 8 GPIO_INPUT>;
-			label = "SOM_A34";
+		som_pcie_perst_l {
+			gpios = <&gpioe 8 GPIO_OUTPUT>;
+			label = "SOM_PCIE_PERST_L";
 		};
 
 		som_a21 {
