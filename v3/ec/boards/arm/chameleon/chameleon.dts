@@ -471,7 +471,7 @@
 		};
 
 		som_a34 {
-			gpios = <&gpioe 8 GPIO_OUTPUT>;
+			gpios = <&gpioe 8 GPIO_INPUT>;
 			label = "SOM_A34";
 		};
 
