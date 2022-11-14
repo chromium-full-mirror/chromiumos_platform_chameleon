@@ -105,10 +105,10 @@ static struct gpio_info gpios[] = {
 	GPIO(pcie, pcie_rsvd3),
 	GPIO(pcie, pcie_rsvd4),
 	GPIO(pcie, pcie_ref_clk_sel),
-	GPIO(pcie, som_pcie_perst_l),
+	GPIO(pcie, som_a34),
 	GPIO(pcie, som_a21),
 	GPIO(pcie, som_a98),
-	GPIO(pcie, som_a104),
+	GPIO(pcie, som_pcie_perst_l),
 };
 
 /*

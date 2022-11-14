@@ -470,9 +470,9 @@
 			label = "PCIE_REF_CLK_SEL";
 		};
 
-		som_pcie_perst_l {
+		som_a34 {
 			gpios = <&gpioe 8 GPIO_OUTPUT>;
-			label = "SOM_PCIE_PERST_L";
+			label = "SOM_A34";
 		};
 
 		som_a21 {
@@ -485,9 +485,9 @@
 			label = "SOM_A98";
 		};
 
-		som_a104 {
-			gpios = <&gpiof 15 GPIO_OUTPUT_LOW>;
-			label = "SOM_A104";
+		som_pcie_perst_l {
+			gpios = <&gpiof 15 GPIO_OUTPUT>;
+			label = "SOM_PCIE_PERST_L";
 		};
 	};
 };

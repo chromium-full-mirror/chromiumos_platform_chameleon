@@ -95,6 +95,14 @@ static int pcie_init(const struct device *ptr)
 		return ret;
 	}
 
+	/* Set SOM_A34 to High-Z */
+	ret = gpio_pin_configure(gpio_get_device(som_a34),
+				 gpio_get_pin(som_a34),
+				 GPIO_DISCONNECTED);
+	if (ret != 0) {
+		LOG_ERR("Error %d: failed to configure SOM_A34 for High-Z\n",
+			ret);
+	}
 	return 0;
 }
 SYS_INIT(pcie_init, APPLICATION, 85);

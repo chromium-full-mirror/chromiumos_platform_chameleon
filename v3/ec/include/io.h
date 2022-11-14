@@ -90,10 +90,10 @@ enum gpio_signal {
 	pcie_rsvd3,
 	pcie_rsvd4,
 	pcie_ref_clk_sel,
-	som_pcie_perst_l,
+	som_a34,
 	som_a21,
 	som_a98,
-	som_a104,
+	som_pcie_perst_l,
 };
 
 /**
