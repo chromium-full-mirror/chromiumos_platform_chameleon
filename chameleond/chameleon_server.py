@@ -20,18 +20,17 @@ from chameleond.utils.caching_server import CachingServer
 
 
 class ChameleonXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
-  """XMLRPC request handler for Chameleon server.
+  """XMLRPC request handler for Chameleon server."""
+  rpc_paths = ('/RPC2',)
 
-  During the response of SimpleXMLRPCRequestHandler, it will try to obtain
-  client's domain name for logging. When there is no DNS server in the
-  network, this step will take a long time and delay the returning of calls
-  from server proxy. We override address_string method to bypass requesting
-  domain name.
-  """
   def address_string(self):
     """Returns the client address formatted for logging.
 
-    This method is overridden to bypass requesting domain name.
+    During the response of SimpleXMLRPCRequestHandler, it will try to obtain
+    client's domain name for logging. When there is no DNS server in the
+    network, this step will take a long time and delay the returning of calls
+    from server proxy. We override address_string method to bypass requesting
+    domain name.
 
     Returns:
       The formatted string for client address.
@@ -39,6 +38,16 @@ class ChameleonXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
     host = self.client_address[0]
     # original: return socket.getfqdn(host)
     return '%s (no getfqdn)' % host
+
+  def do_OPTIONS(self):
+      self.send_response(200)
+      self.end_headers()
+
+  def end_headers(self):
+      self.send_header("Access-Control-Allow-Headers",
+                        "Origin, X-Requested-With, Content-Type, Accept")
+      self.send_header("Access-Control-Allow-Origin", "*")
+      SimpleXMLRPCRequestHandler.end_headers(self)
 
 
 class ChameleonServer(object):
