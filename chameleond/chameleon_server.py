@@ -21,7 +21,6 @@ from chameleond.utils.caching_server import CachingServer
 
 class ChameleonXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
   """XMLRPC request handler for Chameleon server."""
-  rpc_paths = ('/RPC2',)
 
   def address_string(self):
     """Returns the client address formatted for logging.
