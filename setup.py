@@ -1,4 +1,4 @@
-# Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Setup script to distribute and install Chameleond library and scripts."""
@@ -27,7 +27,7 @@ setup(
     package_data={'chameleond': ['data/*.bin', 'data/*.bitmap', 'utils/*.xml',
                                  'utils/*.conf', 'utils/data/*/*']},
     url='http://www.chromium.org',
-    maintainer='chromium os',
+    maintainer='The ChromiumOS Authors',
     maintainer_email='chromium-os-dev@chromium.org',
     license='Chromium',
     description='Server to communicate and control Chameleon board.',
