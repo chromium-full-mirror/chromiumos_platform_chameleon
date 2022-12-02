@@ -114,6 +114,7 @@
           - python-pyserial
           - python-cffi
           - python-numpy
+          - imagemagick
         state: present
       tags: install, python
 
