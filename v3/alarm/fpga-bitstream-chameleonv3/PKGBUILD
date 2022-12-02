@@ -3,7 +3,7 @@
 
 buildarch=4
 
-_version=v3-proto2-1-gd2c77f44
+_version=v3-82-g1ef838f4
 pkgname=fpga-bitstream-chameleonv3
 pkgver=$(echo ${_version}|sed "s/-/_/g")
 pkgrel=1
@@ -21,9 +21,9 @@ _fpga_types=(
 source=('fpga.its')
 for type in "${_fpga_types[@]}"; do source+=("${_version}-${type}.rbf"); done
 sha256sums=('e42cf2dddc07c837a42302c8143ab5c80abe49f2de8714c083244d6ff30404fd'
-            '79e6f88a8c48a419dbc705753229ac9eaceee02db0dc61582dabe5f7c97f19a6'
-            '63fefad83932b690dc93dcddb59cf4ff0b542246637d49aaf60654130ffb5ad3'
-            'dbe8397d225023cd566998bacfab1788185e7db88b1a885971aca73756f5ab75')
+            'a8df4f93a20ae3c3ff5a19a78e4cece634ab87cf40d93c110748fa44919d85f3'
+            '64550128e6915690444e2defb525d77c73a3590d01df4cbfb5a6ac439c0689ec'
+            '8e1706f47176fd3fe8fd0a4f10ec2d3a3d97c0e2ab7f7f11144c94f85500ae50')
 
 build() {
   for type in "${_fpga_types[@]}"; do
