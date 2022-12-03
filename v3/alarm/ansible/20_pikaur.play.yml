@@ -50,9 +50,15 @@
         state: absent
       tags: pikaur_boostrap
 
+    - name: Ignore arch for pikaur building
+      community.general.ini_file:
+        path: '/home/{{username}}/.config/pikaur.conf'
+        section: build
+        option: ignorearch
+        value: "yes"
+      tags: pikaur_configure
+
     - name: Update AUR packages with pikaur
-      # This could have been community.general.pacman with executable: pikaur
-      # But glinux's ansible doesn't support that option yet
       ansible.builtin.shell: |
         PKGDEST=/var/cache/pacman/pkg pikaur -Syua --noconfirm
-      tags: update
+      tags: update, update_aur

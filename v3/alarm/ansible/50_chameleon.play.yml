@@ -119,8 +119,6 @@
       tags: install, python
 
     - name: Build and install more packages from the AUR
-      # This could have been community.general.pacman with executable: pikaur
-      # But glinux's ansible doesn't support that option yet
       vars:
         ansible_become_user: '{{username}}'
       ansible.builtin.shell: |
