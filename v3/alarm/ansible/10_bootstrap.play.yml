@@ -124,10 +124,17 @@
           validate: /usr/sbin/visudo -cf %s
       tags: provision
 
-    - name: Enable and start NetworkManager
+    - name: Enable NetworkManager
       ansible.builtin.systemd:
         name: NetworkManager
         enabled: yes
+      tags: provision
+
+    - name: Disable systemd-networkd
+      # Fights with NetworkManager, but is enabled by default on alarm.
+      ansible.builtin.systemd:
+        name: systemd-networkd
+        enabled: false
       tags: provision
 
     - name: print-ip NetworkManager hook
