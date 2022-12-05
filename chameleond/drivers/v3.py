@@ -710,6 +710,7 @@ class ChameleondDriver(ChameleondInterface):
       height: The height of the area of crop.
     """
 
+    x, y, width, height = self._AutoFillArea(port_id, x, y, width, height)
     logging.info(f"CaptureVideo {self.PORTS[port_id]}, "
                  f"(x={x}, y={y}, width={width}, height={height})")
 
@@ -779,7 +780,6 @@ class ChameleondDriver(ChameleondInterface):
     Returns:
       A byte-array of the pixels, wrapped in a xmlrpclib.Binary object.
     """
-    x, y, width, height = self._AutoFillArea(port_id, x, y, width, height)
     self.CaptureVideo(port_id, self._DEFAULT_FRAME_LIMIT, x, y, width, height)
     return self.ReadCapturedFrame(self._DEFAULT_FRAME_INDEX)
 
