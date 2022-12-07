@@ -27,17 +27,17 @@ from chameleond.devices import usb_audio_flow
 from chameleond.devices import usb_hid_flow
 from chameleond.devices import usb_printer_device
 from chameleond.interface import ChameleondInterface
+from chameleond.utils import bluetooth_a2dp
 from chameleond.utils import caching_server
 from chameleond.utils import device_manager
-from chameleond.utils import fpga
 from chameleond.utils import flow_manager
+from chameleond.utils import fpga
 from chameleond.utils import i2c
 from chameleond.utils import ids
 from chameleond.utils import system_tools
 from chameleond.utils import usb
 from chameleond.utils import usb_printer_control
 from chameleond.utils.common import lazy
-from chameleond.utils import bluetooth_a2dp
 
 if os.environ.get('PLATFORM') != 'FPGA':
   # pylint: disable=C0412
@@ -239,6 +239,10 @@ class ChameleondDriver(ChameleondInterface):
         ids.BLE_PHONE: raspi_bluetooth_flow.RaspiBLEPhone(),
         ids.BLUETOOTH_AUDIO: raspi_bluetooth_flow.RaspiBluetoothAudioFlow(),
         ids.BLE_FAST_PAIR: raspi_bluetooth_flow.RaspiBLEFastPair(),
+        ids.USB_AUDIO_IN: usb_audio_flow.InputUSBAudioFlow(
+            ids.USB_AUDIO_IN, self._usb_audio_ctrl),
+        ids.USB_AUDIO_OUT: usb_audio_flow.OutputUSBAudioFlow(
+            ids.USB_AUDIO_OUT, self._usb_audio_ctrl),
     }
     return devices
 
