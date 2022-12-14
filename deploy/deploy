@@ -68,6 +68,20 @@ validate_package_installation() {
     fi
 }
 
+validate_bluez_installation() {
+    installed=$(apt-cache policy bluez | grep '\*\*\*' | awk '{print $2}')
+    wanted="5.50-1.2~deb10u2+rpt1"
+
+    if [ "${installed}" = "${wanted}" ]; then
+        echo BlueZ is already installed with the right version "${wanted}"
+        return
+    fi
+
+    echo Installing BlueZ version "${wanted}"
+    curl http://archive.raspberrypi.org/debian/pool/main/b/bluez/bluez_5.50-1.2~deb10u2+rpt1_armhf.deb -o /tmp/bluez.deb
+    dpkg -i /tmp/bluez.deb || echo "Failed installing BlueZ ${wanted}"
+}
+
 validate_python_package_installation() {
     PACKAGE_NAME=$1
 
@@ -343,7 +357,6 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     # apt-clone proved to be stable.
     # Install required packages
     validate_package_installation "bluetooth"
-    validate_package_installation "bluez"
     validate_package_installation "python3-bluez"
     validate_package_installation "python3-dbus"
     validate_package_installation "python3-pyudev"
@@ -361,6 +374,9 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     validate_package_installation "playerctl"
     validate_package_installation "pulseaudio-module-bluetooth"
     validate_package_installation "pulseaudio"
+
+    # b/256547984: BlueZ needs to be fixed at a good known version.
+    validate_bluez_installation
 
     # Install python packages for Raspberry Pi.
     validate_python_package_installation "numpy"
