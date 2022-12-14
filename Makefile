@@ -210,6 +210,15 @@ else
 	$(error CHAMELEON_HOST is undefined)
 endif
 
+.PHONY: setup-usb-audio-testbed
+setup-usb-audio-testbed:
+ifeq ($(CHAMELEON_HOSTNAME), raspberrypi)
+	@echo Setup raspberry pi: Enable USB gadget mode.
+	sh deploy/setup_raspberrypi_as_usb_gadget $(CHAMELEON_HOST)
+	@echo Setup usb audio testbed on $(CHAMELEON_HOST) is completed.
+	@echo The raspberry pi will be ready after reboot.
+endif
+
 .PHONY: clean
 clean:
 	@rm -rf $(BINDIR) $(DISTDIR) $(EGGDIR)

@@ -1,0 +1,24 @@
+#!/bin/sh
+# Copyright 2022 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+USER_NAME="root"
+RPI_SSH_PORT="22"
+
+RPI_HOST=$1
+
+# Setup the raspberry pi as usb gadget mode
+setup_rpi_as_usb_gadget() {
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    -p "${RPI_SSH_PORT}" "${USER_NAME}"@"${RPI_HOST}" '
+      hostname
+      echo "dtoverlay=dwc2" | sudo tee -a /boot/config.txt
+      echo "dwc2" | sudo tee -a /etc/modules
+      echo "g_audio" | sudo tee -a /etc/modules
+      echo Y | sudo apt remove pulseaudio
+      sudo reboot
+    '
+}
+
+setup_rpi_as_usb_gadget
