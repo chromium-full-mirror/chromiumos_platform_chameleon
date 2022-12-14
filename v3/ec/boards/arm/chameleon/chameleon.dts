@@ -308,7 +308,7 @@
 		};
 
 		dp_in_pwr_en {
-			gpios = <&u79 15 GPIO_OUTPUT_HIGH>;
+			gpios = <&u79 15 GPIO_OUTPUT_LOW>;
 			label = "DP_IN_PWR_EN";
 		};
 	};
