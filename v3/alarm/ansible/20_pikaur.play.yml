@@ -50,6 +50,10 @@
         state: absent
       tags: pikaur_boostrap
 
+    - name: Run pikaur once to create config file
+      ansible.builtin.shell:
+        pikaur --help
+
     - name: Ignore arch for pikaur building
       community.general.ini_file:
         path: '/home/{{username}}/.config/pikaur.conf'
