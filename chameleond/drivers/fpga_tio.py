@@ -12,6 +12,7 @@ import logging
 import os
 import time
 import traceback
+import uuid
 import xmlrpc.client
 
 from . import chameleon_common  # pylint: disable=W0611, C0411
@@ -114,6 +115,7 @@ class ChameleondDriver(ChameleondInterface):
         bluetooth_hid_flow.BleHIDMouseFlow.DRIVER_MODULE)
     # A base control comes without any driver.
     self._base_ctrl = lazy(usb.USBController)('')
+    self._file_dict = {}
 
     if self._platform == 'CHROMEOS':
       self._devices = self.init_devices_for_chromeos()
@@ -1136,6 +1138,71 @@ class ChameleondDriver(ChameleondInterface):
       port_id: The ID of the output connector.
     """
     self._flow_manager.StopPlayingAudio(port_id)
+
+  def CopyFileToChameleon(self, content, filename):
+    """Copy a file to Chameleon
+
+    This function is designed to be idempotent: if a file with same name
+    exists, then it will be overwritten with the new given content.
+
+    Args:
+      content: the data to be copied in the binary form.
+      filename: the filename (including file format) in the binary form.
+    Returns:
+      token: a token that refers to the file for further usage.
+    Raises:
+      IOError: unable to save the file to chameleon. Check chameleon log
+               for more details.
+    """
+    logging.info("Copy file to chameleon:" + filename)
+    token = uuid.uuid5(uuid.NAMESPACE_DNS, filename).hex
+
+    if token in self._file_dict:
+      logging.info("File already exist in chameleon: " + filename)
+      logging.info("Overwrite with given file.")
+
+    try:
+      with open("/tmp/" + filename, "wb") as handle:
+        handle.write(content.data)
+    except:
+      raise IOError("Unable to open the file specified: " + filename)
+
+    self._file_dict[token] = filename
+    return token
+
+  def DeleteFileInChameleon(self, token):
+    """Delete a file in Chameleon
+
+    This function is designed to be idempotent: if given file is not found,
+    it be regarded as same as successfully deleted.
+
+    Arg:
+      token: a token that points to the file that you want to delete.
+    Raises:
+      IOError: unable to delete the file in chameleon. Check
+               chameleon log for more details.
+    """
+    logging.info("Delete file in chameleon. Given token:" + token)
+
+    if token not in self._file_dict:
+      logging.info("Given token not found: " + token)
+      return
+
+    filename = self._file_dict[token]
+    path = os.path.join("/tmp/", filename)
+    if not os.path.isfile(path):
+      logging.info("File not found: " + filename)
+      del self._file_dict[token]
+      return
+
+    try:
+      os.remove(path)
+      del self._file_dict[token]
+    except:
+      raise IOError("Unable to delete the file in path: " + path)
+
+    logging.info("Successfully deleted file: " + path)
+    return
 
   def _ClearPrinterFiles(self):
     """Clears temporary printer files.

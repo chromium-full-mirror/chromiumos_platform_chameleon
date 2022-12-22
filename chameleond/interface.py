@@ -836,3 +836,34 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
   def IsBluetoothRefDisabled(self):
     """Check if BTREF is enabled"""
     raise NotImplementedError('IsBluetoothRefDisabled')
+
+  def CopyFileToChameleon(self, content, filename):
+    """Copy a file to Chameleon
+
+    This function is designed to be idempotent: if a file with same name
+    exists, it will be overwritten with the new given content.
+
+    Args:
+      content: the data to be copied in the binary form.
+      filename: the filename (including file format) in the binary form.
+    Returns:
+      token: A token that refers to the file for further usage.
+    Raises:
+      IOError: unable to save the file to chameleon. Check chameleon log
+               for more details.
+    """
+    raise NotImplementedError('CopyFileToChameleon')
+
+  def DeleteFileInChameleon(self, token):
+    """Delete a file in Chameleon
+
+    This function is designed to be idempotent: if given file is not found,
+    it be regarded as same as successfully deleted.
+
+    Arg:
+      token: Points to the file that you want to delete.
+    Raises:
+      IOError: unable to delete the file in chameleon. Check
+               chameleon log for more details.
+    """
+    raise NotImplementedError('DeleteFileInChameleon')

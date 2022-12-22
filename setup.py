@@ -7,6 +7,8 @@ import sys
 
 # Needs to import setup from setuptools instead of distutils.core
 # in order to use the install_requires argument.
+# To install setuptools on Debian:
+# sudo apt-get install python3-setuptool
 from setuptools import setup
 
 
