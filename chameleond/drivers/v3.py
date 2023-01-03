@@ -72,7 +72,7 @@ class ChameleondDriver(ChameleondInterface):
 
   edid_database: dict # {edid_id: edid_bytes}
 
-  NETWORK_INTERFACE = "eth0"
+  NETWORK_INTERFACE = "end0"
 
   EC_SERIAL_PORT = "/dev/ttyS0"
 
