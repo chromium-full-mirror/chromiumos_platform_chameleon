@@ -1145,14 +1145,23 @@ class ChameleondDriver(ChameleondInterface):
     This function is designed to be idempotent: if a file with same name
     exists, then it will be overwritten with the new given content.
 
+    Example:
+      handle = open("fix_1k_440_16.wav", "rb")
+      tmp = xmlrpc.client.Binary(handle.read())
+      token = p.CopyFileToChameleon(tmp, "fix_1k_440_16.wav")
+
+    chameleon is responsible of file writing, and requestor is responsible
+    of file reading and conversion to binary form. Over-simplification should
+    be avoided.
+
     Args:
-      content: the data to be copied in the binary form.
+      content: the data to be copied in the binary form. See above example.
       filename: the filename (including file format) in the binary form.
     Returns:
       token: a token that refers to the file for further usage.
     Raises:
-      IOError: unable to save the file to chameleon. Check chameleon log
-               for more details.
+      xmlrpc.client.Fault: unable to write the file. Check chameleon log for
+                           more details.
     """
     logging.info("Copy file to chameleon:" + filename)
     token = uuid.uuid5(uuid.NAMESPACE_DNS, filename).hex
@@ -1165,7 +1174,7 @@ class ChameleondDriver(ChameleondInterface):
       with open("/tmp/" + filename, "wb") as handle:
         handle.write(content.data)
     except:
-      raise IOError("Unable to open the file specified: " + filename)
+      raise xmlrpc.client.Fault(500, "Unable to write the file: " + filename)
 
     self._file_dict[token] = filename
     return token
@@ -1176,33 +1185,47 @@ class ChameleondDriver(ChameleondInterface):
     This function is designed to be idempotent: if given file is not found,
     it be regarded as same as successfully deleted.
 
+    Check the faultCode to triage the error. For example:
+    try:
+      p.DeleteFileInChameleon(token)
+    except xmlrpc.client.Fault as err:
+      if err.faultCode == 400:
+        # something's wrong from the request
+      else:
+        # something's wrong from xmlrpc, check chameleon's log for more details
+
     Arg:
       token: a token that points to the file that you want to delete.
+    Returns:
+      isDeleted: a boolean value, True if the file is successfully removed. For
+                 the False case, now we're returning faultCode 500 to provide
+                 more error messages, but we can change those into False if we
+                 found that's not necessary.
     Raises:
-      IOError: unable to delete the file in chameleon. Check
-               chameleon log for more details.
+      xmlrpc.client.Fault: unable to delete the file. Check chameleon log for
+                           more details.
     """
     logging.info("Delete file in chameleon. Given token:" + token)
 
     if token not in self._file_dict:
       logging.info("Given token not found: " + token)
-      return
+      raise xmlrpc.client.Fault(400, "Given token not found: " + token)
 
     filename = self._file_dict[token]
     path = os.path.join("/tmp/", filename)
     if not os.path.isfile(path):
-      logging.info("File not found: " + filename)
+      logging.info("Found given token, but file does not exist: " + token)
       del self._file_dict[token]
-      return
+      return True
 
     try:
       os.remove(path)
-      del self._file_dict[token]
     except:
-      raise IOError("Unable to delete the file in path: " + path)
+      raise xmlrpc.client.Fault(500, "Unable to delete: " + filename)
 
+    del self._file_dict[token]
     logging.info("Successfully deleted file: " + path)
-    return
+    return True
 
   def _ClearPrinterFiles(self):
     """Clears temporary printer files.
