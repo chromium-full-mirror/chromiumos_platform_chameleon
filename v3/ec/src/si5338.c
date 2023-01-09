@@ -98,12 +98,7 @@ static int init_si5338(const struct device *ptr)
 {
 	ARG_UNUSED(ptr);
 
-	const struct device *i2c_dev = device_get_binding("I2C_2");
-
-	if (!i2c_dev) {
-		LOG_ERR("%s: I2C_2 device not found.\n", __func__);
-		return -ENODEV;
-	}
+	const struct device *i2c_dev = DEVICE_DT_GET(DT_NODELABEL(i2c2));
 
 	/*
 	 * Follow the programming procedure laid out in Figure 9 of the

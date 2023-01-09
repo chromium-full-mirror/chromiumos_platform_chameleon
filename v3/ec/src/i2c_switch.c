@@ -22,7 +22,7 @@ LOG_MODULE_REGISTER(i2c_switch);
 #define MAX7367_ADDR 0x73
 #define NUM_BUS 4
 
-const struct device *i2c_dev;
+static const struct device *i2c_dev = DEVICE_DT_GET(DT_NODELABEL(i2c1));
 
 /**
  * @brief Mutex for changing the I2C switch state.
@@ -110,13 +110,6 @@ static int init_i2c_switch(const struct device *ptr)
 	ARG_UNUSED(ptr);
 
 	int ret;
-
-	i2c_dev = device_get_binding("I2C_1");
-
-	if (!i2c_dev) {
-		LOG_ERR("%s: I2C_1 device not found.\n", __func__);
-		return -ENODEV;
-	}
 
 	i2c_switch_reset(RESET_DEASSERTED);
 	i2c_switch_select_bus(-1);
