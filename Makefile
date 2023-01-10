@@ -5,7 +5,7 @@
 SHELL := bash
 VERSION := 0.0.2
 CC := armv7a-cros-linux-gnueabihf-gcc
-CFLAGS := -g -Wall -O2
+CFLAGS := -g -Wall -O2 -static
 ifeq ($(PLATFORM), x86-generic)
 	CC := gcc
 endif
