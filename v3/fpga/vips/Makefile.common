@@ -1,0 +1,246 @@
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Copyright 2023 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Enable gui
+GUI?=
+
+# Used simulator. Valid values: questa, vivado
+SIM?=questa
+
+SIM_DIR=${SIM}_sim
+
+# Additional arguments for Vivado's xvlog
+XVLOG_ARGS?=
+
+# Additional arguments for Questa's vsim
+VSIM_ARGS?=
+
+# Native test directory name
+NATIVE_TEST=native_test_$(SIM)
+
+# SVUnit test directory name
+SVUNIT_TEST=test_svunit_$(SIM)
+
+# Result file name
+RESULTS_FILE?=
+
+# Test result prefix
+RESULT_PREFIX?=test_result
+
+# If set after eleboration would be run
+RUN_SIM?=1
+
+# Path to test directory
+export TEST_DIR?=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+
+# Path to test's filelist direcotry
+export TEST_FILELIST_DIR?=$(TEST_DIR)
+
+# Path to test's filelist
+FILELIST?=$(TEST_FILELIST_DIR)/filelist.f
+
+# Simulator script name
+SCRIPT_NAME=run
+
+# Simulator tcl script name
+TCL_SCRIPT_PATH=$(TEST_DIR)/$(SIM_DIR)/$(SCRIPT_NAME).tcl
+
+# Simulator shell script name
+SHELL_SCRIPT_PATH=$(TEST_DIR)/$(SIM_DIR)/$(SCRIPT_NAME).sh
+
+# Update PATH to use SVUnit
+ifdef SVUNIT_INSTALL
+	export PATH+=:$(SVUNIT_INSTALL)/bin
+endif
+
+ifeq ($(GUI),)
+	GUI_DEF="-c"
+	QUIT_CMD=quit -f;
+else
+	GUI_DEF=""
+	QUIT_CMD=
+endif
+
+ifeq ($(RESULTS_FILE),)
+	RESULTS_FILE_LOCAL="dummy"
+else
+	RESULTS_FILE_LOCAL=$(RESULTS_FILE)
+endif
+
+# Prepare run command
+ifeq ($(RUN_SIM), 1)
+	RUN_CMD=run -a;
+else
+	RUN_CMD=
+endif
+
+# Pass result prefix to the test
+VSIM_ARGS += +RESULT_PREFIX=$(RESULT_PREFIX)
+
+# It has to be always set because of crash in gui
+VSIM_ARGS += -voptargs=+acc
+
+# Run test with debug
+DEBUG_ARGS=log -r /*;
+ifeq ($(DEBUG),)
+	DEBUG_CMD=
+else
+	DEBUG_CMD=debug;
+endif
+
+# Run test with coverage
+ifeq ($(COVER),)
+	COVER_CMD=
+	COVER_VSIM=
+	COVER_VLOG=
+else
+	COVER_CMD=cover;
+	COVER_VSIM=-coverage
+	COVER_VLOG="+cover -coverexcludedefault"
+endif
+
+# Run test with assertions
+ifeq ($(ASSERT),)
+	ASSERT_DEF=""
+else
+	ASSERT_DEF="+define+ASSERT_AXIS"
+endif
+
+# Create script for Questa
+.PHONY: create_questa_script
+create_questa_script:
+	@echo "if { ![info exists env(VIPS_DIR) ] } {"                              >  $(TCL_SCRIPT_PATH)
+	@echo "  set ::env(VIPS_DIR) $(VIPS_DIR)"                                   >> $(TCL_SCRIPT_PATH)
+	@echo "}"                                                                   >> $(TCL_SCRIPT_PATH)
+	@echo "set VIPS_DIR $$::env(VIPS_DIR)"                                      >> $(TCL_SCRIPT_PATH)
+	@echo "if { ![info exists env(TEST_FILELIST_DIR) ] } {"                     >> $(TCL_SCRIPT_PATH)
+	@echo "  set ::env(TEST_FILELIST_DIR) $(TEST_FILELIST_DIR)"                 >> $(TCL_SCRIPT_PATH)
+	@echo "}"                                                                   >> $(TCL_SCRIPT_PATH)
+	@echo "set TEST_FILELIST_DIR $$::env(TEST_FILELIST_DIR)"                    >> $(TCL_SCRIPT_PATH)
+	@echo ""                                                                    >> $(TCL_SCRIPT_PATH)
+	@echo "alias rf \"restart -f\""                                             >> $(TCL_SCRIPT_PATH)
+	@echo "alias vv \"vsim -view vsim.wlf\""                                    >> $(TCL_SCRIPT_PATH)
+	@echo "alias rl \"dataset reload -f\""                                      >> $(TCL_SCRIPT_PATH)
+	@echo ""                                                                    >> $(TCL_SCRIPT_PATH)
+	@echo ""                                                                    >> $(TCL_SCRIPT_PATH)
+	@echo "proc lib {} {"                                                       >> $(TCL_SCRIPT_PATH)
+	@echo "  vlib work"                                                         >> $(TCL_SCRIPT_PATH)
+	@echo "  vmap work work"                                                    >> $(TCL_SCRIPT_PATH)
+	@echo "}"                                                                   >> $(TCL_SCRIPT_PATH)
+	@echo ""                                                                    >> $(TCL_SCRIPT_PATH)
+	@echo "proc com {} {"                                                       >> $(TCL_SCRIPT_PATH)
+	@echo "  global VIPS_DIR"                                                   >> $(TCL_SCRIPT_PATH)
+	@echo "  global TEST_FILELIST_DIR"                                          >> $(TCL_SCRIPT_PATH)
+	@echo "  vlog -sv -f $(VIPS_DIR)/filelist.f $(COVER_VLOG)"                  >> $(TCL_SCRIPT_PATH)
+	@echo "  vlog -sv -f $(FILELIST) $(ASSERT_DEF) \
++incdir+$(VIPS_DIR)/common/assertions/sva \
++incdir+$(VIPS_DIR)/common/assertions $(COVER_VLOG)"                          >> $(TCL_SCRIPT_PATH)
+	@echo "}"                                                                   >> $(TCL_SCRIPT_PATH)
+	@echo "proc elab {} {"                                                      >> $(TCL_SCRIPT_PATH)
+	@echo "  vsim $(TOP_NAME) $(VSIM_ARGS) $(COVER_VSIM)"                       >> $(TCL_SCRIPT_PATH)
+	@echo "  onfinish stop"                                                     >> $(TCL_SCRIPT_PATH)
+	@echo "}"                                                                   >> $(TCL_SCRIPT_PATH)
+	@echo ""                                                                    >> $(TCL_SCRIPT_PATH)
+	@echo "proc debug {} {"                                                     >> $(TCL_SCRIPT_PATH)
+	@echo "  $(DEBUG_ARGS)"                                                     >> $(TCL_SCRIPT_PATH)
+	@echo "}"                                                                   >> $(TCL_SCRIPT_PATH)
+
+ifneq ($(COVER_CMD),)
+	@echo "proc cover {} {"                                                     >> $(TCL_SCRIPT_PATH)
+	@echo "  foreach fi [concat [glob $(VIPS_DIR)/common/*.sv*] [glob $(VIPS_DIR)/axis/vip/*.sv*]] {"\
+																																							>> $(TCL_SCRIPT_PATH)
+	@echo "    coverage exclude -srcfile \$$fi"                                 >> $(TCL_SCRIPT_PATH)
+	@echo "  }"                                                                 >> $(TCL_SCRIPT_PATH)
+	@echo "  coverage save coverage.ucdb"                                       >> $(TCL_SCRIPT_PATH)
+	@echo "  vcover report -total coverage.ucdb"                                >> $(TCL_SCRIPT_PATH)
+	@echo "  vcover report -html coverage.ucdb -details"                        >> $(TCL_SCRIPT_PATH)
+	@echo "}"                                                                   >> $(TCL_SCRIPT_PATH)
+	@echo ""                                                                    >> $(TCL_SCRIPT_PATH)
+endif
+
+# Create script for Vivado
+.PHONY: create_vivado_script
+create_vivado_script:
+	@echo "source $${VIVADO_DIR}/settings64.sh"                    >  $(SHELL_SCRIPT_PATH)
+	@echo "export TEST_FILELIST_DIR=$(TEST_FILELIST_DIR)"          >> $(SHELL_SCRIPT_PATH)
+	@echo "xvlog -sv -f $(VIPS_DIR)/filelist.f -f $(FILELIST) \
+-i $(VIPS_DIR)/common/assertions $(XVLOG_ARGS)"                  >> $(SHELL_SCRIPT_PATH)
+	@echo "xelab $(TOP_NAME)"                                      >> $(SHELL_SCRIPT_PATH)
+	chmod +x $(SHELL_SCRIPT_PATH)
+
+.PHONY: test_native
+test_native: $(NATIVE_TEST)
+
+.PHONY: native_test_questa
+native_test_questa: test_prepare create_questa_script run_questa check
+
+.PHONY: native_test_vivado
+native_test_vivado: test_prepare create_vivado_script run_vivado check
+
+.PHONY: test_prepare
+test_prepare:
+	mkdir -p $(TEST_DIR)/$(SIM_DIR)
+
+.PHONY: run_questa
+run_questa:
+	@rm -f $(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ok
+	@rm -f $(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ko
+	-vsim $(GUI_DEF) -l $(TEST_DIR)/$(SIM_DIR)/questa.log -do \
+		"cd $(TEST_DIR)/$(SIM_DIR); do $(TCL_SCRIPT_PATH);   \
+		lib; com; elab; $(DEBUG_CMD) $(RUN_CMD) $(COVER_CMD) $(QUIT_CMD)"
+
+.PHONY: test_svunit
+test_svunit: $(SVUNIT_TEST)
+
+.PHONY: test_svunit_questa
+test_svunit_questa: run_svunit_questa check
+
+.PHONY: test_svunit_vivado
+test_svunit_vivado: run_svunit_vivado check
+
+.PHONY: run_svunit_vivado
+run_svunit_vivado:
+	@rm -f $(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ok
+	@rm -f $(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ko
+	@echo "SVUnit in Vivado is not supported yet"
+
+.PHONY: run_svunit_questa
+run_svunit_questa:
+	@rm -f $(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ok
+	@rm -f $(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ko
+	$(shell source $(SVUNIT_INSTALL)/Setup.csh)
+	- \
+	export VIPS_DIR=$(VIPS_DIR); \
+	export TEST_FILELIST_DIR=$(TEST_FILELIST_DIR); \
+	runSVUnit -s=questa -o $(TEST_DIR)/$(SIM_DIR) -r "+RESULT_PREFIX=$(RESULT_PREFIX)"
+
+.PHONY: run_vivado
+run_vivado:
+	@rm -f $(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ok
+	@rm -f $(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ko
+	cd $(TEST_DIR)/$(SIM_DIR)
+	-$(SHELL_SCRIPT_PATH)
+
+.PHONY: clean
+clean:
+	rm -fr $(TEST_DIR)/$(SIM_DIR)
+
+
+.PHONY: check
+check:
+	@if [ -f $(RESULTS_FILE) ] && ! [ -z $(RESULTS_FILE) ]; then \
+		if [ -f "$(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ok" ]; then \
+			echo "PASSED $(TEST_DIR)" | sed 's+$(VIPS_DIR)/++g' >> ${RESULTS_FILE_LOCAL}; \
+		else \
+			echo "FAILED $(TEST_DIR)" | sed 's+$(VIPS_DIR)/++g' >> ${RESULTS_FILE_LOCAL}; \
+		fi \
+	else \
+		if [ -f "$(TEST_DIR)/$(SIM_DIR)/$(RESULT_PREFIX)-ok" ]; then \
+			echo -e "\033[1;32mPASSED\033[0m $(TEST_DIR)"; \
+		else \
+			echo -e "\033[1;31mFAILED\033[0m $(TEST_DIR)"; \
+		fi \
+	fi

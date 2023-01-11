@@ -1,0 +1,13 @@
+questa_sim
+vivado_sim
+vivado*.log
+vivado*.jou
+work
+modelsim.ini
+transcript
+*.wlf
+*.log
+.testrunner.sv
+.svunit.f
+.__testsuite.sv
+tests.xml
