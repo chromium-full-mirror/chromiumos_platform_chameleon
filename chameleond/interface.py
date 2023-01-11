@@ -687,6 +687,33 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
     """
     raise NotImplementedError('StartPlayingAudio')
 
+  def StartPlayingAudioWithToken(self, port_id, token, data_format):
+    """Playing audio data from an output port.
+
+    Play audio data at given token using given format from port_id port.
+
+    The original API StartPlayingAudio uses path, which is a side-effect
+    of using SSH connection to deal with files in chameleon.
+
+    The way how chameleon stores the file should be managed by chameleon side.
+    The implementation should not affect with how it's going to be played.
+
+    Args:
+      port_id: The ID of the output connector.
+      token: The token indicates the desired audio data to play.
+      data_format: The dict representation of AudioDataFormat.
+        Refer to docstring of utils.audio.AudioDataFormat for detail.
+        Currently Chameleon only accepts data format if it meets
+        dict(file_type='raw', sample_format='S16_LE', channel=2, rate=48000)
+        Chameleon user should do the format conversion to minimize work load
+        on Chameleon board.
+
+    Raises:
+      xmlrpc.client.Fault: unable to find the file. Check chameleon log for
+                           more details.
+    """
+    raise NotImplementedError('StartPlayingAudioWithToken')
+
   def StartPlayingEcho(self, port_id, input_id):
     """Echoes audio data received from input_id and plays to port_id.
 
@@ -862,6 +889,8 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
 
     Arg:
       token: Points to the file that you want to delete.
+    Return:
+      isDeleted: a boolean value, True if the file is successfully removed.
     Raises:
       IOError: unable to delete the file in chameleon. Check
                chameleon log for more details.

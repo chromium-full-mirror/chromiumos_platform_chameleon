@@ -1098,6 +1098,67 @@ class ChameleondDriver(ChameleondInterface):
     """
     self._flow_manager.StartPlayingAudio(port_id, path, data_format)
 
+  def _GetPathByToken(self, token):
+    """Get file path by token.
+
+    Args:
+      token: The token indicates the desired audio data to play.
+
+    Raises:
+      FileNotFoundError: unable to find the file. Check chameleon log for
+                         more details.
+    """
+    logging.info("Getting file path by token ...")
+    if token not in self._file_dict:
+      logging.info("Token not found: " + token)
+      raise FileNotFoundError("Invalid token: " + token)
+
+    filename = self._file_dict[token]
+    path = os.path.join("/tmp/", filename)
+    return path
+
+  def StartPlayingAudioWithToken(self, port_id, token, data_format):
+    """Playing audio data from an output port.
+
+    Play audio data at given token using given format from port_id port.
+
+    The original API StartPlayingAudio uses path, which is a side-effect
+    of using SSH connection to deal with files in chameleon.
+
+    The way how chameleon stores the file should be managed by chameleon side.
+    The implementation should not affect with how it's going to be played.
+
+    For example:
+      handle = open("audio_fix_1k_440_16.wav", "rb")
+      tmp = xmlrpc.client.Binary(handle.read())
+      token = p.CopyFileToChameleon(tmp, "audio_fix_1k_440_16.wav")
+      ft, sf, ch, rt = 'file_type', 'sample_format', 'channel', 'rate'
+      fmt = {ft:'wav', sf:'S16_LE', ch:2, rt:48000}
+      p.Plug(9)
+      p.StartPlayingAudioWithToken(9, token, fmt)
+
+    Args:
+      port_id: The ID of the output connector.
+      token: The token indicates the desired audio data to play.
+      data_format: The dict representation of AudioDataFormat.
+        Refer to docstring of utils.audio.AudioDataFormat for detail.
+        Chameleon user should do the format conversion to minimize work load
+        on Chameleon board.
+
+    Raises:
+      xmlrpc.client.Fault: unable to play the file. Check faultCode and also
+                           chameleon log for more details.
+    """
+
+    try:
+      path = self._GetPathByToken(token)
+      self._flow_manager.StartPlayingAudio(port_id, path, data_format)
+    except FileNotFoundError as fe:
+      raise xmlrpc.client.Fault(400, "Token not found: " + token) from fe
+    except DriverError as de:
+      raise xmlrpc.client.Fault(500, "Unable to play file.") from de
+    return
+
   def StartPlayingEcho(self, port_id, input_id):
     """Echoes audio data received from input_id and plays to port_id.
 
