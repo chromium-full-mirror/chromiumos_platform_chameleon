@@ -157,6 +157,21 @@ package gvip_policy_pkg;
 
   endclass : single_ack
 
+  // Class: always_nactive
+  //
+  // Valid/ready signal is always inactive.
+  //
+  class always_nactive extends policy;
+    `POLICY_UTILS(always_nactive)
+    function new(string name = "always_nactive", string type_name = $typename(this));
+      super.new(name, type_name);
+      sig_value = '0;
+    endfunction : new
+    virtual function void next(logic tpartner);
+      is_randomize_done();
+      sig_value = '0;
+    endfunction : next
+  endclass : always_nactive
 
   ///////////////////////////////
   // Functional implementation //
