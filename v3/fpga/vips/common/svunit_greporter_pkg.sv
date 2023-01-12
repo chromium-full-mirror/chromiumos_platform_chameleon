@@ -36,13 +36,13 @@ package svunit_greporter_pkg;
     virtual function void report_error(string id, string message,
                                     int verbosity = LOW, string filename = "", int line = 0);
       string name = id;
-      `ERROR(message);
+      void'(svunit_pkg::current_tc.fail("fatal", 1, message, filename, line));
     endfunction : report_error
 
     virtual function void report_fatal( string id, string message,
                                     int verbosity = NONE, string filename = "", int line = 0);
       string name = id;
-      `ERROR(message);
+      void'(svunit_pkg::current_tc.fail("fatal", 1, message, filename, line));
     endfunction : report_fatal
 
     static function svunit_reporter get();

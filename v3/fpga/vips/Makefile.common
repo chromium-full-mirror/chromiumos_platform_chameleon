@@ -215,7 +215,7 @@ run_svunit_questa:
 	- \
 	export VIPS_DIR=$(VIPS_DIR); \
 	export TEST_FILELIST_DIR=$(TEST_FILELIST_DIR); \
-	runSVUnit -s=questa -o $(TEST_DIR)/$(SIM_DIR) -r "+RESULT_PREFIX=$(RESULT_PREFIX)"
+	runSVUnit -s=questa -o $(TEST_DIR)/$(SIM_DIR) -r "+RESULT_PREFIX=$(RESULT_PREFIX)" -c "$(ASSERT_DEF)"
 
 .PHONY: run_vivado
 run_vivado:

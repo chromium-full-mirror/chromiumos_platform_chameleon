@@ -6,4 +6,6 @@
 
  ../dut.sv
 -f ${VIPS_DIR}/filelist.f
++incdir+${VIPS_DIR}/common/assertions
++incdir+${VIPS_DIR}/common/assertions/sva
 ${VIPS_DIR}/common/svunit_greporter_pkg.sv

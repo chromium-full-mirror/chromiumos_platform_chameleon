@@ -9,6 +9,7 @@
 // gaxis vip example with SVUnit //
 ///////////////////////////////////
 
+`include "assert.svh"
 `include "svunit_defines.svh"
 
 module svunit_unit_test;
@@ -41,6 +42,8 @@ module svunit_unit_test;
     .i_axis_in ( gaxis_vip_in.axis  ),
     .i_axis_out( gaxis_vip_out.axis )
   );
+
+  `ASSERT_AXIS_INF(clk, rst, gaxis_vip_in.axis, in)
 
   // class which is analyzing incomming packets from i_axis_out
   class ap_impl implements gvip_axis_pkg::analysis_port_ic #(item_t);
@@ -112,6 +115,9 @@ module svunit_unit_test;
     gaxis_vip_out.core.run_phase();
     repeat(4) @(posedge clk);
     rst <= 0;
+
+    gaxis_vip_in.core.set_policy(gvip_policy_pkg::random_std::create(), 1);
+    gaxis_vip_out.core.set_policy(gvip_policy_pkg::random_std::create(), 1);
   endtask : setup
 
   int file;
