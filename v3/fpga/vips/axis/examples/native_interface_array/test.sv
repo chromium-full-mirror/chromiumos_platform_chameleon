@@ -20,6 +20,7 @@ module test;
   parameter int D = $clog2(NUM);
   parameter type U_T = logic[31:0];
 
+  import greporter_pkg::greporter;
 
   logic clk;
   logic rst;
@@ -36,7 +37,6 @@ module test;
 
   // get item type from vip's interface
   item_t item_obj;
-  bit test_passed;
 
   dut #(
     .NUM       ( NUM                )
@@ -63,17 +63,15 @@ module test;
       int item_dest = item.tdest;
 
       if (pat_queue[item_dest].size() == 0) begin
-        test_passed = 1'b0;
-        $error ("pattern queue is empty");
+        greporter::error("TEST", "Pattern queue is empty");
       end
 
       pat = pat_queue[item_dest].pop_front();
 
       if (!item.compare(pat)) begin
-        test_passed = 1'b0;
-        $error("%t Packet missmatch\n%s\n%s", $time,
+        greporter::error("TEST", $sformatf("%t Packet mismatch\n%s\n%s", $time,
           gvip_axis_item_pkg::printer #()::add_prefix(pat.convert2string(), "pattern"),
-          gvip_axis_item_pkg::printer #()::add_prefix(item.convert2string(), "result"));
+          gvip_axis_item_pkg::printer #()::add_prefix(item.convert2string(), "result")));
       end
     endfunction : write
 
@@ -109,7 +107,6 @@ module test;
 
   initial begin
     rst <= 1;
-    test_passed = 1'b1;
     repeat(4) @(posedge clk);
     rst <= 0;
   end
@@ -139,8 +136,7 @@ module test;
     repeat (iterations) begin
       item_obj = new();
       if (!(item_obj.randomize() with {tdata.size() < 5; tdest < NUM;})) begin
-        test_passed = 1'b0;
-        $error("Can't randomize item");
+        greporter::error("TEST", "Can't randomize item");
       end
       dest = item_obj.tdest;
       ap.add_pat(item_obj, dest);
@@ -154,11 +150,11 @@ module test;
       result_file_name="test_result";
     end
 
-    if (test_passed) begin
-      file = $fopen($sformatf("%s-ok",result_file_name),"a+");
+    if (greporter::get_counter_error() || greporter::get_counter_fatal()) begin
+      file = $fopen($sformatf("%s-ko",result_file_name),"a+");
     end
     else begin
-      file = $fopen($sformatf("%s-ko",result_file_name),"a+");
+      file = $fopen($sformatf("%s-ok",result_file_name),"a+");
     end
     $fwrite(file, "Test ended");
     $fclose(file);

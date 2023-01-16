@@ -21,6 +21,7 @@ module test;
   parameter int D = 3;
   parameter type U_T = logic[31:0];
 
+  import greporter_pkg::greporter;
 
   logic clk;
   logic rst;
@@ -37,7 +38,6 @@ module test;
 
   // get item type from vip's interface
   item_t item_obj;
-  bit test_passed;
 
   dut #(
     .ACK_TIME  ( ACK_TIME           )
@@ -60,17 +60,15 @@ module test;
       item_t pat;
 
       if (pat_queue.size() == 0) begin
-        test_passed = 1'b0;
-        $error ("pattern queue is empty");
+        greporter::error("TEST", "Pattern queue is empty");
       end
 
       pat = pat_queue.pop_front();
 
       if (!item.compare(pat)) begin
-        test_passed = 1'b0;
-        $error("%t Packet missmatch\n%s\n%s", $time,
+        greporter::error("TEST", $sformatf("%t Packet mismatch\n%s\n%s", $time,
           gvip_axis_item_pkg::printer #()::add_prefix(pat.convert2string(), "pattern"),
-          gvip_axis_item_pkg::printer #()::add_prefix(item.convert2string(), "result"));
+          gvip_axis_item_pkg::printer #()::add_prefix(item.convert2string(), "result")));
       end
     endfunction : write
 
@@ -109,7 +107,6 @@ module test;
 
   initial begin
     rst <= 1;
-    test_passed = 1'b1;
     repeat(4) @(posedge clk);
     rst <= 0;
   end
@@ -138,30 +135,31 @@ module test;
     gaxis_vip_out.core.set_policy(my_policy::create(), 1);
 
     gaxis_vip_in.core.set_policy(gvip_policy_pkg::always_active::create(), 1);
-    gaxis_vip_out.core.set_policy(gvip_policy_pkg::random::create(), 1);
+    gaxis_vip_out.core.set_policy(gvip_policy_pkg::random_std::create(), 1);
+
+    // Changing policy during runtime results in breaking asserion rules
+`ifndef ASSERT_AXIS
     fork
       forever begin
         int delay;
         if (!(std::randomize(delay) with {delay < 100; delay > 50;})) begin
-          test_passed = 1'b0;
-          $error("Can't randomize delay");
+          greporter::error("TEST", "Can't randomize delay");
         end
         repeat(delay) @(posedge clk);
         gaxis_vip_in.core.set_policy(gvip_policy_pkg::policy_after_partner_active::create(), 1);
         if (!(std::randomize(delay) with {delay < 300; delay > 200;})) begin
-          test_passed = 1'b0;
-          $error("Can't randomize delay");
+          greporter::error("TEST", "Can't randomize delay");
         end
         repeat(delay) @(posedge clk);
         gaxis_vip_in.core.set_policy(gvip_policy_pkg::always_active::create(), 1);
       end
     join_none
+`endif
 
     repeat (iterations) begin
       item_obj = new();
       if (!(item_obj.randomize() with {tdata.size() < 5; tlast == 1;})) begin
-        test_passed = 1'b0;
-        $error("Can't randomize item");
+          greporter::error("TEST", "Can't randomize item");
       end
       ap.add_pat(item_obj);
       // send packet
@@ -174,13 +172,13 @@ module test;
       result_file_name="test_result";
     end
 
-    if (test_passed) begin
-      file = $fopen($sformatf("%s-ok",result_file_name),"a+");
-    end
-    else begin
+    if (greporter::get_counter_error() || greporter::get_counter_fatal()) begin
       file = $fopen($sformatf("%s-ko",result_file_name),"a+");
     end
-    $fwrite(file, "Test ended");
+    else begin
+      file = $fopen($sformatf("%s-ok",result_file_name),"a+");
+    end
+    $fwrite(file, $sformatf("Reporter statistics:%s",greporter::convert2string()));
     $fclose(file);
     $finish;
   end

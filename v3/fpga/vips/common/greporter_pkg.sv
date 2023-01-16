@@ -97,13 +97,16 @@ package greporter_pkg;
 
     local static greporter    _this; // singleton handler
     local        greporter_ic active_reporter; // current reporter used implementation
-    local        int          verbosity_map[string] = '{default: MEDIUM}; // map of id:verbosity
+    local        int          verbosity_map[string]       = '{default: MEDIUM}; // id:verbosity
+    local        int          counter_info_map[string]    = '{default: 0};
+    local        int          counter_warning_map[string] = '{default: 0};
+    local        int          counter_error_map[string]   = '{default: 0};
+    local        int          counter_fatal_map[string]   = '{default: 0};
 
     local function new();
       default_reporter dr = new();
       active_reporter = dr;
     endfunction : new
-
 
     //////////////////////
     // Static interface //
@@ -213,6 +216,63 @@ package greporter_pkg;
     endfunction : set_default_verbosity
 
 
+    // Static function: get_counter_info
+    //
+    // Returns number of info messages
+    // id - message ID
+    static function int get_counter_info(string id = "");
+      greporter gr = greporter::get();
+      return gr.counter_info(id);
+    endfunction : get_counter_info
+
+
+    // Static function: get_counter_warning
+    //
+    // Returns number of warning messages
+    // id - message ID
+    static function int get_counter_warning(string id = "");
+      greporter gr = greporter::get();
+      return gr.counter_warning(id);
+    endfunction : get_counter_warning
+
+
+    // Static function: get_counter_error
+    //
+    // Returns number of error messages
+    // id - message ID
+    static function int get_counter_error(string id = "");
+      greporter gr = greporter::get();
+      return gr.counter_error(id);
+    endfunction : get_counter_error
+
+
+    // Static function: get_counter_fatal
+    //
+    // Returns number of fatal messages
+    // id - message ID
+    static function int get_counter_fatal(string id = "");
+      greporter gr = greporter::get();
+      return gr.counter_fatal(id);
+    endfunction : get_counter_fatal
+
+
+    // Static function: clear_counters
+    //
+    // Clears message counters
+    static function void clear_counters();
+      greporter gr = greporter::get();
+      gr.erase_counters();
+    endfunction : clear_counters
+
+
+    // Static function: convert2string
+    //
+    // Returns string with reporter's statistics
+    static function string convert2string();
+      greporter gr = greporter::get();
+      return gr.counters2string();
+    endfunction : convert2string
+
     /////////////
     // Methods //
     /////////////
@@ -231,27 +291,122 @@ package greporter_pkg;
 
     virtual function void report_info(string id, string message,
           int verbosity = MEDIUM, string filename = "", int line = 0);
-      if (verbosity <= verbosity_map[id])
+      if (verbosity <= verbosity_map[id]) begin
+        counter_info_map[id]++;
         active_reporter.report_info(id, message, verbosity, filename, line);
+      end
     endfunction : report_info
 
     virtual function void report_warning(string id, string message,
           int verbosity = MEDIUM, string filename = "", int line = 0);
-      if (verbosity <= verbosity_map[id])
+      if (verbosity <= verbosity_map[id]) begin
+        counter_warning_map[id]++;
         active_reporter.report_warning(id, message, verbosity, filename, line);
+      end
     endfunction : report_warning
 
     virtual function void report_error(string id, string message,
           int verbosity = LOW, string filename = "", int line = 0);
-      if (verbosity <= verbosity_map[id])
+      if (verbosity <= verbosity_map[id]) begin
+        counter_error_map[id]++;
         active_reporter.report_error(id, message, verbosity, filename, line);
+      end
     endfunction : report_error
 
     virtual function void report_fatal( string id, string message,
           int verbosity = NONE, string filename = "", int line = 0);
-      if (verbosity <= verbosity_map[id])
+      if (verbosity <= verbosity_map[id]) begin
+        counter_fatal_map[id]++;
         active_reporter.report_fatal(id, message, verbosity, filename, line);
+      end
     endfunction : report_fatal
+
+
+    // Function: counter_info
+    //
+    // Returns number of info messages
+    // id - message ID
+    function int counter_info(string id = "");
+      return ((id == "") ? counter_info_map.sum() : counter_info_map[id]);
+    endfunction : counter_info
+
+
+    // Function: counter_warning
+    //
+    // Returns number of warning messages
+    // id - message ID
+    function int counter_warning(string id = "");
+      return ((id == "") ? counter_warning_map.sum() : counter_warning_map[id]);
+    endfunction : counter_warning
+
+
+    // Function: counter_error
+    //
+    // Returns number of error messages
+    // id - message ID
+    function int counter_error(string id = "");
+      return ((id == "") ? counter_error_map.sum() : counter_error_map[id]);
+    endfunction : counter_error
+
+
+    // Function: counter_fatal
+    //
+    // Returns number of fatal messages
+    // id - message ID
+    function int counter_fatal(string id = "");
+      return ((id == "") ? counter_fatal_map.sum() : counter_fatal_map[id]);
+    endfunction : counter_fatal
+
+
+    // Function: erase_counters
+    //
+    // Clears message counters
+    function void erase_counters();
+      counter_info_map.delete();
+      counter_warning_map.delete();
+      counter_error_map.delete();
+      counter_fatal_map.delete();
+    endfunction : erase_counters
+
+
+    // Function: convert2string
+    //
+    // Returns string with reporter's statistics
+    function string counters2string();
+      string output_string;
+      string ids[$];
+      ids = {counter_info_map.find_index() with (item),
+             counter_warning_map.find_index() with (item),
+             counter_error_map.find_index() with (item),
+             counter_fatal_map.find_index() with (item)};
+      ids = ids.unique();
+
+      output_string =
+        $sformatf("%s\nTotal", output_string);
+      output_string =
+        $sformatf("%s\n\tInfos num:    %0d", output_string, counter_info_map.sum());
+      output_string =
+        $sformatf("%s\n\tWarnings num: %0d", output_string, counter_warning_map.sum());
+      output_string =
+        $sformatf("%s\n\tErrors num:   %0d", output_string, counter_error_map.sum());
+      output_string =
+        $sformatf("%s\n\tFatals num:   %0d", output_string, counter_fatal_map.sum());
+
+      foreach (ids[i]) begin
+        output_string =
+          $sformatf("%s\n%s", output_string, ids[i]);
+        output_string =
+          $sformatf("%s\n\tInfos num:    %0d", output_string, counter_info_map[ids[i]]);
+        output_string =
+          $sformatf("%s\n\tWarnings num: %0d", output_string, counter_warning_map[ids[i]]);
+        output_string =
+          $sformatf("%s\n\tErrors num:   %0d", output_string, counter_error_map[ids[i]]);
+        output_string =
+          $sformatf("%s\n\tFatals num:   %0d", output_string, counter_fatal_map[ids[i]]);
+      end
+      return output_string;
+    endfunction : counters2string
+
 
   endclass : greporter
 
