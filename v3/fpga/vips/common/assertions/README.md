@@ -13,4 +13,5 @@
 3. Copy `sva` folder to `TOP_DIR/common/assertions/`
 
 ### Using assertions during tests
+Use ASSERT_AXIS_INF macro in the test
 While running tests set `ASSERT` (`make ASSERT=1`)
