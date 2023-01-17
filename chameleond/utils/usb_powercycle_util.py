@@ -85,13 +85,13 @@ def PowerCycleUSBPort(usb_vid, usb_pid):
       logging.debug('returning %s', index)
       return index
 
-  def _get_board():
-    """Get the board name."""
+  def _get_frid():
+    """Get the RO firmware version."""
     try:
-      board = _run('mosys platform name').lower()
-      return board
+      frid = _run('crossystem ro_fwid')
+      return frid
     except subprocess.CalledProcessError:
-      logging.debug('Unable to get board name')
+      logging.debug('Unable to get FRID')
       return None
 
   def _cycle_gpio_power_fizz(gpio_idx):
@@ -241,8 +241,8 @@ def PowerCycleUSBPort(usb_vid, usb_pid):
 
   logging.debug('PowerCycleUSBPort: usb_vid %s usb_pid %s', usb_vid, usb_pid)
 
-  board = _get_board()
-  if board != 'fizz':
+  frid = _get_frid()
+  if not frid.startswith('Google_Fizz.'):
     logging.debug('PowerCycleUSBPort: This function is supported only'
                   'on fizz boards')
     return False
@@ -265,7 +265,7 @@ def PowerCycleUSBPort(usb_vid, usb_pid):
   status = True
   for port_id in port_ids:
     logging.info('PowerCycleUSBPort: reset port id %s', port_id)
-    gpio_index = _get_gpio_index(board, port_id)
+    gpio_index = _get_gpio_index('fizz', port_id)
     if not _cycle_gpio_power_fizz(gpio_index):
       logging.info('PowerCycleUSBPort: power cycle port_id %s failed', port_id)
       status = False
