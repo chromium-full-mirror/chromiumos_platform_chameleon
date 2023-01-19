@@ -18,6 +18,14 @@
           - target_uboot.stdout.rsplit("-", 1)[1] in update_payload_name
         fail_msg: "Cannot find `{{target_uboot.stdout.rsplit('-', 1)[1]}}` in payload name `{{ update_payload_name }}`. Are you sure fpga type matches?"
 
+    - name: Extend/Resize rootfs partition to take up the whole sd card
+      ansible.builtin.shell: |
+        echo -e "Yes" | parted /dev/mmcblk0 resizepart 3 "100%" ---pretend-input-tty
+        # Yes, it's ok to do this while in use, at runtime,
+        # despite parted's complaining
+        btrfs filesystem resize max /
+      tags: resize
+
     - name: Stream payload to target
       # This is annoying. Since ansible has no concept of streaming this
       # gigantic file and keeps wanting to put it in temporary variables,
