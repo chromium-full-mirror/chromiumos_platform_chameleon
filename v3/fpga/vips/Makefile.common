@@ -106,7 +106,7 @@ endif
 ifeq ($(ASSERT),)
 	ASSERT_DEF=""
 else
-	ASSERT_DEF="+define+ASSERT_AXIS"
+	ASSERT_DEF="+define+ASSERT_AXIS+define+ASSERT_AXIMM"
 endif
 
 # Create script for Questa

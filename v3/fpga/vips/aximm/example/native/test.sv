@@ -6,6 +6,8 @@
  */
 
 
+`include "assert.svh"
+
 // Simple example with base VIPs functionality presentation
 // for simplicity base dut with asynchronous assigment input to output interface is used
 module test;
@@ -39,6 +41,8 @@ module test;
     .i_aximm_out ( out_if        )
   );
 
+  // add ARM protocol checker
+  `ASSERT_AXIMM_INF(clk, rst, gvip_in.aximm, in)
 
   // We want to have some analysis port which just print incoming item
   // we will use this aport for all channel and both VIPs
