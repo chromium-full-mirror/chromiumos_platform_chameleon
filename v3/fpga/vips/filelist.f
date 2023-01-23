@@ -7,3 +7,4 @@
 -f ${VIPS_DIR}/common/filelist.f
 -f ${VIPS_DIR}/axis/vip/filelist.f
 -f ${VIPS_DIR}/aximm/vip/filelist.f
+-f ${VIPS_DIR}/axil/vip/filelist.f
