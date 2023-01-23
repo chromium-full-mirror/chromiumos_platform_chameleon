@@ -101,6 +101,49 @@ endfunction : arm_amba4_pc_msg_warn
       0, `__FILE__, `__LINE__);
 `endif
 
+
+`ifdef ASSERT_AXIL
+  `include "Axi4LitePC.sv"
+
+  `define ASSERT_AXIL_INF(clk, rst, inf, name, not_ready_threshold=16) \
+    localparam int MaxWaits``name = not_ready_threshold ? not_ready_threshold : 1; \
+    localparam bit RecMaxWaitOn``name = not_ready_threshold != 0; \
+    Axi4LitePC #( \
+      .DATA_WIDTH    ( inf.N * 8          ), \
+      .MAXWAITS      ( MaxWaits``name     ), \
+      .RecMaxWaitOn  ( RecMaxWaitOn``name ), \
+      .ADDR_WIDTH    ( inf.A              )  \
+    ) assert_``name (             \
+      .ACLK     ( clk          ), \
+      .ARESETn  ( !rst         ), \
+      .AWADDR   ( inf.awaddr   ), \
+      .AWPROT   ( inf.awprot   ), \
+      .AWVALID  ( inf.awvalid  ), \
+      .AWREADY  ( inf.awready  ), \
+      .WDATA    ( inf.wdata    ), \
+      .WSTRB    ( inf.wstrb    ), \
+      .WVALID   ( inf.wvalid   ), \
+      .WREADY   ( inf.wready   ), \
+      .BRESP    ( inf.bresp    ), \
+      .BVALID   ( inf.bvalid   ), \
+      .BREADY   ( inf.bready   ), \
+      .ARADDR   ( inf.araddr   ), \
+      .ARPROT   ( inf.arprot   ), \
+      .ARVALID  ( inf.arvalid  ), \
+      .ARREADY  ( inf.arready  ), \
+      .RDATA    ( inf.rdata    ), \
+      .RRESP    ( inf.rresp    ), \
+      .RVALID   ( inf.rvalid   ), \
+      .RREADY   ( inf.rready   )  \
+    );
+`else
+    `define ASSERT_AXIL_INF(clk, rst, inf, name, not_ready_threshold=16) \
+      greporter_pkg::build_warning bw``name = new("ASSERT", \
+        {"AXI Lite assertions are not set up!", \
+        "(Set up manual here: $(VIPS_DIR)/common/assertions/README.md)"}, \
+        0, `__FILE__, `__LINE__);
+`endif
+
 `ifdef ASSERT_AXIS
   `include "Axi4StreamPC.sv"
 
