@@ -276,25 +276,27 @@ package gvip_aximm_pkg;
 
 
   function void core::add_ap2pkt(gvip::channel_e channel, analysis_port_ic #(item_t) ap);
+    gvip_amba_axi4_pkg::analysis_port_wrp#(item_t, analysis_port_ic #(item_t)) wrp = new(ap);
     case (channel)
-      gvip::AW   : mon_ch_aw.add_ap2pkt(ap);
-      gvip::AR   : mon_ch_ar.add_ap2pkt(ap);
-      gvip::W    : mon_ch_w.add_ap2pkt(ap);
-      gvip::B    : mon_ch_b.add_ap2pkt(ap);
-      gvip::R    : mon_ch_r.add_ap2pkt(ap);
-      gvip::AW_W : mon_aw_w.add_ap2pkt(ap);
+      gvip::AW   : mon_ch_aw.add_ap2pkt(wrp);
+      gvip::AR   : mon_ch_ar.add_ap2pkt(wrp);
+      gvip::W    : mon_ch_w.add_ap2pkt(wrp);
+      gvip::B    : mon_ch_b.add_ap2pkt(wrp);
+      gvip::R    : mon_ch_r.add_ap2pkt(wrp);
+      gvip::AW_W : mon_aw_w.add_ap2pkt(wrp);
     endcase
   endfunction : add_ap2pkt
 
 
   function void core::add_ap2transfer(gvip::channel_e channel, analysis_port_ic #(item_t) ap);
+    gvip_amba_axi4_pkg::analysis_port_wrp#(item_t, analysis_port_ic #(item_t)) wrp = new(ap);
     case (channel)
-      gvip::AW   : mon_ch_aw.add_ap2transfer(ap);
-      gvip::AR   : mon_ch_ar.add_ap2transfer(ap);
-      gvip::W    : mon_ch_w.add_ap2transfer(ap);
-      gvip::B    : mon_ch_b.add_ap2transfer(ap);
-      gvip::R    : mon_ch_r.add_ap2transfer(ap);
-      gvip::AW_W : mon_aw_w.add_ap2pkt(ap);
+      gvip::AW   : mon_ch_aw.add_ap2transfer(wrp);
+      gvip::AR   : mon_ch_ar.add_ap2transfer(wrp);
+      gvip::W    : mon_ch_w.add_ap2transfer(wrp);
+      gvip::B    : mon_ch_b.add_ap2transfer(wrp);
+      gvip::R    : mon_ch_r.add_ap2transfer(wrp);
+      gvip::AW_W : mon_aw_w.add_ap2pkt(wrp);
     endcase
   endfunction : add_ap2transfer
 

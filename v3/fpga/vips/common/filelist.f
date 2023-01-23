@@ -8,3 +8,4 @@ ${VIPS_DIR}/common/greporter_pkg.sv
 ${VIPS_DIR}/common/gclk_if.sv
 ${VIPS_DIR}/common/gvip_policy_pkg.sv
 ${VIPS_DIR}/common/gvip_handshake_pkg.sv
+${VIPS_DIR}/common/gvip_amba_axi4_pkg.sv

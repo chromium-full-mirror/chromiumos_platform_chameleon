@@ -78,7 +78,7 @@ endclass : aximm_aw_receiver
 // Puts aw* items fields to AW channel
 //
 class aximm_aw_transmitter #(`IF_PARAMS, type item_t = gvip_aximm_item_pkg::item #(`IF_PARAMS_MAP))
-      extends aximm_aw_hs #(`IF_PARAMS_MAP, .base(aximm_transmitter_for_single_transfer #(item_t)));
+      extends aximm_aw_hs #(`IF_PARAMS_MAP, .base(amba_transmitter_for_single_transfer #(item_t)));
 
   typedef aximm_aw_transmitter #(`IF_PARAMS_MAP, .item_t(item_t)) this_type;
 
@@ -126,7 +126,7 @@ endclass : aximm_aw_transmitter
 //
 class aximm_aw_monitor #(`IF_PARAMS, type item_t = gvip_aximm_item_pkg::item #(`IF_PARAMS_MAP))
       extends aximm_aw_hs #(`IF_PARAMS_MAP,
-                           .base(aximm_monitor_ap_support_for_single_transfers #(item_t)));
+                           .base(amba_monitor_ap_support_for_single_transfers #(item_t)));
 
   put_item_ic #(item_t) transmitter;
 

@@ -78,7 +78,7 @@ endclass : aximm_r_receiver
 // Puts r* items fields to R channel
 //
 class aximm_r_transmitter #(`IF_PARAMS, type item_t = gvip_aximm_item_pkg::item #(`IF_PARAMS_MAP))
-      extends aximm_r_hs #(`IF_PARAMS_MAP, .base(aximm_transmitter_for_multi_transfers #(item_t)));
+      extends aximm_r_hs #(`IF_PARAMS_MAP, .base(amba_transmitter_for_multi_transfers #(item_t)));
 
   typedef aximm_r_transmitter #(`IF_PARAMS_MAP, .item_t(item_t)) this_type;
 
@@ -121,7 +121,7 @@ endclass : aximm_r_transmitter
 //
 class aximm_r_monitor #(`IF_PARAMS, type item_t = gvip_aximm_item_pkg::item #(`IF_PARAMS_MAP))
       extends aximm_r_hs #(`IF_PARAMS_MAP,
-                          .base(aximm_monitor_ap_support_for_multi_transfers #(item_t)));
+                          .base(amba_monitor_ap_support_for_multi_transfers #(item_t)));
 
   function new(
     virtual gaximm_if #(`IF_PARAMS_MAP) vif,

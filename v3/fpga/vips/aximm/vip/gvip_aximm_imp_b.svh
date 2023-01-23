@@ -78,7 +78,7 @@ endclass : aximm_b_receiver
 // Puts b* items fields to B channel
 //
 class aximm_b_transmitter #(`IF_PARAMS, type item_t = gvip_aximm_item_pkg::item #(`IF_PARAMS_MAP))
-      extends aximm_b_hs #(`IF_PARAMS_MAP, .base(aximm_transmitter_for_single_transfer #(item_t)));
+      extends aximm_b_hs #(`IF_PARAMS_MAP, .base(amba_transmitter_for_single_transfer #(item_t)));
 
   typedef aximm_b_transmitter #(`IF_PARAMS_MAP, .item_t(item_t)) this_type;
 
@@ -115,7 +115,7 @@ endclass : aximm_b_transmitter
 //
 class aximm_b_monitor #(`IF_PARAMS, type item_t = gvip_aximm_item_pkg::item #(`IF_PARAMS_MAP))
       extends aximm_b_hs #(`IF_PARAMS_MAP,
-                          .base(aximm_monitor_ap_support_for_single_transfers #(item_t)));
+                          .base(amba_monitor_ap_support_for_single_transfers #(item_t)));
 
   function new(
     virtual gaximm_if #(`IF_PARAMS_MAP) vif,
