@@ -244,4 +244,43 @@ package gvip_handshake_pkg;
   endtask : main_th
 
 
+
+  ///////////////
+  // Auxiliary //
+  ///////////////
+
+  // Class: items_policy_setter
+  //
+  // This is helper class that sets HS policy taken from given item if is not null,
+  // making a backup that can be restored later
+  // assumption item_t has a ~policy~ field of gvip_policy_pkg::policy type
+  //
+  class items_policy_setter #(type item_t = struct {gvip_policy_pkg::policy policy;});
+    local handshake hs;
+    local policy backup_vip_main_policy;
+
+    function new(handshake hs);
+      this.hs = hs;
+    endfunction : new
+
+    virtual function policy get_policy_from_item(item_t item);
+      return item.policy;
+    endfunction : get_policy_from_item
+
+    virtual function void policy_from_item(item_t item);
+      policy item_policy = get_policy_from_item(item);
+      if (item_policy != null) begin
+        backup_vip_main_policy = hs.get_policy();
+        hs.set_policy(item_policy);
+      end
+    endfunction : policy_from_item
+
+    virtual function void restore_original_policy();
+      if (backup_vip_main_policy != null) begin
+        hs.set_policy(backup_vip_main_policy);
+        backup_vip_main_policy = null;
+      end
+    endfunction : restore_original_policy
+  endclass : items_policy_setter
+
 endpackage : gvip_handshake_pkg
