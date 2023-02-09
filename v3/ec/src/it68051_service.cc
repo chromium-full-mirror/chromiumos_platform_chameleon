@@ -29,7 +29,9 @@ it68051_service::select_port(const ::it68051_port_num_request &request,
 		return ::pw::Status::InvalidArgument();
 	}
 
+	it68051_lock();
 	it68051_port_select(port);
+	it68051_unlock();
 
 	return ::pw::OkStatus();
 }
@@ -40,7 +42,9 @@ it68051_service::get_selected_port(const ::Empty &request,
 {
 	static_cast<void>(request);
 
+	it68051_lock();
 	enum it68051_port port = it68051_get_selected_port();
+	it68051_unlock();
 	if (port == PORT2) {
 		response.port = it68051_port_num_PORT2;
 	} else if (port == PORT1) {
@@ -67,7 +71,9 @@ it68051_service::get_selected_port(const ::Empty &request,
 		return ::pw::Status::InvalidArgument();
 	}
 
+	it68051_lock();
 	it68051_set_hpd(port, (request.on_off != 0));
+	it68051_unlock();
 
 	return ::pw::OkStatus();
 }
@@ -85,7 +91,9 @@ it68051_service::get_selected_port(const ::Empty &request,
 		return ::pw::Status::InvalidArgument();
 	}
 
+	it68051_lock();
 	response.on_off = it68051_get_hpd(port) ? 1 : 0;
+	it68051_unlock();
 
 	return ::pw::OkStatus();
 }
@@ -96,8 +104,10 @@ it68051_service::set_edid_idx(const ::it68051_edid_idx_request &request,
 {
 	static_cast<void>(response);
 
+	it68051_lock();
 	it68051_edid_select(request.edid_idx);
 	it68051_edid_init();
+	it68051_unlock();
 
 	return ::pw::OkStatus();
 }
@@ -108,7 +118,9 @@ it68051_service::write_edid(const ::it68051_raw_edid_request &request,
 {
 	static_cast<void>(response);
 
+	it68051_lock();
 	it68051_edid_write_block(request.raw_edid);
+	it68051_unlock();
 
 	return ::pw::OkStatus();
 }
@@ -118,6 +130,8 @@ it68051_service::get_link_status(const ::Empty &request,
 				 ::it68051_link_status_response &response)
 {
 	static_cast<void>(request);
+	it68051_lock();
 	response.active = it68051_get_link_active();
+	it68051_unlock();
 	return ::pw::OkStatus();
 }
