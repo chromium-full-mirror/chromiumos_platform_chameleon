@@ -24,11 +24,16 @@ if [[ -e /etc/cros_chroot_version ]]; then
   exit 1
 fi
 
+# Base directory for Chameleon v3
+CHAMELEON=~/"${CHROOT:-chromiumos}"/src/platform/chameleon/v3
+# Directory for the EC PKGBUILD
+PKG="${CHAMELEON}"/alarm/ec-firmware-chameleonv3-bin
+
 # Get the git tags for the public and private code
-pushd ~/"${CHROOT:-chromiumos}"/src/platform/chameleon/v3/ec
+pushd "${CHAMELEON}"/ec
 PUBLIC=$(git describe --tags)
 popd
-pushd ~/"${CHROOT:-chromiumos}"/src/platform/chameleon/v3/ec/private/ite
+pushd "${CHAMELEON}"/ec/private/ite
 PRIVATE=$(git describe --tags)
 popd
 
@@ -45,11 +50,11 @@ pushd ~/chromiumos/src/third_party/pigweed
 PIGWEED=$(git log --oneline -n 1)
 popd
 
-# Copy the EC binary to ~/Downloads/${PUBLIC}.bin
-cp ~/zephyrproject/build/zephyr/zephyr.bin ~/Downloads/"${PUBLIC}".bin
+# Copy the EC binary to the package directory
+cp ~/zephyrproject/build/zephyr/zephyr.bin "${PKG}"/"${PUBLIC}".bin
 
 # Create the manifest
-cat <<EOF >~/Downloads/"${PUBLIC}".txt
+cat <<EOF >"${PKG}"/"${PUBLIC}".txt
 v3/ec build ${PUBLIC}
 private/ite build ${PRIVATE}
 zephyr ${ZEPHYR}
@@ -57,5 +62,25 @@ modules/hal/stm32 ${HAL}
 pigweed ${PIGWEED}
 EOF
 
-pushd ~/Downloads
-ls -1 "${PUBLIC}".*
+pushd "${PKG}"
+
+# Update the PKGBUILD
+sed -i "s/_version=.*/_version=${PUBLIC}/g" PKGBUILD
+sed -i "s/pkgrel=.*/pkgrel=1/g" PKGBUILD
+
+SHA256SUM=$(sha256sum "${PUBLIC}".bin | awk '{print $1}')
+sed -i "s/sha256sums=('.*/sha256sums=('${SHA256SUM}'/" PKGBUILD
+
+git add PKGBUILD
+pkgver="${PUBLIC//-/_}"
+manifest=$(cat "${PUBLIC}".txt)
+git commit -F- <<END_COMMIT_MSG
+v3: alarm: ec: ${pkgver}-1
+
+Uprev EC binary:
+${manifest}
+
+TEST=\`pacman -U\` resulting package
+TEST=do a full boot, see no fresh errors
+BUG=None
+END_COMMIT_MSG
