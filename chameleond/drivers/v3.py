@@ -138,10 +138,23 @@ class ChameleondDriver(ChameleondInterface):
     self.it68051_service = self.ec_client.rpcs()["it68051_service"]
 
     logging.info("Versions:\n" +
-                  pprint.pformat(self._versions(), sort_dicts=False))
+                  pprint.pformat(self.GetVersions(), sort_dicts=False))
 
-  def _versions(self):
+  def GetVersions(self):
+    """Get versions for various components of Chameleon.
+
+    Intended mostly for logging during tests. Do not make conditional decisions
+    based on the contents as the format might change and is not standardized.
+
+    Here you might find stuff like chameleon hardware revision, kernel, fpga,
+    chameleond versions and more.
+
+    Returns:
+      A dict, {"component_name": version, ...}
+    """
     versions = {}
+
+    versions["chameleon"] = "v3"
 
     try:
       status, payload = self.board_service.get_board_version()
