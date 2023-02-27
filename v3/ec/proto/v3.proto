@@ -52,6 +52,9 @@ service it68051_service {
 
     // Query the link status of the IT68051
     rpc get_link_status(Empty) returns (it68051_link_status_response);
+
+    // Read the EDID RAM and return a block of 256 bytes
+    rpc read_edid (Empty) returns (it68051_raw_edid_request);
 }
 
 message board_service_version_response {

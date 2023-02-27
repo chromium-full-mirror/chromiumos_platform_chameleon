@@ -135,3 +135,16 @@ it68051_service::get_link_status(const ::Empty &request,
 	it68051_unlock();
 	return ::pw::OkStatus();
 }
+
+::pw::Status
+it68051_service::read_edid(const ::Empty &request,
+			    ::it68051_raw_edid_request &response)
+{
+	static_cast<void>(request);
+
+	it68051_lock();
+	it68051_edid_read_block(response.raw_edid);
+	it68051_unlock();
+
+	return ::pw::OkStatus();
+}
