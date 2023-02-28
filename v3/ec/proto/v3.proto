@@ -55,6 +55,9 @@ service it68051_service {
 
     // Read the EDID RAM and return a block of 256 bytes
     rpc read_edid (Empty) returns (it68051_raw_edid_request);
+
+    // Read back the Video and Audio information
+    rpc get_video_params (Empty) returns (it68051_vid_aud_info);
 }
 
 message board_service_version_response {
@@ -166,4 +169,68 @@ message it68051_raw_edid_request {
 
 message it68051_link_status_response {
     bool active = 1;
+}
+
+message it68051_vid_aud_info {
+    // Define the color formats for video
+    enum it68051_color_format {
+        RGB = 0;
+        YUV422 = 1;
+        YUV444 = 2;
+        YUV420 = 3;
+        BYPASS_CSC = 4;
+    }
+
+    // Define colorimetry for video
+    enum it68051_colorimetry {
+        UNKNOWN_COLORIMETRY = 0;
+        ITU601 = 1;
+        ITU709 = 2;
+        EXTENDED = 3;
+    }
+
+    enum it68051_quantization {
+        UNKNOWN_QUANTIZATION = 0;
+        VIC = 1;    // Only for RGB
+        RANGE_LIMIT = 2;
+        RANGE_FULL = 3;
+    }
+
+    // TMDS CLK and Pixel CLK are in Hz
+    fixed32 tmdsclk = 1;
+    fixed32 pclk = 2;
+
+    fixed32 h_active = 3;
+    fixed32 v_active = 4;
+    fixed32 h_total = 5;
+    fixed32 v_total = 6;
+    fixed32 h_front_porch = 7;
+    fixed32 h_sync_width = 8;
+    fixed32 h_back_porch = 9;
+    fixed32 v_front_porch = 10;
+    fixed32 v_sync_width = 11;
+    fixed32 v_back_porch = 12;
+    float frame_rate = 13;
+
+    bool is_progressive = 14;
+    bool v_sync_polarity_is_positive = 15;
+    bool h_sync_polarity_is_positive = 16;
+
+    it68051_color_format color_format = 17;
+    it68051_colorimetry colorimetry = 18;
+    it68051_quantization rgb_quantization = 19;
+    it68051_quantization yuv_quantization = 20;
+    sfixed32 extended_colorimetry = 21;
+    sfixed32 vic = 22;
+
+    bool is_audio_3d = 23;
+    bool is_multichannel_audio = 24;
+    bool is_hbr_audio = 25;
+    bool is_dsd_audio = 26;
+
+    /* -1 if error */
+    fixed32 audio_channels = 27;
+
+    /* Hz, up to 1,536,000 Hz */
+    fixed32 audio_fs = 28;
 }
