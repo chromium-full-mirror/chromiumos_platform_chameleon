@@ -200,7 +200,7 @@ message it68051_vid_aud_info {
         RANGE_FULL = 3;
     }
 
-    // TMDS CLK and Pixel CLK are in Hz
+    // TMDS CLK and Pixel CLK are in KHz, e.g. 147976 == 147.976 MHz
     fixed32 tmdsclk = 1;
     fixed32 pclk = 2;
 
