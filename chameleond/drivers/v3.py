@@ -807,6 +807,62 @@ class ChameleondDriver(ChameleondInterface):
     self.CaptureVideo(port_id, self._DEFAULT_FRAME_LIMIT, x, y, width, height)
     return self.ReadCapturedFrame(self._DEFAULT_FRAME_INDEX)
 
+  def GetVideoParams(self, port_id):
+    """Gets video parameters.
+
+    Args:
+      port_id: The ID of the video input port.
+
+    Returns:
+      A dict containing video parameters.
+    """
+    port = self.PORTS[port_id]
+    assert port.has_video
+
+    if port.is_ite:
+      p = self.it68051_service.get_video_params()
+
+      assert (p.h_active, p.v_active) == self.DetectResolution(port_id), \
+             "Resolution directly from EC should match what we get via FPGA + V4L"
+
+      assert p.v_total == sum((p.v_front_porch, p.v_sync_width, p.v_back_porch, p.v_active))
+      assert p.h_total == sum((p.h_front_porch, p.h_sync_width, p.h_back_porch, p.h_active))
+
+      ret = {
+        'clock': p.pclk / 1e3, # Convert kHz to MHz
+
+        'htotal': p.h_total,
+        'hfront_porch': p.h_front_porch,
+        'hsync_width': p.h_sync_width,
+        'hback_porch': p.h_back_porch,
+        'hactive': p.h_active,
+        'hsync_polarity': p.h_sync_polarity_is_positive,
+
+        'vtotal': p.v_total,
+        'vfront_porch': p.v_front_porch,
+        'vsync_width': p.v_sync_width,
+        'vback_porch': p.v_back_porch,
+        'vactive': p.v_active,
+        'vsync_polarity': p.v_sync_polarity_is_positive,
+
+        'frame_rate': p.frame_rate,
+        'interlaced': not p.is_progressive,
+        'bpc': 8, # EC + ITE are hardcoded to 8, 10 might be possible
+      }
+    else:
+      raise NotImplementedError("Need to ask the FPGA Logic")
+
+    # *_offset is weird in the interface.py, defined as:
+    # ```offset from start edge to active edge```
+    # A standard video transmission looks like:
+    #    front_porch, sync, back_porch, active
+    #                ^------offset------^
+    #    ^-----------total--------------------^
+    ret['hsync_offset'] = ret['hsync_width'] + ret['hback_porch']
+    ret['vsync_offset'] = ret['vsync_width'] + ret['vback_porch']
+
+    return ret
+
   def HasAudioBoard(self):
     """Returns True if there is an audio board.
 
