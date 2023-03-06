@@ -6,7 +6,6 @@
 /dts-v1/;
 #include <st/h7/stm32h743Xi.dtsi>
 #include <st/h7/stm32h743zitx-pinctrl.dtsi>
-#include "gpio_defines.h"
 
 / {
 	model = "Google Chameleon";
@@ -19,10 +18,15 @@
 		zephyr,flash = &flash0;
 	};
 
+	/*
+	 * Note that the GPIO flags (the 0 at the end of the `gpios` tuple)
+	 * are ignored by the I/O driver. All flags for GPIOs are specified
+	 * in io.c.
+	 */
 	leds {
 		compatible = "gpio-leds";
 		power_good_led {
-			gpios = <&gpiob 14 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiob 14 0>;
 			label = "POWER_GOOD";
 		};
 	};
@@ -31,27 +35,27 @@
 		compatible = "gpio-keys";
 
 		sd_mux_sel {
-			gpios = <&gpioe 0 GPIO_OUTPUT_LOW>;
+			gpios = <&gpioe 0 0>;
 			label = "SD_MUX_SEL";
 		};
 
 		sd_mux_en_l {
-			gpios = <&gpioe 1 GPIO_OUTPUT_LOW>;
+			gpios = <&gpioe 1 0>;
 			label = "SD_MUX_EN_L";
 		};
 
 		usd_pwr_sel {
-			gpios = <&gpiob 13 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiob 13 0>;
 			label = "USD_PWR_SEL";
 		};
 
 		usd_pwr_en {
-			gpios = <&gpioe 4 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpioe 4 0>;
 			label = "USD_PWR_EN";
 		};
 
 		usd_cd_det {
-			gpios = <&gpioe 2 GPIO_INPUT_PULL_UP>;
+			gpios = <&gpioe 2 0>;
 			label = "USD_CD_DET";
 		};
 	};
@@ -60,7 +64,7 @@
 		compatible = "gpio-keys";
 
 		sysmon_sel {
-			gpios = <&gpioc 6 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpioc 6 0>;
 			label = "SYSMON_SEL";
 		};
 	};
@@ -69,42 +73,42 @@
 		compatible = "gpio-keys";
 
 		pwr_en {
-			gpios = <&gpioc 7 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpioc 7 0>;
 			label = "SOM_PWR_EN";
 		};
 
 		pwr_good {
-			gpios = <&gpioc 8 GPIO_INPUT_PULL_UP>;
+			gpios = <&gpioc 8 0>;
 			label = "SOM_PWR_GOOD";
 		};
 
 		boot_mode1 {
-			gpios = <&gpiod 1 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiod 1 0>;
 			label = "SOM_BOOT_MODE1";
 		};
 
 		boot_mode0 {
-			gpios = <&gpiod 0 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiod 0 0>;
 			label = "SOM_BOOT_MODE0";
 		};
 
 		por_l_load_l {
-			gpios = <&gpiob 1 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiob 1 0>;
 			label = "SOM_POR_L_LOAD_L";
 		};
 
 		fpga_done {
-			gpios = <&gpiob 0 GPIO_INPUT_PULL_UP>;
+			gpios = <&gpiob 0 0>;
 			label = "SOM_FPGA_DONE";
 		};
 
 		fpga_prot {
-			gpios = <&gpioe 13 GPIO_INPUT>;
+			gpios = <&gpioe 13 0>;
 			label = "FPGA_PROT";
 		};
 
 		fpga_comm0 {
-			gpios = <&gpioe 14 GPIO_INPUT>;
+			gpios = <&gpioe 14 0>;
 			label = "FPGA_COMM0";
 		};
 	};
@@ -113,27 +117,27 @@
 		compatible = "gpio-keys";
 
 		tp126 {
-			gpios = <&u78 11 GPIO_OUTPUT_LOW>;
+			gpios = <&u78 11 0>;
 			label = "TP126";
 		};
 
 		tp125 {
-			gpios = <&u78 12 GPIO_OUTPUT_LOW>;
+			gpios = <&u78 12 0>;
 			label = "TP125";
 		};
 
 		board_version_2 {
-			gpios = <&u78 15 GPIO_INPUT>;
+			gpios = <&u78 15 0>;
 			label = "BOARD_VERSION_2";
 		};
 
 		board_version_1 {
-			gpios = <&u78 14 GPIO_INPUT>;
+			gpios = <&u78 14 0>;
 			label = "BOARD_VERSION_1";
 		};
 
 		board_version_0 {
-			gpios = <&u78 13 GPIO_INPUT>;
+			gpios = <&u78 13 0>;
 			label = "BOARD_VERSION_0";
 		};
 	};
@@ -142,12 +146,12 @@
 		compatible = "gpio-keys";
 
 		exp_reset {
-			gpios = <&gpiob 8 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiob 8 0>;
 			label = "I2C1_EXP_RESET_L";
 		};
 
 		exp_irq {
-			gpios = <&gpiob 5 GPIO_INPUT_PULL_UP>;
+			gpios = <&gpiob 5 0>;
 			label = "I2C1_SMBA";
 		};
 	};
@@ -161,25 +165,25 @@
 		 */
 		gp213_it68051p1_ch_sel {
 			/* GPU_SEL on U18 */
-			gpios = <&gpiog 1 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiog 1 0>;
 			label = "GP213_IT68051P1_CH_SEL";
 		};
 
 		dp1_ps8468_sw {
 			/* SW on U3 */
-			gpios = <&gpiog 12 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiog 12 0>;
 			label = "DP1_PS8468_SW";
 		};
 
 		hdmi1_gp213_ch_sel {
 			/* GPU_SEL on U10 */
-			gpios = <&gpiog 0 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiog 0 0>;
 			label = "HDMI1_GP213_CH_SEL";
 		};
 
 		somp1_mode_sel {
 			/* GPU_SEL on U11 */
-			gpios = <&gpiog 4 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiog 4 0>;
 			label = "SOMP1_MODE_SEL";
 		};
 
@@ -190,25 +194,25 @@
 		 */
 		gp213_it68051p0_ch_sel {
 			/* GPU_SEL on U31 */
-			gpios = <&gpiog 3 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiog 3 0>;
 			label = "GP213_IT68051P0_CH_SEL";
 		};
 
 		dp2_ps8468_sw {
 			/* SW on U22 */
-			gpios = <&gpiog 13 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiog 13 0>;
 			label = "DP2_PS8468_SW";
 		};
 
 		hdmi2_gp213_ch_sel {
 			/* GPU_SEL on U29 */
-			gpios = <&gpiog 2 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiog 2 0>;
 			label = "HDMI2_GP213_CH_SEL";
 		};
 
 		somp2_mode_sel {
 			/* GPU_SEL on U14 */
-			gpios = <&gpiog 5 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiog 5 0>;
 			label = "SOMP2_MODE_SEL";
 		};
 
@@ -217,13 +221,13 @@
 		 */
 		dp1_ps8468_rst_l {
 			/* RESETN on U3 */
-			gpios = <&gpiof 5 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiof 5 0>;
 			label = "DP1_PS8468_RST_L";
 		};
 
 		dp2_ps8468_rst_l {
 			/* RESETN on U22 */
-			gpios = <&gpiof 11 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiof 11 0>;
 			label = "DP2_PS8468_RST_L";
 		};
 
@@ -232,13 +236,13 @@
 		 */
 		dp1_hdmi_rst_l {
 			/* EX_RESETN on U17 */
-			gpios = <&gpiog 10 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiog 10 0>;
 			label = "DP1_HDMI_RST_L";
 		};
 
 		dp2_hdmi_rst_l {
 			/* EX_RESETN on U30 */
-			gpios = <&gpiog 11 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiog 11 0>;
 			label = "DP2_HDMI_RST_L";
 		};
 	};
@@ -247,32 +251,32 @@
 		compatible = "gpio-keys";
 
 		it68051_en {
-			gpios = <&gpioe 7 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpioe 7 0>;
 			label = "IT68051_EN";
 		};
 
 		it68051p0_pwr_det {
-			gpios = <&gpiof 0 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiof 0 0>;
 			label = "IT68051P0_PWR_DET";
 		};
 
 		it68051p1_pwr_det {
-			gpios = <&gpiof 1 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiof 1 0>;
 			label = "IT68051P1_PWR_DET";
 		};
 
 		it68051_rst_l {
-			gpios = <&gpiof 2 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiof 2 0>;
 			label = "IT68051_RST_L";
 		};
 
 		gp213_it68051p1_hpd {
-			gpios = <&gpioe 15 GPIO_OUTPUT_LOW>;
+			gpios = <&gpioe 15 0>;
 			label = "GP213_IT68051P1_HPD";
 		};
 
 		i2c2_int_l {
-			gpios = <&gpiob 12 GPIO_INPUT_PULL_UP>;
+			gpios = <&gpiob 12 0>;
 			label = "I2C2_INT_L";
 		};
 	};
@@ -281,12 +285,12 @@
 		compatible = "gpio-keys";
 
 		hdmi1_pp3300 {
-			gpios = <&gpioe 9 GPIO_INPUT_PULL_DOWN>;
+			gpios = <&gpioe 9 0>;
 			label = "HDMI1_PP3300";
 		};
 
 		hdmi2_pp3300 {
-			gpios = <&gpioe 10 GPIO_INPUT_PULL_DOWN>;
+			gpios = <&gpioe 10 0>;
 			label = "HDMI2_PP3300";
 		};
 
@@ -298,17 +302,17 @@
 		 * awake and we can configure the 8468 over the I2C bus.
 		 */
 		dp1_mcu_hpd {
-			gpios = <&gpioe 11 GPIO_INPUT_PULL_DOWN>;
+			gpios = <&gpioe 11 0>;
 			label = "DP1_MCU_HPD";
 		};
 
 		dp2_mcu_hpd {
-			gpios = <&gpioe 12 GPIO_INPUT_PULL_DOWN>;
+			gpios = <&gpioe 12 0>;
 			label = "DP2_MCU_HPD";
 		};
 
 		dp_in_pwr_en {
-			gpios = <&u79 15 GPIO_OUTPUT_LOW>;
+			gpios = <&u79 15 0>;
 			label = "DP_IN_PWR_EN";
 		};
 	};
@@ -322,112 +326,112 @@
 		 * drive the MODE pins to select manual mux control by the SW pin.
 		 */
 		dp1_ps8468_mode {
-			gpios = <&u77 0 GPIO_OUTPUT_LOW>;
+			gpios = <&u77 0 0>;
 			label = "DP1_PS8468_MODE";
 		};
 
 		dp1_ps8468_cfg0 {
-			gpios = <&u77 1 GPIO_INPUT>;
+			gpios = <&u77 1 0>;
 			label = "DP1_PS8468_CFG0";
 		};
 
 		dp1_ps8468_cfg1 {
-			gpios = <&u77 2 GPIO_INPUT>;
+			gpios = <&u77 2 0>;
 			label = "DP1_PS8468_CFG1";
 		};
 
 		dp1_ps8468_cfg2 {
-			gpios = <&u77 3 GPIO_INPUT>;
+			gpios = <&u77 3 0>;
 			label = "DP1_PS8468_CFG2";
 		};
 
 		dp1_ps8468_cfg3 {
-			gpios = <&u77 4 GPIO_INPUT>;
+			gpios = <&u77 4 0>;
 			label = "DP1_PS8468_CFG3";
 		};
 
 		dp1_ps8468_cfg4 {
-			gpios = <&u77 5 GPIO_INPUT>;
+			gpios = <&u77 5 0>;
 			label = "DP1_PS8468_CFG4";
 		};
 
 		dp1_ps8468_eq0  {
-			gpios = <&u77 6 GPIO_INPUT>;
+			gpios = <&u77 6 0>;
 			label = "DP1_PS8468_EQ0";
 		};
 
 		dp1_ps8468_eq1  {
-			gpios = <&u77 7 GPIO_INPUT>;
+			gpios = <&u77 7 0>;
 			label = "DP1_PS8468_EQ1";
 		};
 
 		dp2_ps8468_mode {
-			gpios = <&u77 8 GPIO_OUTPUT_LOW>;
+			gpios = <&u77 8 0>;
 			label = "DP2_PS8468_MODE";
 		};
 
 		dp2_ps8468_cfg0 {
-			gpios = <&u77 9 GPIO_INPUT>;
+			gpios = <&u77 9 0>;
 			label = "DP2_PS8468_CFG0";
 		};
 
 		dp2_ps8468_cfg1 {
-			gpios = <&u77 10 GPIO_INPUT>;
+			gpios = <&u77 10 0>;
 			label = "DP2_PS8468_CFG1";
 		};
 
 		dp2_ps8468_cfg2 {
-			gpios = <&u77 11 GPIO_INPUT>;
+			gpios = <&u77 11 0>;
 			label = "DP2_PS8468_CFG2";
 		};
 
 		dp2_ps8468_cfg3 {
-			gpios = <&u77 12 GPIO_INPUT>;
+			gpios = <&u77 12 0>;
 			label = "DP2_PS8468_CFG3";
 		};
 
 		dp2_ps8468_cfg4 {
-			gpios = <&u77 13 GPIO_INPUT>;
+			gpios = <&u77 13 0>;
 			label = "DP2_PS8468_CFG4";
 		};
 
 		dp2_ps8468_eq0  {
-			gpios = <&u77 14 GPIO_INPUT>;
+			gpios = <&u77 14 0>;
 			label = "DP2_PS8468_EQ0";
 		};
 
 		dp2_ps8468_eq1  {
-			gpios = <&u77 15 GPIO_INPUT>;
+			gpios = <&u77 15 0>;
 			label = "DP2_PS8468_EQ1";
 		};
 
 		dp1_out_sw {
-			gpios = <&u78 0 GPIO_OUTPUT_LOW>;
+			gpios = <&u78 0 0>;
 			label = "DP1_OUT_SW";
 		};
 
 		dp1_out_pd_l {
-			gpios = <&u78 8 GPIO_OUTPUT_HIGH>;
+			gpios = <&u78 8 0>;
 			label = "DP1_OUT_PD_L";
 		};
 
 		dp1_out_mode {
-			gpios = <&u78 9 GPIO_OUTPUT_LOW>;
+			gpios = <&u78 9 0>;
 			label = "DP1_OUT_MODE";
 		};
 
 		dp2_out_sw {
-			gpios = <&u79 0 GPIO_OUTPUT_LOW>;
+			gpios = <&u79 0 0>;
 			label = "DP2_OUT_SW";
 		};
 
 		dp2_out_pd_l {
-			gpios = <&u79 8 GPIO_OUTPUT_HIGH>;
+			gpios = <&u79 8 0>;
 			label = "DP2_OUT_PD_L";
 		};
 
 		dp2_out_mode {
-			gpios = <&u79 9 GPIO_OUTPUT_LOW>;
+			gpios = <&u79 9 0>;
 			label = "DP2_OUT_MODE";
 		};
 	};
@@ -436,57 +440,57 @@
 		compatible = "gpio-keys";
 
 		pcie_perst {
-			gpios = <&gpiog 14 GPIO_INPUT>;
+			gpios = <&gpiog 14 0>;
 			label = "PCIE_PERST";
 		};
 
 		pcie_wake_l_b {
-			gpios = <&gpiog 15 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiog 15 0>;
 			label = "PCIE_WAKE_L_B";
 		};
 
 		pcie_rsvd1 {
-			gpios = <&gpioc 9 GPIO_INPUT>;
+			gpios = <&gpioc 9 0>;
 			label = "PCIE_RSVD1";
 		};
 
 		pcie_rsvd2 {
-			gpios = <&gpiod 3 GPIO_INPUT>;
+			gpios = <&gpiod 3 0>;
 			label = "PCIE_RSVD2";
 		};
 
 		pcie_rsvd3 {
-			gpios = <&gpiod 4 GPIO_INPUT>;
+			gpios = <&gpiod 4 0>;
 			label = "PCIE_RSVD3";
 		};
 
 		pcie_rsvd4 {
-			gpios = <&gpiod 5 GPIO_INPUT>;
+			gpios = <&gpiod 5 0>;
 			label = "PCIE_RSVD4";
 		};
 
 		pcie_ref_clk_sel {
-			gpios = <&gpiod 8 GPIO_OUTPUT_HIGH>;
+			gpios = <&gpiod 8 0>;
 			label = "PCIE_REF_CLK_SEL";
 		};
 
 		som_a34 {
-			gpios = <&gpioe 8 GPIO_INPUT>;
+			gpios = <&gpioe 8 0>;
 			label = "SOM_A34";
 		};
 
 		som_a21 {
-			gpios = <&gpiof 13 GPIO_OUTPUT_LOW>;
+			gpios = <&gpiof 13 0>;
 			label = "SOM_A21";
 		};
 
 		som_a98 {
-			gpios = <&gpiof 14 GPIO_INPUT>;
+			gpios = <&gpiof 14 0>;
 			label = "SOM_A98";
 		};
 
 		som_pcie_perst_l {
-			gpios = <&gpiof 15 GPIO_OUTPUT>;
+			gpios = <&gpiof 15 0>;
 			label = "SOM_PCIE_PERST_L";
 		};
 	};
