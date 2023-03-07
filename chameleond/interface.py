@@ -681,6 +681,27 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
     """
     raise NotImplementedError('StopCapturingAudio')
 
+  def StopCapturingAudioAndGetToken(self, port_id):
+    """Stops capturing audio and returns a token (points to recorded data) and format.
+
+    Args:
+      port_id: The ID of the audio input port.
+
+    Returns:
+      A tuple (token, format).
+      token: The token that points to the captured audio data.
+      format: The format of the captured data. See GetAudioFormat. Note that
+        the returned audio frequency may not be correct, for this reason
+        calling GetAudioFormat during the capture is preferred.
+
+    Raises:
+      DriverError: Input is selected to port other than port_id.
+        This happens if user has used API related to input operation on
+        other port. The API includes CaptureVideo, StartCapturingVideo,
+        DetectResolution, StartCapturingAudio, StartPlayingEcho.
+    """
+    raise NotImplementedError('StopCapturingAudioAndGetToken')
+
   def StartPlayingAudio(self, port_id, path, data_format):
     """Playing audio data from an output port.
 
@@ -894,6 +915,21 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
                for more details.
     """
     raise NotImplementedError('CopyFileToChameleon')
+
+  def GetFileFromChameleon(self, token):
+    """Get the specified file from Chameleon
+
+    This function will retrun the data in a binary form.
+
+    Args:
+      token: A token that refers to the data for further usage.
+    Returns:
+      content: the data to be used in the binary form.
+    Raises:
+      IOError: unable to read the data to chameleon. Check chameleon log
+               for more details.
+    """
+    raise NotImplementedError('GetFileFromChameleon')
 
   def DeleteFileInChameleon(self, token):
     """Delete a file in Chameleon
