@@ -40,9 +40,24 @@ add_custom_command(OUTPUT version.h
 add_custom_target(getversion ALL DEPENDS version.h)
 
 FILE(GLOB app_sources src/*.c src/*.cc)
-FILE(GLOB ite_private_sources private/ite/src/*.c)
 target_include_directories(app PRIVATE include)
-target_include_directories(app PRIVATE private/ite/include)
+
+# Determine if the private ITE code exists in this checkout.
+# If so, add it to the build and remove the 'unimplemented' RPC stubs.
+# If not, remove the full implementation of the it68051_service RPC.
+#
+# Note that files added by GLOB will have a path, so when removing from
+# the list of sources, we need to specify the full path.
+#
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/private/ite)
+    list(REMOVE_ITEM app_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/it68051_service_unimplemented.cc)
+    FILE(GLOB ite_private_sources private/ite/src/*.c)
+    target_include_directories(app PRIVATE private/ite/include)
+else()
+    list(REMOVE_ITEM app_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/it68051_service.cc)
+    set(ite_private_sources "")
+endif()
+
 target_sources(app PRIVATE ${app_sources} ${ite_private_sources})
 
 zephyr_link_libraries(
