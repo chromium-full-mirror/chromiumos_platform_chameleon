@@ -164,6 +164,13 @@
         dest: '~/.bashrc'
       tags: provision, bashrc
 
+    - name: Install our bash_history
+      ansible.builtin.copy:
+        src: '{{playbook_dir}}/files/bash_history'
+        dest: '~/.bash_history'
+        force: false # do not replace if there's already one there
+      tags: provision, bash_history
+
     - name: Install our .gitconfig
       ansible.builtin.copy:
         dest: '~/.gitconfig'

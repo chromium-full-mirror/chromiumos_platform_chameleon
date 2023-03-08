@@ -1,0 +1,26 @@
+# Some manual operations that chameleon hackers might find useful when they're sshd in
+# Most are not required for normal operation and are even redundant when automation is employed
+ip addr
+echo -e "Yes" | sudo parted /dev/mmcblk0 resizepart 3 "100%" ---pretend-input-tty; sudo btrfs filesystem resize max /
+cd ~/boot_pkg/; ls
+sudo pacman -U ~/boot_pkg/*
+sudo pacman -Syu
+pikaur -Syu --noconfirm
+cd ~/chameleon; git pull
+cd ~/chameleon; git fetch
+cd ~/chameleon; ls
+sudo reboot now
+sudo regmap fb
+cat /proc/interrupts | grep chv3
+v4l2-ctl --list-formats --device /dev/video0 # fb ite
+v4l2-ctl --stream-mmap --stream-count=1 --stream-to=frame.raw --device /dev/video0 -v pixelformat=RX24 # fb ite
+sha256sum /boot/fpga*.itb
+df -h
+sudo systemctl stop chameleond
+sudo systemctl start chameleond
+journalctl -u chameleond|grep -A 20 Versions
+cat /var/log/pacman.log
+cat /var/log/alarm-ansible
+sudo systemctl stop chameleond; python -i ~/chameleon/v3/ec/proto/connect.py
+sudo systemctl restart chameleond; journalctl -e -f -u chameleond
+journalctl -e -f -u chameleond

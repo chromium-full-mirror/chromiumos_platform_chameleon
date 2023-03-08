@@ -6,6 +6,7 @@
 [[ $- != *i* ]] && return
 
 alias ls='ls --color=auto'
+alias ll='ls -al'
 
 # fix history to be long and to remember better
 shopt -s histappend
