@@ -6,7 +6,7 @@ buildarch=4
 pkgname=ec-firmware-chameleonv3-bin
 _version=v3-proto2-18-g113fe2d
 pkgver=$(echo ${_version}|sed "s/-/_/g")
-pkgrel=1
+pkgrel=2
 provides=('ec-firmware-chameleonv3')
 pkgdesc="EC Firmware for Chameleon v3"
 arch=('armv7h')
@@ -17,7 +17,7 @@ optdepends=('libgpiod: access the EC bootloader pins'
 source=("${_version}.bin"
         'flash_ec')
 sha256sums=('f39d946b15fb0a91e132d83f528a5d4a08ddc9207cd3dc91abdb07914460b2c9'
-            '41584d20453bedfd55c901b9faa1c37ca5482c6d15cecdaafbe6eae183e13cb2')
+            'ab3d0943145e667bbf0e184cb5b5dc3a36fe55269f168a379d74e5f804fe8ef2')
 
 # build() {
   # For now we'll just pre-build the image and include it in the source= array
