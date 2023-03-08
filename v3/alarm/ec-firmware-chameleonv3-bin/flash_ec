@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -o errexit # percolate errors (eg: flashing ones) upwards to pacman
+
 filename=$1
 if [ -z "${filename}" ]; then
   echo "You need to provide a filename. Maybe one of:"
@@ -11,16 +13,18 @@ echo "Preparing to flash EC with ${filename}"
 
 if ! boot0=$(gpiofind STM32_BOOT0); then
   echo "Can't find STM32_BOOT0. Not on a chameleon?"
-  return
+  # still call it a "success" as we might be in a chroot
+  # preparing the sd card image
+  exit 0
 fi
 
 if ! rst_l=$(gpiofind STM32_RST_L); then
   echo "Can't find STM32_RST_L. Not on a chameleon?"
-  return
+  exit 0
 fi
 
 echo "Flashing!"
-( set -x ; # let's be dramatic by printing the commands
+( set -o xtrace ; # let's be dramatic by printing the commands
   systemctl kill chameleond
   gpioset -D open-source ${boot0}=1 # program
   gpioset -D open-drain ${rst_l}=0
