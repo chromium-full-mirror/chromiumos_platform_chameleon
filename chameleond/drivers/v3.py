@@ -5,6 +5,7 @@
 """Chameleond Driver for Chameleon v3 hardware."""
 
 from dataclasses import dataclass
+import functools
 import inspect
 import logging
 import numpy
@@ -28,6 +29,36 @@ EC_PROTO = pw_protobuf_compiler.python_protos.Library.from_paths([EC_PROTO_PATH]
 
 class ChameleondError(Exception):
   pass
+
+class PwExceptionWrap:
+  """
+  Pigweed RPC uses the go style error handling which is not very pythonic.
+  Without this wrapper, one would have to check the status (first of the
+  returned tuple) at the callsite of every rpc call.
+  This wrapper handles that automatically.
+  """
+  def __init__(self, client, service_name):
+    self.service = client.rpcs()[service_name]
+
+  def __getattr__(self, name):
+    original_attr = getattr(self.service, name)
+    if not hasattr(original_attr, "method"):
+      # Probably some non-rpc attr, like `__repr__()`. Return it unchanged.
+      return original_attr
+
+    # therefore typeof(original_attr) == pw_rpc.callback_client.impl. .....
+    original_rpc_method = original_attr
+    method_type = original_rpc_method.method
+
+    @functools.wraps(original_rpc_method)
+    def exception_wrapper(*args, **kwargs):
+      status, payload = original_rpc_method(*args, **kwargs)
+      if status.ok():
+        return payload
+      if status == pw_rpc.callback_client.errors.Status.UNIMPLEMENTED:
+        raise NotImplementedError(method_type)
+      raise pw_rpc.callback_client.errors.RpcError(original_rpc_method, status)
+    return exception_wrapper
 
 def _check_output(args, encoding="utf-8", **kwargs):
   out = subprocess.check_output(args, encoding=encoding, **kwargs)
@@ -133,9 +164,9 @@ class ChameleondDriver(ChameleondInterface):
       client_impl = callback_client_impl,
     )
 
-    self.board_service = self.ec_client.rpcs()["board_service"]
-    self.videomux_service = self.ec_client.rpcs()["videomux_service"]
-    self.it68051_service = self.ec_client.rpcs()["it68051_service"]
+    self.board_service = PwExceptionWrap(self.ec_client, "board_service")
+    self.videomux_service = PwExceptionWrap(self.ec_client, "videomux_service")
+    self.it68051_service = PwExceptionWrap(self.ec_client, "it68051_service")
 
     logging.info("Versions:\n" +
                   pprint.pformat(self.GetVersions(), sort_dicts=False))
@@ -157,14 +188,12 @@ class ChameleondDriver(ChameleondInterface):
     versions["chameleon"] = "v3"
 
     try:
-      status, payload = self.board_service.get_board_version()
-      versions["board"] = payload.version
+      versions["board"] = self.board_service.get_board_version().version
     except Exception as e:
       versions["board"] = repr(e)
 
     try:
-      status, payload = self.board_service.get_code_version()
-      for field, value in payload.ListFields():
+      for field, value in self.board_service.get_code_version().ListFields():
         versions[field.name] = value
     except Exception as e:
       versions["ec_ver"] = repr(e)
@@ -458,21 +487,18 @@ class ChameleondDriver(ChameleondInterface):
       # check videomux via the EC
 
       # let's check if videomux is routed the right way
-      status, response = self.videomux_service.get()
-      # TODO(amstan): figure out what to do with status
-      current_direction = getattr(response, port.external_name.lower())
+      board_mux_conf = self.videomux_service.get()
+      current_direction = getattr(board_mux_conf, port.external_name.lower())
       if current_direction != port.videomux_direction:
         return False
 
       if port.is_ite:
         # make sure ite is on the correct port
-        status, response = self.it68051_service.get_selected_port()
-        if response.port != port.ite_port:
+        if self.it68051_service.get_selected_port().port != port.ite_port:
           return False
 
         # make sure we're emitting hpd
-        status, response = self.it68051_service.get_hpd(port=port.ite_port)
-        if response.on_off == 0:
+        if self.it68051_service.get_hpd(port=port.ite_port).on_off == 0:
           return False
 
     # If nothing caught yet, it's probably connected
@@ -567,13 +593,13 @@ class ChameleondDriver(ChameleondInterface):
         logging.disable(logging.INFO)
 
         while time.time() < end_time:
-          status, response = self.it68051_service.get_link_status()
-          if response.active:
+          link_status = self.it68051_service.get_link_status()
+          if link_status.active:
             break
           time.sleep(0.1)
 
         # we either timed out, or EC thinks we have a link
-        if not response.active:
+        if not link_status.active:
           logging.warning("WaitVideoInputStable timed out using the EC")
           return False
       finally:
@@ -630,15 +656,14 @@ class ChameleondDriver(ChameleondInterface):
       A tuple of port_id, for the input ports connected to DUT.
     """
 
-    status, payload = self.board_service.get_board_version()
-    board_version = payload.version
+    board_version = self.board_service.get_board_version().version
 
-    status, payload = self.board_service.get_source_presence()
+    source_presence = self.board_service.get_source_presence()
 
     port_ids = []
     for i, port in enumerate(self.PORTS):
       if port.has_video:
-        connected = getattr(payload, port.external_name.lower())
+        connected = getattr(source_presence, port.external_name.lower())
         if port.connector_type == "HDMI" and board_version <= 2:
           # HACK(b/220139622): Temporarly lie, hw issue on proto2
           # otherwise autotest gets mad
