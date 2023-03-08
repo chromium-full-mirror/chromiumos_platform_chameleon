@@ -2,6 +2,7 @@
   hosts: archlinuxarm-chroot
   vars:
     ansible_become: yes
+    ansible_become_user: '{{username}}'
   tags: chameleon, chameleon_sd
   tasks:
     - name: Save packages touching /boot
