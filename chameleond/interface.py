@@ -919,7 +919,7 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
   def GetFileFromChameleon(self, token):
     """Get the specified file from Chameleon
 
-    This function will retrun the data in a binary form.
+    This function will return the data in a binary form.
 
     Args:
       token: A token that refers to the data for further usage.

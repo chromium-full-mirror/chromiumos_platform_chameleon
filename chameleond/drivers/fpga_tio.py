@@ -1098,6 +1098,33 @@ class ChameleondDriver(ChameleondInterface):
     """
     self._flow_manager.StartPlayingAudio(port_id, path, data_format)
 
+  def StopCapturingAudioAndGetToken(self, port_id):
+    """Stops capturing audio and returns a token (points to recorded data) and format.
+
+    Args:
+      port_id: The ID of the audio input port.
+
+    Returns:
+      A tuple (token, format).
+      token: The token that points to the captured audio data.
+      format: The format of the captured data. See GetAudioFormat. Note that
+        the returned audio frequency may not be correct, for this reason
+        calling GetAudioFormat during the capture is preferred.
+
+    Raises:
+      DriverError: Input is selected to port other than port_id.
+        This happens if user has used API related to input operation on
+        other port. The API includes CaptureVideo, StartCapturingVideo,
+        DetectResolution, StartCapturingAudio, StartPlayingEcho.
+    """
+    logging.info("Stop Capturing Audio: %d", port_id)
+    path, fmt = self._flow_manager.StopCapturingAudio(port_id)
+    prefix = "/tmp/"
+    filename = path[len(prefix):] if path.startswith(prefix) else path
+    token = uuid.uuid5(uuid.NAMESPACE_DNS, filename).hex
+    self._file_dict[token] = filename
+    return token, fmt
+
   def _GetPathByToken(self, token):
     """Get file path by token.
 
@@ -1239,6 +1266,37 @@ class ChameleondDriver(ChameleondInterface):
 
     self._file_dict[token] = filename
     return token
+
+  def GetFileFromChameleon(self, token):
+    """Get the specified file from Chameleon
+
+    This function will return the data in a binary form.
+
+    Check the faultCode to triage the error. For example:
+    try:
+      p.GetFileFromChameleon(token)
+    except xmlrpc.client.Fault as err:
+      if err.faultCode == 400:
+        # something's wrong from the request
+      else:
+        # something's wrong from xmlrpc, check chameleon's log for more details
+
+    Args:
+      token: A token that refers to the data for further usage.
+    Returns:
+      content: the data to be used in the binary form.
+    Raises:
+      xmlrpc.client.Fault: unable to read the file. Check chameleon
+                           log for more details.
+    """
+    try:
+      path = self._GetPathByToken(token)
+      content = xmlrpc.client.Binary(open(path, "rb").read())
+    except FileNotFoundError as fe:
+      raise xmlrpc.client.Fault(400, "Token not found: " + token) from fe
+    except:
+      raise xmlrpc.client.Fault(500, "Unable to read the file: " + filename)
+    return content
 
   def DeleteFileInChameleon(self, token):
     """Delete a file in Chameleon
