@@ -79,7 +79,15 @@
       ansible.builtin.shell:
         chdir: "~{{username}}/boot_pkg/"
         cmd: |
-          pacman -U * --noconfirm
+          pacman -U *.pkg* --noconfirm
+      tags: boot_pkg
+      register: boot_pkg_install
+
+    - name: Check that everything post-installed alright
+      ansible.builtin.assert:
+        that:
+          - "'error' not in boot_pkg_install.stderr"
+          - "'command failed' not in boot_pkg_install.stderr"
       tags: boot_pkg
 
     - name: Rebooting after /boot got updated
