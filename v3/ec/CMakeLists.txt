@@ -19,7 +19,7 @@ list(APPEND ZEPHYR_EXTRA_MODULES
     ${dir_pw_third_party_nanopb}
 )
 
-find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+find_package(Zephyr REQUIRED HINTS ${ZEPHYR_BASE})
 project(chameleon)
 
 add_definitions(-DCONFIG_RPC_BUFFER_SIZE=1024)
