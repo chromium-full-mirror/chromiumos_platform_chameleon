@@ -682,17 +682,18 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
     raise NotImplementedError('StopCapturingAudio')
 
   def StopCapturingAudioAndGetToken(self, port_id):
-    """Stops capturing audio and returns a token (points to recorded data) and format.
+    """Stops capturing audio and returns a string to string dictionary.
 
     Args:
       port_id: The ID of the audio input port.
 
     Returns:
-      A tuple (token, format).
-      token: The token that points to the captured audio data.
-      format: The format of the captured data. See GetAudioFormat. Note that
-        the returned audio frequency may not be correct, for this reason
-        calling GetAudioFormat during the capture is preferred.
+      response: a string to string dictionary, including these keys:
+        token: a string that points to the captured audio data.
+        file_type: file type, e.g. 'raw'
+        sample_format: sample format, e.g. 'S16_LE'
+        channel: number of channels, e.g. '2'
+        rate: sampling rate, e.g. '48000'
 
     Raises:
       DriverError: Input is selected to port other than port_id.
