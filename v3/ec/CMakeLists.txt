@@ -7,6 +7,10 @@ cmake_minimum_required(VERSION 3.13.1)
 set(BOARD_ROOT ${CMAKE_CURRENT_LIST_DIR})
 set(BOARD chameleon)
 
+if("${ZEPHYR_TOOLCHAIN_VARIANT}" STREQUAL "coreboot-sdk")
+include_directories(toolchain/include)
+endif()
+
 # Use this copy of Pigweed
 get_filename_component(PW_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../third_party/pigweed" ABSOLUTE)
 set(ENV{PW_ROOT} ${PW_ROOT})
