@@ -91,6 +91,7 @@
           - sudo
           - git
           - base-devel
+          - fakeroot
           - vim
           - nano
           - networkmanager
