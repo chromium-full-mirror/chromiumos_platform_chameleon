@@ -15,6 +15,7 @@ if ! mountpoint -q "$chrootdir"; then
 fi
 
 # let's speed up package downloads/builds on subsequent runs by caching them
+mkdir --mode 777 -p "$chrootdir/../cache/"
 chmod 777 $chrootdir/var/cache/pacman/pkg # so the user inside the chroot has write permissions
 mount -o bind "$chrootdir/../cache/" "$chrootdir/var/cache/pacman/pkg"
 
