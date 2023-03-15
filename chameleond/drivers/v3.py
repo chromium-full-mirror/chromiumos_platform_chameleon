@@ -922,7 +922,9 @@ class ChameleondDriver(ChameleondInterface):
       ret = method(*params)
 
       # log what we returned
-      if ret is not None:
+      if method_name == "GetChameleondLogs":
+        logging.info(f'XMLRPC .{method_name} returned {len(ret)} bytes')
+      elif ret is not None:
         ret_str = self._fmt_var(ret)
         logging.info(f'XMLRPC .{method_name} returned => {ret_str}')
 
