@@ -164,6 +164,17 @@
         dest: '~/.bashrc'
       tags: provision, bashrc
 
+    - name: Install our .gitconfig
+      ansible.builtin.copy:
+        dest: '~/.gitconfig'
+        force: false # do not replace if there's already one there
+        content: |
+          [user]
+            # useful for hacking with gerrit commands like cherry-pick
+            email = chameleon-v3-device@chromium.org
+            name = Chameleon User
+      tags: provision, gitconfig
+
     - name: Checkout chameleon public repo
       ansible.builtin.git:
         repo: 'https://chromium.googlesource.com/chromiumos/platform/chameleon'
