@@ -97,9 +97,6 @@
     - name: Create fs dir structure and mount everything in its proper spot
       ansible.builtin.shell:
         chdir: '{{playbook_dir}}/build'
-        warn: false # silence mkdir warning
-                    # mount module would work better too, but that's also
-                    # unsuitable without touching the local /etc/fstab
         cmd: |
           mkdir -p sd &&
           mount {{losetup.stdout}}p3 -o subvol=/ sd &&
