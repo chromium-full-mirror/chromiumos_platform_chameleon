@@ -10,5 +10,5 @@
 register_raw_project(
     project_name="chameleon",
     zephyr_board="chameleon",
-    modules=["hal_stm32", "nanopb", "pigweed"],
+    modules=["hal_stm32", "cmsis", "nanopb", "pigweed"],
 )
