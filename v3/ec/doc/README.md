@@ -1,6 +1,6 @@
 # Chameleon v3 Applications
 
-Chameleon v3 has an embedded controller (an STM32H743ZI as of Proto 2) and
+Chameleon v3 has an embedded controller (STM32H743ZI) and
 an FPGA with embedded ARM cores that run Linux.
 
 This document describes how to build, install, and run the applications on
@@ -15,13 +15,17 @@ embedded controller.
 
 Follow the instructions in the Zephyr [Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html).
 
-Ensure that you have sufficiently recent code
+Ensure that you have the latest code:
 
 ```
-$ cd ~/zephyrproject
-$ west update
-$ cd zephyr/
-$ git checkout zephyr-v3.2.0
+cd ~/zephyrproject/
+west update
+pushd zephyr
+git pull origin main
+popd
+pushd modules/hal/stm32/
+git pull upstream main
+popd
 ```
 
 ## Installing Pigweed
@@ -35,6 +39,17 @@ installed. If you have an older version of Pigweed installed,
 
 ## Building the application
 
+After updating Pigweed, use the `bootstrap.sh` script:
+```
+source ~/chromiumos/src/third_party/pigweed/bootstrap.sh
+```
+If you haven't pulled in any new commits in Pigweed, just use `activate.sh`:
+```
+source ~/chromiumos/src/third_party/pigweed/activate.sh
+```
+
+After sourcing either `bootstrap.sh` or `activate.sh`, stay in the same shell,
+change to the Zephyr directory and build the application:
 ```
 cd ~/zephyrproject
 west build -b chameleon -s ~/chromiumos/src/platform/chameleon/v3/ec
