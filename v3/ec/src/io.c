@@ -35,7 +35,7 @@ static struct gpio_info gpios[] = {
 	GPIO(sd_mux, sd_mux_en_l, GPIO_OUTPUT_LOW),
 	GPIO(sd_mux, usd_pwr_sel, GPIO_OUTPUT_HIGH),
 	GPIO(sd_mux, usd_pwr_en, GPIO_OUTPUT_HIGH),
-	GPIO(sd_mux, usd_cd_det, (GPIO_INPUT | GPIO_PULL_UP)),
+	GPIO(sd_mux, usd_cd_det, GPIO_INPUT),
 	GPIO(sysmon, sysmon_sel, GPIO_OUTPUT_HIGH),
 	GPIO(fpga, pwr_en, GPIO_OUTPUT_HIGH),
 	GPIO(fpga, pwr_good, (GPIO_INPUT | GPIO_PULL_UP)),
