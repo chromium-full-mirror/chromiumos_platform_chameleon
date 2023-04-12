@@ -19,8 +19,8 @@ extern "C" {
  *
  * Using the state of the AUX signals, determine if a DisplayPort source
  * is connected. See b/245752990#comment4 for details. Basically, if
- * AUXP < 0.25V, then there is a cable connected and a DisplayPort source
- * is present.
+ * AUXP is under a certain voltage (see calculations in source_presence.c),
+ * then there is a cable connected and a DisplayPort source is present.
  *
  * @retval true if DisplayPort source is connected
  * @retval false if there is no DisplayPort source
