@@ -31,16 +31,13 @@ SHELL_CMD_REGISTER(ver, NULL, "get build version", cmd_ver);
 /**
  * @brief Prints the git hashes for the build
  *
- * @param ptr Unused argument, required by SYS_INIT
  * @retval 0
  * No error
  * @retval Non-zero
  * Error code
  */
-static int version_init(const struct device *ptr)
+static int version_init(void)
 {
-	ARG_UNUSED(ptr);
-
 	printk("\n");
 	printk("v3/ec build %s\n", EC_VER);
 	printk("private/ite build %s\n", ITE_VER);

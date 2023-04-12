@@ -105,10 +105,8 @@ static void exp_irq_cb(const struct device *dev, struct gpio_callback *cb,
 /**
  * @brief Initialize the MAX7367 i2c switch
  */
-static int init_i2c_switch(const struct device *ptr)
+static int init_i2c_switch(void)
 {
-	ARG_UNUSED(ptr);
-
 	int ret;
 
 	i2c_switch_reset(RESET_DEASSERTED);

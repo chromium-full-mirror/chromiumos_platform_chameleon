@@ -154,16 +154,13 @@ static void dp2_hpd_cb(const struct device *dev, struct gpio_callback *cb,
 /**
  * @brief Initialize the DP[12]_HPD I/Os and start the PS8468 task
  *
- * @param ptr Unused argument, required by SYS_INIT
  * @retval 0
  * No error
  * @retval Non-zero
  * Error code
  */
-static int ps8468_init(const struct device *ptr)
+static int ps8468_init(void)
 {
-        ARG_UNUSED(ptr);
-
         int ret;
 
         /* Configure DP1_HPD interrupt on a rising edge. */

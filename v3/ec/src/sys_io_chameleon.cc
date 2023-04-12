@@ -50,14 +50,11 @@ static uint8_t tx_buf[TX_BUFSIZE];
 /**
  * @brief Initialize the UART device that sys_io needs
  *
- * @param ptr Unused argument, required by SYS_INIT
  * @retval 0
  * No error
  */
-static int sys_io_init(const struct device *ptr)
+static int sys_io_init(void)
 {
-	ARG_UNUSED(ptr);
-
 	/*
          * Make sure the UART device is ready. No need to configure it
          * beyond that, because the values in the DTS are all good.

@@ -49,16 +49,13 @@ static void perst_cb(const struct device *dev, struct gpio_callback *cb,
 /**
  * @brief Initialize the PCIE_PERST ISR
  *
- * @param ptr Unused argument, required by SYS_INIT
  * @retval 0
  * No error
  * @retval Non-zero
  * Error code
  */
-static int pcie_init(const struct device *ptr)
+static int pcie_init(void)
 {
-	ARG_UNUSED(ptr);
-
 	int ret;
 
 	/* Reconfigure SOM_PCIE_PERST_L for open-drain */

@@ -266,16 +266,13 @@ static void fpgaboot_task(void *unused1, void *unused2, void *unused3)
  *
  * @note Also sets the FPGA boot mode to SDIO.
  *
- * @param ptr Unused argument, required by SYS_INIT
  * @retval 0
  * No error
  * @retval Non-zero
  * Error code
  */
-static int fpgaboot_init(const struct device *ptr)
+static int fpgaboot_init(void)
 {
-	ARG_UNUSED(ptr);
-
 	int ret;
 
 	fpgaboot_set_boot_mode(FPGA_BOOT_SDIO);

@@ -106,14 +106,11 @@ static void rpc_task(void *unused1, void *unused2, void *unused3)
 /**
  * @brief Start the RPC task
  *
- * @param ptr Unused argument, required by SYS_INIT
  * @retval 0
  * No error
  */
-static int rpc_init(const struct device *ptr)
+static int rpc_init(void)
 {
-	ARG_UNUSED(ptr);
-
 	/* Create the RPC task and start it. */
 	k_thread_create(&rpc_thread_data, rpc_stack_area,
 			K_THREAD_STACK_SIZEOF(rpc_stack_area), rpc_task, NULL,

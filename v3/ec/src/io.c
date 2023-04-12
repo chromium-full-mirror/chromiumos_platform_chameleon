@@ -156,12 +156,10 @@ static int string_cmp(const void *p_a, const void *p_b)
  * to declare multiple commands with the same list results in duplicate
  * symbol errors.
  *
- * @param ptr	Required by the API, but not used
  * @retval 0	Success
  */
-static int io_init_devices(const struct device *ptr)
+static int io_init_devices(void)
 {
-	ARG_UNUSED(ptr);
 	for (int idx = 0; idx < ARRAY_SIZE(gpios); ++idx) {
 		/*
 		 * Store the GPIO name in the list that will be used for

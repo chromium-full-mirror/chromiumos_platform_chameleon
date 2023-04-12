@@ -417,10 +417,8 @@ float sysmon_get_val(enum sysmon_input input)
  * initialize a GPIO to control the analog switches in addition to
  * intializing the ADCs to sample inputs.
  */
-static int sysmon_init(const struct device *ptr)
+static int sysmon_init(void)
 {
-	ARG_UNUSED(ptr);
-
 	int ret = 0;
 
 	/* Configure the ADCs. */

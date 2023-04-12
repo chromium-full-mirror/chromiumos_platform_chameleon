@@ -191,16 +191,13 @@ static int cmd_videomux_get(const struct shell *shell, size_t argc, char **argv)
  * which isn't supported in devicetree because it strips off the lower
  * 8 bits of the pin config.
  *
- * @param ptr Unused argument, required by SYS_INIT
  * @retval 0
  * No error
  * @retval Non-zero
  * Error code
  */
-static int videomux_init(const struct device *ptr)
+static int videomux_init(void)
 {
-	ARG_UNUSED(ptr);
-
 	int ret;
 
 	ret = gpio_pin_configure(gpio_get_device(dp1_hdmi_rst_l),
