@@ -61,12 +61,7 @@ inventory_template.yml for more details on how or where to put them.
 alarm/ansible% sudo ansible-playbook -i inventory.yml *.play*.yml -v
 ```
 
-Make sure you have the prerequisite files in `intermediate/`, you might find
-those in the Golden Images folder, here's an example of what I have in there:
-
-* `2022-02-09-ec.bin`
-
-It will also try looking for chameleon binary packages in each of the other
+It will try looking for chameleon binary packages in each of the other
 non-ansible folders in alarm/. Make sure they exist or ansible will
 remind you pretty early.
 

@@ -1,4 +1,4 @@
-- name: Look inside intermediate/ before we start building
+- name: Look for intermediate files before we start building
   hosts: localhost
   tags: chameleon, chameleon_alarm, check_intermediate
 
