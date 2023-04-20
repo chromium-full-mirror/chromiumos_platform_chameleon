@@ -20,9 +20,7 @@ import subprocess
 import time
 import xmlrpc.client
 
-
-from . import chameleon_common  # pylint: disable=W0611
-from chameleond.interface import ChameleondInterface
+from interface import ChameleondInterface
 
 EC_PROTO_PATH = (pathlib.Path(__file__)/"../../../v3/ec/proto/v3.proto").resolve()
 EC_PROTO = pw_protobuf_compiler.python_protos.Library.from_paths([EC_PROTO_PATH]).modules_by_package[""][0]

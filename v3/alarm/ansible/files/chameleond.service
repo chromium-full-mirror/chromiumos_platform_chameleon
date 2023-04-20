@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 User=USERNAME_HERE
-ExecStart=/home/USERNAME_HERE/chameleon/utils/run_chameleond --log - --driver v3
+ExecStart=/home/USERNAME_HERE/chameleon/v3/chameleond/__main__.py --driver v3
 
 [Install]
 WantedBy=multi-user.target
