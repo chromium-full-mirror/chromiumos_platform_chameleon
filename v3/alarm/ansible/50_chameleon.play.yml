@@ -105,6 +105,20 @@
       register: authorized_keys
       tags: user, ssh_key
 
+    - name: timesyncd.conf.d/
+      ansible.builtin.file:
+        path: /etc/systemd/timesyncd.conf.d/
+        state: directory
+      tags: provision, ntp
+
+    - name: Google NTP Servers
+      ansible.builtin.copy:
+        dest: /etc/systemd/timesyncd.conf.d/google.conf
+        content: |
+          [Time]
+          NTP=time.google.com
+      tags: provision, ntp
+
     - name: Install some userspace packages
       community.general.pacman:
         package:
