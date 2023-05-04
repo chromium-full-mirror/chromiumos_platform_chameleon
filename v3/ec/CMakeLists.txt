@@ -4,8 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 cmake_minimum_required(VERSION 3.13.1)
-set(BOARD_ROOT ${CMAKE_CURRENT_LIST_DIR})
-set(BOARD chameleon)
+set(BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "" FORCE)
 
 if("${ZEPHYR_TOOLCHAIN_VARIANT}" STREQUAL "coreboot-sdk")
 include_directories(toolchain/include)
