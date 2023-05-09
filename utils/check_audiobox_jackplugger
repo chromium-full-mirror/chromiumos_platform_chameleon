@@ -1,0 +1,32 @@
+#!/bin/bash
+# Copyright 2023 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+out_f=$(mktemp)
+err_f=$(mktemp)
+
+python2 ~/tools/io plug_status > "${out_f}" 2> "${err_f}";
+ret_code=$?;
+
+if [[ "${ret_code}" == 0 ]];
+then
+    if grep -q " unknown" "${out_f}";
+    then
+        echo "BROKEN"
+    elif (grep -q " off" "${out_f}") || (grep -q " on" "${out_f}");
+    then
+        echo "WORKING"
+    else
+        ret_code=1
+        echo "Cannot parse status from \"python2 ~/tools/io plug_status\"" >> \
+            /dev/stderr
+    fi
+fi
+
+cat "${out_f}" "${err_f}" >> /dev/stderr
+
+rm "${out_f}"
+rm "${err_f}"
+
+exit "${ret_code}"

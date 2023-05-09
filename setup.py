@@ -38,5 +38,5 @@ setup(
     scripts=['utils/lock_u_boot_console', 'utils/run_chameleond',
              'utils/run_displayd', 'utils/run_stream_server',
              'chameleond/utils/server_time', 'utils/run_scheduler',
-             'utils/run_chameleon_updater']
+             'utils/run_chameleon_updater', 'utils/check_audiobox_jackplugger']
 )
