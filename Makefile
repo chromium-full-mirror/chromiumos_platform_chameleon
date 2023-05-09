@@ -20,7 +20,7 @@ EGGDIR := ./chameleond.egg-info
 STREAM_SRCS = $(wildcard $(SRCDIR)/stream_server/*.c)
 STREAM_OBJS = $(patsubst $(SRCDIR)/stream_server/*.c,$(BINDIR)/%.o,$(STREAM_SRCS))
 CONFFILES = chameleond.conf
-IDENTITY_FILE := ~/trunk/src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa
+IDENTITY_FILE := ~/.ssh/testing_rsa  # follow https://chromium.googlesource.com/chromiumos/docs/+/main/developer_guide.md#set-up-ssh-connection-between-chroot-and-dut
 COMMIT_FILE := $(DISTDIR)/commit
 PY_VERSION_FILE := $(DISTDIR)/py_version
 
