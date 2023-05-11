@@ -6,6 +6,7 @@
 
 from dataclasses import dataclass
 import functools
+import itertools
 import inspect
 import logging
 import numpy
@@ -563,6 +564,68 @@ class ChameleondDriver(ChameleondInterface):
       self.it68051_service.set_hpd(port=port.ite_port, on_off=0)
     else:
       raise NotImplementedError("Need to tell the FPGA Logic")
+
+  def FireHpdPulse(self, port_id,
+                   deassert_interval_usec, assert_interval_usec=None,
+                   repeat_count=1, end_level=0):
+    """Fires one or more HPD pulse (low -> high -> low -> ...).
+
+    Warning: expect >100,000us error for the intervals.
+
+    Args:
+      port_id: The ID of the video input port.
+      deassert_interval_usec: The time in microsecond of the deassert pulse.
+      assert_interval_usec: The time in microsecond of the assert pulse.
+                            If None, then use the same value as
+                            deassert_interval_usec.
+      repeat_count: The count of HPD pulses to fire.
+      end_level: HPD ends with 0 for LOW (unplugged) or 1 for HIGH (plugged).
+    """
+    if assert_interval_usec is None:
+      assert_interval_usec = deassert_interval_usec
+
+    for i in range(repeat_count):
+      logging.info(f"HPD Pulse {i}")
+
+      self.UnplugHPD(port_id)
+      time.sleep(deassert_interval_usec / 1e6)
+
+      self.Plug(port_id)
+      time.sleep(assert_interval_usec / 1e6)
+
+    if not end_level:
+      self.UnplugHPD(port_id)
+
+  def FireMixedHpdPulses(self, port_id, widths_msec):
+    """Fires one or more HPD pulses, starting at low, of mixed widths.
+
+    One must specify a list of segment widths in the widths_msec argument where
+    widths_msec[0] is the width of the first low segment, widths_msec[1] is that
+    of the first high segment, widths_msec[2] is that of the second low segment,
+    etc.
+    The HPD line stops at low if even number of segment widths are specified;
+    otherwise, it stops at high.
+
+    The method is equivalent to a series of calls to Unplug() and Plug()
+    separated by specified pulse widths.
+
+    Warning: expect >100ms error for the widths
+
+    Args:
+      port_id: The ID of the video input port.
+      widths_msec: list of pulse segment widths in milli-seconds.
+    """
+    ops = itertools.cycle([self.UnplugHPD, self.Plug])
+
+    for delay_msec, op in zip(widths_msec, ops):
+      logging.info(f"Fire {op.__name__}, wait {delay_msec}msec.")
+      op(port_id)
+      time.sleep(delay_msec / 1000)
+
+    # Append a plug/unplug after the last pulse
+    op = next(ops)
+    logging.info(f"Fire last {op.__name__}.")
+    op(port_id)
 
   def WaitVideoInputStable(self, port_id, timeout=None):
     """Waits the video input stable or timeout.
