@@ -11,6 +11,11 @@ when you're trying to reproduce some chameleon behavior using first principles
 `screenshot.py` exercises the whole frame capture flow, ouputting a standard
 image file. If this works, your chameleon and the DUT is likely in good shape.
 
+`stress_edid.py` runs continously runs through a loop of edids to make
+sure the whole video path is working. We found quite a few chameleon bugs where
+the EDID was getting intermittently stuck/corrupted in one place or another.
+One can consider this a chameleon plug/unplug stress test.
+
 ## Implementing your own clients
 
 You can use `interactive.py` to learn how to do it, but please don't just import it.

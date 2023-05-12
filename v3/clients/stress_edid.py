@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-#
 # Copyright 2023 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-#
+
 """EDID stress test - present lots of EDIDs to the DUT
 
 This test cycles through a list of EDIDs and verifies that the DUT
@@ -18,11 +16,10 @@ import codecs
 import itertools
 import os
 import random
+from screenshot import read_edid
 import sys
 import time
-
-import six.moves.xmlrpc_client
-
+import xmlrpc.client
 
 # TODO(b/268527894): can we pass in a JSON file of EDIDs from the command line?
 
@@ -90,32 +87,6 @@ port_id_map = {
     'hdmi2' : 3,
 }
 
-
-
-def read_edid(filename):
-    """Read a text-format EDID and turn it into a binary string
-
-    The EDIDs are stored in text files as ASCII hex digits with
-    no intervening spaces, e.g.
-
-        00ffffffffffff0022f06c2801010101
-        0c170104b5402878e28d85ad4f35b125
-        ...
-
-    This function reads the text from the file, decodes it from hex
-    into bytes, and then pads out to 256 bytes because the Chameleon
-    wants the EDIDs to always be 256 bytes long.
-
-    Args:
-        filename: EDID file, with directory if needed to access it
-    """
-    edid = b''
-    for line in open(filename).readlines():
-        edid += codecs.decode(line.strip(), 'hex')
-    return edid.ljust(256, b'\0')
-
-
-
 def run_edid_test(port_id, pause_flag, path):
     """Apply each EDID and check that the video resolution matches expected
 
@@ -124,14 +95,14 @@ def run_edid_test(port_id, pause_flag, path):
         pause_flag: True if we should pause for input when there is a failure
         path: where to look for the EDIDs
     """
-    chameleon = six.moves.xmlrpc_client.ServerProxy('http://localhost:9992')
+    chameleon = xmlrpc.client.ServerProxy('http://localhost:9992')
 
     for (edid_name, exp_res) in itertools.cycle(edids):
         delay = random.uniform(2, 5)
         chameleon.Unplug(port_id)
         time.sleep(delay)
         edid = read_edid(os.path.join(os.path.expanduser(path),edid_name))
-        edid_id = chameleon.CreateEdid(six.moves.xmlrpc_client.Binary(edid))
+        edid_id = chameleon.CreateEdid(xmlrpc.client.Binary(edid))
         chameleon.ApplyEdid(port_id, edid_id)
         chameleon.DestroyEdid(edid_id)
         chameleon.Plug(port_id)
