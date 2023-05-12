@@ -21,6 +21,8 @@ sudo systemctl start chameleond
 journalctl -u chameleond|grep -A 20 Versions
 cat /var/log/pacman.log
 cat /var/log/alarm-ansible
+python3 -i ~/chameleon/v3/clients/interactive.py
+~/chameleon/v3/clients/screenshot.py
 sudo systemctl stop chameleond; python -i ~/chameleon/v3/ec/proto/connect.py
 sudo systemctl restart chameleond; journalctl -e -f -u chameleond
 journalctl -e -f -u chameleond
