@@ -10,6 +10,8 @@ from __future__ import print_function
 
 import logging
 import os
+import re
+import subprocess
 import tempfile
 
 from . import chameleon_common  # pylint: disable=W0611, C0411
@@ -127,7 +129,41 @@ class USBAudioFlow(chameleon_device.Flow):
     """
     pass
 
-  def _GetAlsaUtilCommandArgs(self, data_format):
+  def _GetUSBAudioDevice(self, alsa_command):
+    """Returns the correct audio device.
+
+    In the Raspberry Pi Analog Audio testbed, an external USB sound card is
+    attached to Pi handle analog audio to/from DUT.
+
+    Check the existence of the external USB sound card, and return the correct
+    audio device if exist.
+
+    Args:
+      alsa_command: ALSA command, accepts only 'aplay' and 'arecord'.
+
+    Returns:
+      A string with the following format - "hw:x,0", and x is the device number
+      with default value of UAC2.
+    """
+    logging.info("Checking the existence of external USB sound card...")
+    if alsa_command not in ['aplay', 'arecord']:
+      err_msg = 'Unable to pick PCM - unexpected ALSA command:' + alsa_command
+      raise USBAudioFlowError(err_msg)
+
+    output = subprocess.check_output([alsa_command,'-l']).decode('utf-8')
+
+    # use regex to find the device number
+    ext_card = re.search("([\d]): ICUSBAUDIO7D", output)
+    if ext_card:
+      return 'hw:' + ext_card[1] + ',0'
+    uac2_gadget = re.search("([\d]): UAC2Gadget", output)
+    if uac2_gadget:
+      return 'hw:' + uac2_gadget[1] + ',0'
+    else:
+      err_msg = 'Unable to pick PCM from existing audio devices:' + output
+      raise USBAudioFlowError(err_msg)
+
+  def _GetAlsaUtilCommandArgs(self, data_format, device_name):
     """Returns a list of parameter flags paired with corresponding arguments.
 
     The argument values are taken from data_format.
@@ -135,11 +171,13 @@ class USBAudioFlow(chameleon_device.Flow):
     Args:
       data_format: An AudioDataFormat object whose values are passed as
         arguments into the Alsa util command.
+      device_name: ALSA device name
 
     Returns:
       A list containing argument strings
     """
-    params_list = ['-D', 'hw:0,0',
+    logging.info("Using audio device: %s", device_name)
+    params_list = ['-D', device_name,
                    '-t', data_format.file_type,
                    '-f', data_format.sample_format,
                    '-c', str(data_format.channel),
@@ -236,7 +274,8 @@ class InputUSBAudioFlow(USBAudioFlow):
       raise USBAudioFlowError('USB Audio only supports save to file')
     self._supported_data_format = self._usb_ctrl.GetSupportedCaptureDataFormat()
     self._supported_data_format.file_type = self._captured_file_type
-    params_list = self._GetAlsaUtilCommandArgs(self._supported_data_format)
+    device_name = self._GetUSBAudioDevice('arecord')
+    params_list = self._GetAlsaUtilCommandArgs(self._supported_data_format, device_name)
     file_suffix = '.' + self._captured_file_type
     recorded_file = tempfile.NamedTemporaryFile(prefix='audio_',
                                                 suffix=file_suffix,
@@ -349,7 +388,8 @@ class OutputUSBAudioFlow(USBAudioFlow):
         self._usb_ctrl.GetSupportedPlaybackDataFormat()
     if self._InputDataFormatIsCompatible(data_format):
       data_format_object = audio.CreateAudioDataFormatFromDict(data_format)
-      params_list = self._GetAlsaUtilCommandArgs(data_format_object)
+      device_name = self._GetUSBAudioDevice('aplay')
+      params_list = self._GetAlsaUtilCommandArgs(data_format_object, device_name)
       params_list.append(path)
       self._subprocess = system_tools.SystemTools.RunInSubprocess('aplay',
                                                                   *params_list)
