@@ -64,22 +64,38 @@ validate_package_installation() {
         else
             eval "apt-get -y --allow-downgrades install "\
                 "${PACKAGE_NAME}=${PACKAGE_VERSION} > /dev/null 2>&1"
+            printf "Package %s %s installed\n" \
+                "${PACKAGE_NAME}" "${PACKAGE_VERSION}"
         fi
     fi
 }
 
 validate_bluez_installation() {
+    os_version=$(hostnamectl | grep "Operating System" | awk '{print $5}')
     installed=$(apt-cache policy bluez | grep '\*\*\*' | awk '{print $2}')
-    wanted="5.50-1.2~deb10u2+rpt1"
 
-    if [ "${installed}" = "${wanted}" ]; then
-        echo BlueZ is already installed with the right version "${wanted}"
-        return
+    if [ "${os_version}" = "10" ]; then
+        wanted="5.50-1.2~deb10u2+rpt1"
+        if [ "${installed}" = "${wanted}" ]; then
+            echo BlueZ is already installed with the right version "${wanted}"
+            return
+        fi
+        echo Installing BlueZ version "${wanted}"
+        curl http://archive.raspberrypi.org/debian/pool/main/b/bluez/bluez_5.50-1.2~deb10u2+rpt1_armhf.deb -o /tmp/bluez.deb
+        dpkg -i /tmp/bluez.deb || echo "Failed installing BlueZ ${wanted}"
+
+    elif [ "${os_version}" = "11" ]; then
+        wanted="5.55-3.1+rpt2"
+        if [ "${installed}" = "${wanted}" ]; then
+            echo BlueZ is already installed with the right version "${wanted}"
+            return
+        fi
+        validate_package_installation "bluez" "${wanted}"
+
+    else
+        echo Error: Raspberry Pi OS version "$os_version" not supported
+        exit
     fi
-
-    echo Installing BlueZ version "${wanted}"
-    curl http://archive.raspberrypi.org/debian/pool/main/b/bluez/bluez_5.50-1.2~deb10u2+rpt1_armhf.deb -o /tmp/bluez.deb
-    dpkg -i /tmp/bluez.deb || echo "Failed installing BlueZ ${wanted}"
 }
 
 validate_python_package_installation() {
