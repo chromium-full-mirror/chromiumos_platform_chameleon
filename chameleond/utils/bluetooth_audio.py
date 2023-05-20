@@ -115,6 +115,32 @@ class BluetoothAudio(BluezPeripheral):
   INTERVAL_BETWEEN_START_PULSEAUDIO_SECS = 0.2
   WAIT_PULSEAUDIO_READY_SECS = 1
 
+  AUDIO_SERVER = 'audio_server'
+  A2DP_CODEC = 'a2dp_codec'
+  SBC = 'sbc'
+  AAC = 'aac'
+
+  # pipewire related processes
+  # Note: pipewire-pulse is not needed in tests
+  PIPEWIRE = 'pipewire'
+  WIREPLUMBER = 'wireplumber'
+  WPCTL = 'wpctl'
+  SYSTEMCTL = 'systemctl'
+  START_PIPEWIRE_TIMES = 2
+  PIPEWIRE_READY_TIMEOUT_SECS = 5
+  INTERVAL_BETWEEN_START_PIPEWIRE_SECS = 1
+
+  # The pipewire related processes:
+  # - pipewire: the audio server process
+  # - wireplumber: an auxiliary process for configuring pipewire
+  # Note: starting pipewire will auto start pipewire.socket as well.
+  PIPEWIRE_PROCESSES_TO_START = [f'{PIPEWIRE}', f'{WIREPLUMBER}']
+
+  # Note: the pipewire.socket must be stopped before pipewire.
+  #       Otherwise, pipewire.socket will auto restart pipewire.
+  PIPEWIRE_PROCESSES_TO_STOP = [f'{PIPEWIRE}.socket', f'{PIPEWIRE}']
+
+
   def __init__(self):
     """Initializes a Bluetooth audio object."""
     BluezPeripheral.__init__(self)
@@ -127,6 +153,20 @@ class BluetoothAudio(BluezPeripheral):
     self._play = None
     self._profile = None
     self._media_player = None
+    self._pi_uid = self.GetUserIdOfPi()
+    self._pulse_socket_file = f'/run/user/{self._pi_uid}/pulse/native'
+
+    # Set up the pi environment so that the audio subprocess methods in
+    # SystemTools can connect to the user service manager through
+    # "systemctl --user".
+    # Note: the audio processes should be executed as the user pi.
+    SystemTools.SetUpPiEnv(self._pi_uid)
+
+    # Use pulseaudio as the default audio server for now.
+    # Use pipewire as default later when it proves to be stable for all tests.
+    self._audio_config = {
+        self.AUDIO_SERVER: self.PULSEAUDIO,
+        self.A2DP_CODEC: self.SBC}
 
     # A hfp bluez source device looks like:
     #   5 bluez_source.DC_71_96_68_E0_9C.headset_audio_gateway \
@@ -229,8 +269,7 @@ class BluetoothAudio(BluezPeripheral):
                                     desc=desc)
     except common.TimeoutError as e:
       ret = ''
-      logging.warn('Failed to start %s in %d seconds: %s.',
-                   self.PULSEAUDIO, timeout, e)
+      logging.warn('Failed to run the command in %d seconds: %s.', timeout, e)
     return ret
 
   def _KillPulseAudio(self):
@@ -320,11 +359,165 @@ class BluetoothAudio(BluezPeripheral):
       time.sleep(self.INTERVAL_BETWEEN_START_PULSEAUDIO_SECS)
     return False
 
+  def GetUserIdOfPi(self):
+    """Get the user ID for the user pi.
+
+    Returns:
+      the pi's user id
+    """
+    return SystemTools.Output('id', '-u', 'pi').strip()
+
+  def _GetPipewireStatusOuput(self):
+    """Get the pipewire status output.
+
+    If pipewire is not fully started yet, the output would be
+    > Could not connect to PipeWire
+
+    Otherwise, the output would look something like below.
+    Note that the bluez node would not appear initially if
+    there is no bluetooth connection yet.
+
+    Audio
+     ├─ Devices:
+     │      52. Built-in Audio                      [alsa]
+     │      53. Built-in Audio                      [alsa]
+     │      54. Built-in Audio                      [alsa]
+
+    Returns:
+      the output of wpctl status
+    """
+    return SystemTools.OutputAsPi(self.WPCTL, 'status',
+                                    use_local_version=False)
+
+  def _GetPipewireBluezId(self):
+    """Get the bluez device id assigned in pipewire.
+
+    In the following example output, '68' will be returned for bluez.
+
+    Audio
+     ├─ Devices:
+     │      52. Built-in Audio                      [alsa]
+     │      53. Built-in Audio                      [alsa]
+     │      54. Built-in Audio                      [alsa]
+     │      68. 18-26-49-ED-36-94                   [bluez5]
+
+    Returns:
+      the bluez id if available; None otherwise
+    """
+    output = self._GetPipewireStatusOuput()
+    if not bool(output):
+      return None
+
+    lines = output.split('\n')
+    for line in lines:
+      if 'bluez5' in line:
+        logging.info('wpctl status for bluez audio device: %s', line)
+        bluez_id = int(line.split()[1].split('.')[0])
+        return bluez_id
+    return None
+
+  def GetPipewireBluezId(self):
+    """Get the pipewire bluez id.
+
+    Use `wpctl status` to get the id of the bluez audio device.
+
+    Returns:
+      the audio device id if available; None otherwise
+    """
+    if not self._pi_uid:
+      logging.error('The user ID of pi is not available.')
+      return None
+
+    bluez_id = self._PollForCondition(lambda: self._GetPipewireBluezId(),
+                                      desc='pipewire audio profile connected')
+    bluez_id = bluez_id if bool(bluez_id) else None
+    logging.info('GetPipewireBluezId: %s', bluez_id)
+    return bluez_id
+
+  def _StartPipewire(self):
+    """Start Pipewire processes.
+
+    Returns:
+      True if they start successfully.
+    """
+    # Stop pipewire in case it is still running.
+    self.StopPipewire()
+
+    logging.info('trying to start pipewire')
+
+    # Start the processes sequentially as pi.
+    result_flag = self.SystemctlProcessCommand('pi', 'start',
+                                               self.PIPEWIRE_PROCESSES_TO_START)
+
+    if result_flag:
+      logging.info('% are started: %s',
+                   str(self.PIPEWIRE_PROCESSES_TO_STOP), result_flag)
+    return result_flag
+
+  def StartPipewire(self):
+    """Start the pipewire processes.
+
+    Retry a few times as sometimes they may not start correctly.
+
+    Returns:
+      True if they start successfully.
+    """
+    for i in range(self.START_PIPEWIRE_TIMES):
+      if not self._StartPipewire():
+        time.sleep(self.INTERVAL_BETWEEN_START_PIPEWIRE_SECS)
+        continue
+
+      if bool(self._PollForCondition(
+          self._GetPipewireStatusOuput,
+          timeout=self.PIPEWIRE_READY_TIMEOUT_SECS,
+          desc='pipewire fully started')):
+        return True
+    return False
+
+  def GetAudioServerName(self):
+    """Get the audio server.
+
+    Returns:
+      the audio server name
+    """
+    return self._audio_config.get(self.AUDIO_SERVER)
+
+  def StartAudioServer(self, audio_profile):
+    """Start the audio server.
+
+    There are multiple audio servers including pulseaudio and pipewire.
+    Start the specified audio server after stopping the other non-used one.
+
+    Args:
+      audio_profile: the audio profile being tested which determines
+            which version of the audio server to start.
+
+    Returns:
+      True if it starts successfully.
+    """
+    audio_server = self.GetAudioServerName()
+    logging.info('audio server: %s', audio_server)
+    if audio_server == self.PULSEAUDIO:
+      self.StopPipewire()
+      return self.StartPulseaudio(audio_profile)
+    else:
+      self.StopPulseaudio()
+      return self.StartPipewire()
+
+  def SetAudioConfig(self, audio_config):
+    """Set the audio configuration.
+
+    Args:
+      audio_config: an audio configuration dict
+    """
+    self._audio_config.update(audio_config)
+
   def _PrintProcessStderr(self, proc):
     """Print the stderr of the proc if any."""
-    _, stderr_data = proc.communicate()
-    if bool(stderr_data):
-      logging.error('[%s]: %s', proc.name, stderr_data)
+    if proc:
+      _, stderr_data = proc.communicate()
+      if bool(stderr_data):
+        logging.error('[%s]: %s', proc.name, stderr_data)
 
   def StopPulseaudio(self):
     """Stop Pulseaudio process.
@@ -335,15 +528,103 @@ class BluetoothAudio(BluezPeripheral):
     Returns:
       True if it stops successfully.
     """
-    if self._pulseaudio is None:
-      logging.error('Stop %s before starting it.', self.PULSEAUDIO)
-      return False
+    if self._pulseaudio:
+        self._pulseaudio.terminate()
+    else:
+      # Kill any unexpected residual pulseaudio process below.
+      msg = '%s may have been launched unexpectedly. Kill it anyway.'
+      logging.warn(msg, self.PULSEAUDIO)
 
-    self._pulseaudio.terminate()
     self._KillPulseAudio()
     self._PrintProcessStderr(self._pulseaudio)
     self._pulseaudio = None
+    logging.info('%s has been stopped', self.PULSEAUDIO)
     return True
+
+  def _IsActive(self, unit, user):
+    """Is a systemctl unit active?
+
+    A unit is active if the return code is 0.
+
+    Args:
+      user: the user can be 'pi' or 'root'
+
+    Returns: True if the unit is active
+    """
+    args_str = f'--user is-active {unit}'
+    if user == 'pi':
+      rc = SystemTools.OrigCallAsPi(self.SYSTEMCTL, args_str)
+    else:
+      rc = SystemTools.OrigCall(self.SYSTEMCTL, *args_str.split())
+
+    logging.info(f'({user}) systemctl {args_str}: {rc}')
+    return rc == 0
+
+  def SystemctlProcessCommand(self, user, command, processes):
+    result_flag = True
+
+    for proc in processes:
+      args_str = f'--user {command} {proc}'
+      if user == 'pi':
+        rc = SystemTools.OrigCallAsPi(self.SYSTEMCTL, args_str)
+      else:
+        rc = SystemTools.OrigCall(self.SYSTEMCTL, *args_str.split())
+
+      if rc < 0:
+        logging.error('failed to {args_str}: {rc}.')
+        result_flag = False
+
+      if command == 'stop':
+        if not self._PollForCondition(lambda: not self._IsActive(proc, user),
+                                      desc=f'{proc} is not active'):
+          result_flag = False
+      else: # command == 'start'
+        if not self._PollForCondition(lambda: self._IsActive(proc, user),
+                                      desc=f'{proc} is active'):
+          result_flag = False
+
+    return result_flag
+
+  def StopPipewire(self):
+    """Stop the Pipewire processes.
+
+    Terminate the pipewire processes.
+
+    Note that we must stop the pipewire.socket before stopping pipewire.
+    Otherwise, pipewire may still be started by pipewire.socket.
+
+    A traditional `killall` method does not work as the processes may be
+    restarted automatically.
+
+    Returns: True if they stop successfully.
+    """
+    logging.info('trying to stop pipewire')
+
+    result_flag = True
+    # Stop the processes that have been started as root.
+    if not self.SystemctlProcessCommand('root', 'stop',
+                                        self.PIPEWIRE_PROCESSES_TO_STOP):
+      result_flag = False
+
+    # Stop the processes that have been started as pi.
+    if not self.SystemctlProcessCommand('pi', 'stop',
+                                        self.PIPEWIRE_PROCESSES_TO_STOP):
+      result_flag = False
+
+    if result_flag:
+      logging.info('% are stopped: %s',
+                   str(self.PIPEWIRE_PROCESSES_TO_STOP), result_flag)
+    return result_flag
+
+  def StopAudioServer(self):
+    """Stop the audio server."""
+    server_name = self.GetAudioServerName()
+    if server_name == self.PULSEAUDIO:
+      return self.StopPulseaudio()
+    elif server_name == self.PIPEWIRE:
+      return self.StopPipewire()
+    else:
+      raise BluetoothAudioException(f'Unknown audio server {server_name}')
 
   def StartOfono(self):
     """Start/restart Ofono process.
@@ -574,8 +855,8 @@ class BluetoothAudio(BluezPeripheral):
         return a2dp_id
     return None
 
-  def StartRecordingAudioSubprocess(self, audio_profile, test_data,
-                                    recording_entity='recorded_by_peer'):
+  def StartRecordingAudioSubprocessPulseaudio(
+      self, audio_profile, test_data, recording_entity='recorded_by_peer'):
     """Start recording audio in a subprocess.
 
     Args:
@@ -628,6 +909,83 @@ class BluetoothAudio(BluezPeripheral):
                            desc=f'{file_path} created')
     self._recorded_file = open(file_path, 'rb')
     return True
+
+  def StartRecordingAudioSubprocessPipewire(
+      self, audio_profile, test_data, recording_entity='recorded_by_peer'):
+    """Start recording audio in a subprocess.
+
+    The output of `wpctl status` looks like below. The target bluez_id is 69
+    in this example.
+    ...
+    Audio
+     ├─ Devices:
+     │      52. Built-in Audio                      [alsa]
+     │      63. Built-in Audio                      [alsa]
+     │      67. Built-in Audio                      [alsa]
+     │      69. Chromebook_AD2C                     [bluez5]
+    ...
+
+
+    Args:
+      audio_profile: the audio profile used to get the recording settings
+      test_data: the details of the file being recorded
+      recording_entity: which entity will record the audio, defined in
+                        bluetooth_audio_test_data.py
+
+    Returns:
+      True if successful
+    """
+    self._profile = test_data
+    file_path = test_data[recording_entity]
+    self._MakeAudioRecordDirectory(os.path.split(file_path)[0])
+
+    bluez_id = self.GetPipewireBluezId()
+    if bluez_id is None:
+      return False
+
+    args = (f"--target {bluez_id} "
+            f"--rate {test_data['rate']} "
+            f"--channels {test_data['channels']} "
+            f"--channel-map stereo {file_path}")
+
+    self._record = SystemTools.RunInSubprocessAsPi(
+        'pw-record', args, self._UsingLocalVersion(audio_profile))
+
+    # Polling until the pw-record process fully launches.
+    # Otherwise, we may hit the error:
+    #   FileNotFoundError: [Errno 2] No such file or directory:
+    #                      '/tmp/audio/a2dp_recorded_by_peer.raw'
+    self._PollForCondition(lambda: os.path.isfile(file_path),
+                           desc=f'{file_path} created')
+    self._recorded_file = open(file_path, 'rb')
+    return True
+
+  def StartRecordingAudioSubprocess(self, audio_profile, test_data,
+                                    recording_entity='recorded_by_peer'):
+    """Start recording audio in a subprocess.
+
+    Start the selected audio server subprocess based on the audio server name.
+
+    Args:
+      audio_profile: the audio profile used to get the recording settings
+      test_data: the details of the file being recorded
+      recording_entity: which entity will record the audio, defined in
+                        bluetooth_audio_test_data.py
+
+    Returns:
+      True if successful
+    """
+    server_name = self.GetAudioServerName()
+    if server_name == self.PULSEAUDIO:
+      return self.StartRecordingAudioSubprocessPulseaudio(
+          audio_profile, test_data, recording_entity)
+
+    elif server_name == self.PIPEWIRE:
+      return self.StartRecordingAudioSubprocessPipewire(
+          audio_profile, test_data, recording_entity)
+
+    else:
+      raise BluetoothAudioException(f'Unknown audio server {server_name}')
 
   def _WriteOneChunk(self):
     """Write one chunk of data to the chunk file.

@@ -36,7 +36,8 @@ class _SystemTools(object):
       'i2cdump': '/usr/local/sbin/i2cdump',
       'i2cget': '/usr/local/sbin/i2cget',
       'i2cset': '/usr/local/sbin/i2cset',
-      'killall': '/usr//bin/killall',
+      'id': '/usr/bin/id',
+      'killall': '/usr/bin/killall',
       'logger': '/usr/bin/logger',
       'lsmod': '/sbin/lsmod',
       'lspci': 'lspci',
@@ -55,34 +56,47 @@ class _SystemTools(object):
       'printer': '/usr/bin/printer',
       'pulseaudio.local': '/usr/local/bin/pulseaudio',
       'pulseaudio': '/usr/bin/pulseaudio',
+      'pw-record': '/usr/bin/pw-record',
       'reboot': '/sbin/reboot',
       'scp': '/usr/bin/scp',
       'service': '/usr/sbin/service',
       'servod': '/usr/local/bin/servod',
       'ssh': '/usr/bin/ssh',
       'su': '/bin/su',
+      # Although systemd should theoretically be in /usr/bin,
+      # the debian distro sometimes only installs it in /bin.
+      'systemctl': '/bin/systemctl',
       'tail': '/usr/bin/tail',
       'uname': '/bin/uname',
       'wget': '/usr/bin/wget',
+      'wpctl': '/usr/bin/wpctl',
   }
 
   def __init__(self):
     """Constructs a _SystemTools object."""
     self._CheckRequiredTools()
     self._pi_args = 'su - pi -c'.split()
-    self._GetPiEnv()
+    # The pi environment is only needed when running bluetooth audio tests.
+    self._pi_env = {}
+    self._pi_uid = None
 
-  def _GetPiEnv(self):
-    """Get a proper environment for Pi.
+  def SetUpPiEnv(self, uid):
+    """Set up a proper environment for the user pi.
+
+    Some audio processes have to be run as the user pi.
+
+    Args:
+      uid: the pi user id
 
     We need to set XDG_RUNTIME_DIR for pi for pulseaudio tools to run
     correctly. Setting environmental variable DBUS_SESSION_BUS_ADDRESS to force
     the pulseaudio to connect to an existing DBSU session before starting a new
     one.
     """
+    self._pi_uid = uid
     self._pi_env = os.environ.copy()
-    self._pi_env['XDG_RUNTIME_DIR'] = '/run/user/1000'
-    self._pi_env['DBUS_SESSION_BUS_ADDRESS'] = '/run/user/1000/bus'
+    self._pi_env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
+    self._pi_env['DBUS_SESSION_BUS_ADDRESS'] = f'/run/user/{uid}/bus'
 
   def GetToolPath(self, name):
     """Get the path of the tool.
@@ -106,6 +120,44 @@ class _SystemTools(object):
         # It is okay that some tools may not exist in a particular platform.
         logging.warning('IOError: Required tool %s not existed', path)
 
+  def _MakeCommandForPi(self, name, args_str, use_local_version=False):
+    """Combines the system tool and its parameters into a list.
+
+    In python3, the following subprocess methods take env as a keyword
+    argument:
+      - subprocess.Popen
+      - subprocess.run
+      - subprocess.check_output
+    To pass environment variables to a method other than those above, e.g.,
+    subprocess.call, the environment variables must be positioned before the
+    tool name.
+
+    However, subprocess.check_output seems to have an issue such that the
+    env keyword argument does not take effect. Instead, the environment
+    string must be positioned before the tool name. To simplify and ensure
+    consistency across all subprocess methods, the environment string is
+    placed before the tool name, and the env keyword argument is not used.
+
+    Args:
+      name: the name of the system tool.
+      args_str: the args string (not a list)
+      use_local_version: True to use a local version of the executable.
+          Default value is False to favor the native version.
+
+    Returns:
+      A list representing the complete command.
+    """
+    xdg_runtime_dir = self._pi_env.get('XDG_RUNTIME_DIR', '')
+    dbus_session_bus_addr = self._pi_env.get('DBUS_SESSION_BUS_ADDRESS', '')
+    s1 = f'XDG_RUNTIME_DIR={xdg_runtime_dir}'
+    s2 = f'DBUS_SESSION_BUS_ADDRESS={dbus_session_bus_addr}'
+    env_str = ' '.join([s1, s2])
+
+    tool_path = self._FindPreferredExecutablePath(name, use_local_version)
+    command = self._pi_args + [' '.join([env_str, tool_path, args_str])]
+    logging.info('command: %s', str(command))
+    return command
+
   def _MakeCommand(self, name, args):
     """Combines the system tool and its parameters into a list.
 
@@ -116,7 +168,9 @@ class _SystemTools(object):
     Returns:
       A list representing the complete command.
     """
-    return [self._TOOL_PATHS[name]] + [str(arg) for arg in args]
+    command = [self._TOOL_PATHS[name]] + [str(arg) for arg in args]
+    logging.info('command: %s', str(command))
+    return command
 
   def OrigCall(self, name, *args):
     """Calls the tool with arguments using subprocess.call().
@@ -126,6 +180,21 @@ class _SystemTools(object):
       *args: The arguments of the tool.
     """
     command = self._MakeCommand(name, args)
+    return subprocess.call(command)
+
+  def OrigCallAsPi(self, name, args_str):
+    """Calls the tool with arguments as Pi using subprocess.call().
+
+    This is primarily used on Raspberry Pi as the chameleon host. This is
+    needed as some commands, in pulseaudio and pipewire, are required
+    to run with pi as the user. The chameleond root user is not allowed to
+    access pulseaudio and pipewire for security concern.
+
+    Args:
+      name: The name of the tool.
+      args_str: the args string (not a list)
+    """
+    command = self._MakeCommandForPi(name, args_str)
     return subprocess.call(command)
 
   def Call(self, name, *args):
@@ -154,6 +223,7 @@ class _SystemTools(object):
     except Exception as e:
       logging.error('Output error: %s', e)
       return ''
+
     if sys.version_info >= (3, 0):
       return output.decode()
     else:
@@ -199,14 +269,19 @@ class _SystemTools(object):
     Returns:
       The output message of the call, including stderr message.
     """
-    preferred_path = self._FindPreferredExecutablePath(name, use_local_version)
-    args = self._pi_args + [preferred_path + ' ' + args_str]
+    command = self._MakeCommandForPi(name, args_str,
+                                     use_local_version=use_local_version)
+
     try:
-      output = subprocess.check_output(args, env=self._pi_env).decode()
-      return output
+      output = subprocess.check_output(command)
     except Exception as e:
       logging.error('Output error: %s', e)
       return ''
+
+    if sys.version_info >= (3, 0):
+      return output.decode()
+    else:
+      return output
 
   def DelayedCall(self, time, name, *args):
     """Calls the tool with arguments after a given delay.
@@ -252,10 +327,9 @@ class _SystemTools(object):
     Returns:
       process: The subprocess spawned for the command.
     """
-    preferred_path = self._FindPreferredExecutablePath(name, use_local_version)
-    args = self._pi_args + [preferred_path + ' ' + args_str]
-    logging.info('args: %s', str(args))
-    process = subprocess.Popen(args, stdout=subprocess.PIPE,
+    command = self._MakeCommandForPi(name, args_str,
+                                     use_local_version=use_local_version)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
     process.name = name
     return process
