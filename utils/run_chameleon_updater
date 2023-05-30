@@ -36,9 +36,16 @@ do_start() {
     trap "{ rm ${CHECK_FILE}; }" EXIT
     touch ${CHECK_FILE}
     echo 'Checking Chameleon update...'
-    local latest_bundle=$(wget -qO - "${BUNDLE_URL}/LATEST")
+
+    local bundle_tag="LATEST"
+    if [[ -f /etc/default/chameleond_updater_tag ]]; then
+        bundle_tag="$(cat /etc/default/chameleond_updater_tag)"
+    fi
+    echo "Using bundle tag ${bundle_tag}"
+
+    local latest_bundle=$(wget -qO - "${BUNDLE_URL}/${bundle_tag}")
     if [[ -z ${latest_bundle} ]] ; then
-        echo 'Failed to get the LATEST bundle.'
+        echo 'Failed to get the ${bundle_tag} bundle.'
         exit
     fi
 

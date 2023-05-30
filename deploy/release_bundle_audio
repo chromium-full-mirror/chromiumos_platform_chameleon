@@ -1,0 +1,470 @@
+#!/bin/bash
+# Copyright 2023 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+SCRIPT_PATH=$(realpath "${0}")
+DEPLOY_DIR=$(dirname "${SCRIPT_PATH}")
+CHAMELEON_DIR=$(dirname "${DEPLOY_DIR}")
+
+CHROMIUMOS_PATH=$(realpath "${CHAMELEON_DIR}/../../..")
+COMMON_SH_FILE="${CHROMIUMOS_PATH}/src/scripts/common.sh"
+
+if [[ -f "${COMMON_SH_FILE}" ]]; then
+  # shellcheck source=../../../scripts/common.sh
+  . "${COMMON_SH_FILE}"
+else
+  echo "Error: couldn't find src/script/common.sh file, script is broken."
+  exit 1
+fi
+
+assert_outside_chroot
+
+# === Parsing arguments ===
+DEFINE_string bundle_name '' 'Bundle name' 'n'
+DEFINE_string tag "LATEST" 'Which chameleon bundle tag to target.' 't'
+DEFINE_string hostnames "" 'Which hostnames in the lab to release. Comma/Space seperated values as a string.' 'o'
+DEFINE_boolean update_hosts "${FLAGS_FALSE}" 'Update the hosts immediately, regardless of test running or not.' 'u'
+DEFINE_boolean verbose "${FLAGS_FALSE}" 'Enable verbose output'
+
+SUPPORTED_ACTIONS=( "build" "release" "revert" "list_hostnames" "list_bundles" "get_tag" "set_tag" )
+SUPPORTED_ACTIONS_STR=$(echo "${SUPPORTED_ACTIONS[*]}" | tr " " ",")
+
+FLAGS_HELP="Usage: $(basename "${0}") ACTION [flags]
+    - ACTION: one of (${SUPPORTED_ACTIONS_STR})
+    - flags: check below.
+
+This scripts build and release chameleon bundle to Google Cloud Storage, and allow management of release tags.
+
+Action:
+- 'build' build and upload chameleon bundle to GCP and set a tag in GCP to the newly built bundle. (requires: '--tag')
+- 'release' release a tag to chameleon hosts. (requires: '--tag', '--hostnames', optional: '--update_hosts')
+- 'set_tag' set a tag to a specific bundle version. (requires: '--tag', '--bundle_name')
+- 'get_tag' get the bundle version of the tag. (requires: '--tag')
+- 'list_bundles' chronologically list bundle versions. (no flags)
+- 'list_hostnames' show which hosts are using which tags (no flags)
+
+NOTE: The \"LATEST\" tag is used by chameleon updater by default.
+"
+
+# Parse command line.
+FLAGS "$@" || exit 1
+eval set -- "${FLAGS_ARGV}"
+
+# Only after this point should you enable `set -e` as
+# shflags does not work when that is turned on first.
+set -e
+# === END Parsing arguments ===
+
+# === Macros ===
+have(){
+  [[ -n "${1}" ]]
+}
+
+doesnt_have() {
+  [[ -z "${1}" ]]
+}
+
+is_false() {
+  [[ "${1}" == "${FLAGS_FALSE}" ]];
+}
+
+is_true() {
+  [[ "${FLAGS_TRUE}" == "${1}" ]];
+}
+
+split_string() {
+  tr ", " "\n" <<< "$1"
+}
+
+ssh_clean () {
+  ssh "root@${1}" -p 22 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    -o LogLevel=quiet -i ~/.ssh/testing_rsa "${@:2}"
+}
+
+forget(){
+  # throw log to null;
+  "$@" > /dev/null;
+}
+
+verbose() {
+  if is_true "${FLAGS_verbose}"; then
+    "$@"
+  fi
+}
+# === END Macros ===
+
+# === Constants ===
+
+GSUTIL_CLI="${CHROMIUMOS_PATH}/chromite/scripts/gsutil"
+
+# Every files lives under HTTP_BUNDLE_URL, there is no nested directories.
+GS_BUNDLE_URL="gs://chromeos-localmirror/distfiles/chameleon-bundle"
+HTTP_BUNDLE_URL="http://commondatastorage.googleapis.com/chromeos-localmirror/distfiles/chameleon-bundle"
+
+AUDIO_HOSTNAME_BACKUP="audio_tag_hostname.csv"
+
+BUNDLE_PATH=""
+
+# === END Constants ===
+
+# === Utilities ===
+
+gs_verbose_info() {
+  verbose info "GS UTILS: " "$@"
+}
+
+# Check if file is accessible on GS.
+gs_file_exists() {  # args: url_name, [public_objects=$FLAGS_TRUE], [graceful=$FLAGS_FALSE]
+  # PARAM
+  local url_name
+  local public_objects
+  local graceful
+
+  url_name=${1:?url_name, the path on GS(${HTTP_BUNDLE_URL})}
+  public_objects=${2:-${FLAGS_TRUE}}
+  graceful=${3:-${FLAGS_FALSE}}
+
+  # LOG
+  gs_verbose_info "Checking if file(${HTTP_BUNDLE_URL}/${url_name}) exists"
+
+  # OPERATIONS
+  if is_false "${graceful}"; then
+    if is_true "${public_objects}"; then
+      wget --spider -q "${HTTP_BUNDLE_URL}/${url_name}" ||
+        die "File \"${url_name}\" is not in GS(${GS_BUNDLE_URL})"
+    else
+      ( "${GSUTIL_CLI}" list "${GS_BUNDLE_URL}/${url_name}" > /dev/null ) ||
+        die "File \"${url_name}\" is not in GS(${GS_BUNDLE_URL})"
+    fi
+  else
+    if is_true "${public_objects}"; then
+      wget --spider -q "${HTTP_BUNDLE_URL}/${url_name}"
+    else
+      "${GSUTIL_CLI}" list "${GS_BUNDLE_URL}/${url_name}" > /dev/null 2> /dev/null
+    fi
+  fi
+}
+
+gs_get_content() {  # args: url_name, [public_objects=$FLAGS_TRUE]
+  # PARAM
+  local url_name
+  local public_objects
+
+  url_name=${1:?url_name, name presented on GS(${HTTP_BUNDLE_URL})}
+  public_objects=${2:-${FLAGS_TRUE}}
+
+  # LOG
+  gs_verbose_info "Downloading the content of file(${HTTP_BUNDLE_URL}/${url_name})"
+
+  # OPERATIONS
+  if is_true "${public_objects}"; then
+    wget -qO - "${HTTP_BUNDLE_URL}/${url_name}" ||
+      die "Unable to get \"${url_name}\" GS(${GS_BUNDLE_URL}/${url_name})"
+  else
+    "${GSUTIL_CLI}" cat "${GS_BUNDLE_URL}/${url_name}" ||
+      die "Unable to get \"${url_name}\" GS(${GS_BUNDLE_URL}/${url_name}"
+  fi
+}
+
+gs_upload_file() {  # args: file_path, url_name, [share_publicly=$FLAGS_TRUE]
+  # PARAM
+  local file_path
+  local url_name
+  local share_publicly
+
+  file_path=${1:?file_path, local path to file}
+  url_name=${2:?url_name, name presented on GS(${HTTP_BUNDLE_URL})}
+  share_publicly=${3:-${FLAGS_TRUE}}
+
+  # LOG
+  gs_verbose_info "Uploading file(${file_path}) to GS(${GS_BUNDLE_URL}/${url_name})"
+
+  # OPERATIONS
+  if is_true "${share_publicly}"; then
+    "${GSUTIL_CLI}" cp -a public-read "${file_path}" "${GS_BUNDLE_URL}/${url_name}"
+  else
+    "${GSUTIL_CLI}" cp "${file_path}" "${GS_BUNDLE_URL}/${url_name}"
+  fi
+
+  gs_file_exists "${url_name}" "${share_publicly}"
+}
+
+gs_upload_content() { # args: content, url_name, [share_publicly=$FLAGS_TRUE]
+  # PARAM
+  local content
+  local url_name
+  local share_publicly
+
+  content=${1:?content, content in the url_name to be place on gs}
+  url_name=${2:?url_name, name presented on GS(${HTTP_BUNDLE_URL})}
+  share_publicly=${3:-${FLAGS_TRUE}}
+
+  # LOG
+  gs_verbose_info "Uploading content to GS(${GS_BUNDLE_URL}/${url_name})"
+
+  # create a temp file; put the content inside; and upload
+  local tmp_file
+  tmp_file=$(mktemp "/tmp/gs_upload_tmp.XXXXX")
+
+  echo "${content}" > "${tmp_file}"
+  gs_upload_file "${tmp_file}" "${url_name}" "${share_publicly}"
+  rm -f "${tmp_file}"
+
+  local gs_file_content
+  gs_file_content=$(gs_get_content "${url_name}" "${share_publicly}")
+
+  [[ "${gs_file_content}" = "${content}" ]] ||
+      die "Failed to update ${url_name} file"
+}
+
+gs_list_file() {  # args: NONE
+  # PARAMS
+
+  # LOGS
+  gs_verbose_info "Listing ${GS_BUNDLE_URL}"
+
+  # OPERATIONS
+  # format of output is
+  # 1034671  2014-12-18T23:38:43Z  gs://chrome os-localmirror/distfiles/chameleon-bundle/chameleond-0.0.2-r96.tar.gz
+  # 1035512  2014-12-19T23:38:25Z  gs://chromeos-localmirror/distfiles/chameleon-bundle/chameleond-0.0.2-r97.tar.gz
+  # 1036407  2015-01-06T23:10:03Z  gs://chromeos-localmirror/distfiles/chameleon-bundle/chameleond-0.0.2-r98.tar.gz
+  "${GSUTIL_CLI}" ls -l "${GS_BUNDLE_URL}"
+}
+
+# create a tag file on gs, tag file is a text file with bundle_name inside at the first line.
+create_tag_file_on_gs() {  # args: tag_name, bundle_name
+  # PARAMS
+  local tag_name
+  local bundle_name
+
+  tag_name=${1:?Missing tag_name, the path on GS(${HTTP_BUNDLE_URL})}
+  bundle_name=${2:?Missing bundle_name, the path on GS(${HTTP_BUNDLE_URL})}
+
+  # LOGS
+  gs_verbose_info "Creating a tag file(${tag_name}) on GS(${HTTP_BUNDLE_URL}/${tag_name})"
+
+  # OPERATIONS
+  gs_file_exists "${bundle_name}"
+
+  gs_upload_content "${bundle_name}" "${tag_name}" "${FLAGS_TRUE}"
+
+  # check if content on gs is correct.
+  gs_verbose_info "Verifying tag updates..."
+  local gs_file_content
+  gs_file_content=$(gs_get_content "${tag_name}")
+
+  [[ "${gs_file_content}" = "${bundle_name}" ]] ||
+      die "Failed to update ${tag_name} file"
+}
+
+# === END Utilities ===
+
+# === Supported Actions ===
+
+# Sets the BUNDLE_PATH argument if not exists.
+build() {
+
+  # build chameleon bundle and upload the bundle to the cloud.
+
+  warn "building chameleon requires cros_sdk, which means here might request for password."
+
+  set -o pipefail
+
+  emerge_log_file=$(mktemp /tmp/chameleon_emerge_log.XXX);
+
+  info "Building Chameleon:"
+  info "Build log at ${emerge_log_file}"
+
+  forget pushd "${CHAMELEON_DIR}";
+
+  run_in_chroot() {
+    cros_sdk --working-dir "." "$@"
+  }
+
+  log_to_file() {
+    tee -a "${emerge_log_file}"
+  }
+
+  verbose info "Checking if repository is clean" | log_to_file
+  if ! (run_in_chroot make check_git_tree_clean >> "${emerge_log_file}"); then
+    warn "Found uncommited changes, please commit changes you have before building, it makes the bundle in cloud more consistent."
+  fi
+
+  verbose info "Checking if arm cross compiler exists." | log_to_file
+  (run_in_chroot ls /build/arm-generic >> "${emerge_log_file}") ||
+    die "Cross compiler missing, please run \"setup_board --board arm-generic\""
+  verbose info "Arm cross compiler exists." | log_to_file
+
+  verbose info "Building..." | log_to_file
+  if ! (run_in_chroot sudo emerge chameleon >> "${emerge_log_file}"); then
+    die "Chameleon fails to build check ${emerge_log_file} for more info."
+  fi
+
+  local bundle_name
+  bundle_name=$(run_in_chroot ls -t /usr/share/chameleon-bundle/ | head -n 1);
+  UPLOAD_BUNDLE_PATH="${CHROMIUMOS_PATH}/chroot/usr/share/chameleon-bundle/${bundle_name}";
+
+  BUNDLE_PATH="${UPLOAD_BUNDLE_PATH}"
+
+  FLAGS_bundle_name=$(basename "${BUNDLE_PATH}")
+
+  info "Uploading bundle."
+  gs_upload_file "${BUNDLE_PATH}" "${FLAGS_bundle_name}"
+
+  info "Updating the tag(${FLAGS_tag}) in cloud"
+  set_tag "${FLAGS_tag}" "${FLAGS_bundle_name}"
+
+  info "Chameleon build complete: "
+  info "Build log at ${emerge_log_file}"
+  info "Bundle at ${BUNDLE_PATH}"
+
+  forget popd
+  set +o pipefail
+}
+
+release() {
+  # To release a tag to chameleon devices in the lab.
+
+  if doesnt_have "${FLAGS_hostnames}"; then
+    die "No hosts provided to release to, use \"--hostnames\" or \"-o\"."
+  fi
+  info "Releasing to hostnames ${FLAGS_hostnames}"
+
+  # retrieving the audio hostname backup file.
+  local audio_hostname_content
+  audio_hostname_content=$(mktemp "/tmp/${AUDIO_HOSTNAME_BACKUP}.XXXXX")
+
+  if ! gs_file_exists "${AUDIO_HOSTNAME_BACKUP}" "${FLAGS_FALSE}" "${FLAGS_TRUE}" ; then
+    echo "# This file contain the backup of the hostname of the chameleon in the lab which corresponds to the tags. Changing on this file manually does not make the particular hosts use the tag you expect, the file is just for reference purposes." > "${audio_hostname_content}"
+  else
+    gs_get_content "${AUDIO_HOSTNAME_BACKUP}" "${FLAGS_FALSE}" > "${audio_hostname_content}"
+  fi
+
+  # operating each hostnames
+  local failed_hostnames=""
+  for hostname in $(split_string "${FLAGS_hostnames}")
+  do
+    verbose info "Working on hostname(${hostname})"
+
+    if [[ "${hostname}" != *-chameleon ]]; then
+      warn "Hostname normally ends with *-chameleon."
+    fi
+
+    verbose info "Adding tag through SSH on hostname(${hostname})"
+    # add new tag into chameleon's /etc/default/chameleond_updater_tag
+    if ! ssh_clean "${hostname}" 'echo "'"${FLAGS_tag}"'" > /etc/default/chameleond_updater_tag'; then
+      warn "Failed to SSH into ${hostname} check log above."
+      failed_hostnames="${failed_hostnames},${hostname}"
+      continue
+    fi
+
+    if is_true "${FLAGS_update_hosts}"; then
+      verbose info "Triggering update on hostname(${hostname})"
+      if ! ssh_clean "${hostname}" '/etc/init.d/chameleon-updater start'; then
+        warn "Failed to immediately update the hostname(${hostname})"
+        failed_hostnames="${failed_hostnames},${hostname}"
+        continue
+      fi
+    fi
+
+    verbose info "Remove hostname(${hostname}) from the file(${audio_hostname_content})"
+    # remove HOSTNAME,OLD_TAG line in audio hostname backup file.
+    if ! sed -i "/${hostname}/d" "${audio_hostname_content}"; then
+      warn "Failed to remove ${hostname} from audio hostname file."
+      failed_hostnames="${failed_hostnames},${hostname}"
+      continue
+    fi
+
+    # add HOSTNAME,TAG into audio hostname backup file.
+    if [[ "${FLAGS_tag}" != "LATEST" ]]; then
+      verbose info "Adding hostname(${hostname}), tag(${FLAGS_tag}) to the file(${audio_hostname_content})"
+      if ! echo "${hostname},${FLAGS_tag}" >> "${audio_hostname_content}"; then
+        warn "Failed to add ${hostname} into audio hostname file. "
+        failed_hostnames="${failed_hostnames},${hostname}"
+        continue
+      fi
+    fi
+
+    verbose info "Done hostname(${hostname})"
+  done
+
+  failed_hostnames="${failed_hostnames:1}" # ignore first comma
+
+  if have "${failed_hostnames}"; then
+    warn "Failed to update these hosts: ${failed_hostnames}"
+  fi
+
+  gs_upload_file "${audio_hostname_content}" "${AUDIO_HOSTNAME_BACKUP}" "${FLAGS_FALSE}"
+
+  rm "${audio_hostname_content}"
+}
+
+revert() {
+  warn "Revert is not implemented, use combination of \"list_bundles\", \"get_tag\" and \"set_tag\" to revert the tag to previous bundles."
+  warn "And use \"release\" to selectively release the tag to the devices. Then, wait for the next reboot cycle for update to happens or use \"-u\" flag to release to them immediately."
+  warn "\"list_bundles\" sorts the bundles chronologically."
+  warn "\"get_tag\" shows which bundle the tag is currently using."
+  warn "\"set_tag\" allows tag to use particular bundle version."
+}
+
+list_hostnames() {
+  gs_get_content "${AUDIO_HOSTNAME_BACKUP}" "${FLAGS_FALSE}"
+}
+
+list_bundles() {
+  gs_list_file | grep "chameleond" |
+    column -t -o "," | cut -d "," -f 2-3 |
+    sort -h | grep -Eo "chameleond.*"
+}
+
+get_tag() {
+  have "${FLAGS_tag}" ||
+    die "Required flags --tag"
+
+  gs_file_exists "${FLAGS_tag}"
+
+  gs_get_content "${FLAGS_tag}"
+}
+
+set_tag() {
+  have "${FLAGS_tag}" ||
+    die "Required flags --tag"
+
+  have "${FLAGS_bundle_name}" ||
+    die "Required flags --bundle_name ; Use action \"list_bundles\" for available bundle_name."
+
+  info "Updating the tag(${FLAGS_tag}) in cloud with bundle(${FLAGS_bundle_name})"
+  create_tag_file_on_gs "${FLAGS_tag}" "${FLAGS_bundle_name}"
+
+  info "The tag(${FLAGS_tag}) is updated to bundle(${FLAGS_bundle_name})"
+}
+# === END Supported Actions ===
+
+
+# === Checking arguments ===
+
+# Check if action exists
+have "${1}" ||
+  die "Missing ACTION argument, only accepts: ${SUPPORTED_ACTIONS_STR}"
+
+action=${1}
+
+# Check if action is supported.
+has "${action}" "${SUPPORTED_ACTIONS[@]}" ||
+  die "The action=${action} is not supported, only accepts: ${SUPPORTED_ACTIONS_STR}"
+
+
+# === END Checking arguments ===
+
+
+verbose info "Running action=${action}"
+verbose info "Arguments: (0 means success without error/true in bash)"
+verbose info "bundle_name=${FLAGS_bundle_name}"
+verbose info "hostnames=${FLAGS_hostnames}"
+verbose info "tag=${FLAGS_tag}"
+verbose info "verbose=${FLAGS_verbose}"
+
+${action} || die "Action ${action} failed; run again with --verbose for more information."
+
+verbose command_completed
