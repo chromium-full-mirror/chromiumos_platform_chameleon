@@ -251,6 +251,7 @@ END
         [ -f "${COMMITS_LOG}" ] && cp "${COMMITS_LOG}" "${TMP_COMMITS_LOG}"
         echo "${commit_hash} ${now}" >> "${TMP_COMMITS_LOG}"
         mv -f "${TMP_COMMITS_LOG}" "${COMMITS_LOG}"
+        chmod a+r "${COMMITS_LOG}"
     fi
 }
 
