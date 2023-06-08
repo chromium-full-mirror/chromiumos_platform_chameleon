@@ -545,11 +545,7 @@ class ChameleondDriver(ChameleondInterface):
     """
     port = self.PORTS[port_id]
     if port.has_video:
-      # TODO: disconnect edid
-      port.edid = None
-      # TODO: disconnect ddc
-      # TODO: Perhaps just videomux away? if we can figure out a way
-      #    self.videomux_service.all_off()
+      port.edid = None # forget the port's edid
       self.UnplugHPD(port_id)
 
   def UnplugHPD(self, port_id):
