@@ -18,6 +18,7 @@ import pw_rpc.callback_client.errors
 import re
 import serial
 import subprocess
+import threading
 import time
 import xmlrpc.client
 
@@ -622,6 +623,35 @@ class ChameleondDriver(ChameleondInterface):
     op = next(ops)
     logging.info(f"Fire last {op.__name__}.")
     op(port_id)
+
+  def ScheduleHpdToggle(self, port_id, delay_ms, end_level=1):
+    """Performs a HPD pulse, but schedules the last edge after a delay.
+
+    This returns control to the caller after the first edge and allows it to
+    do other stuff. Example: if a chromebook DUT is the caller, it could go
+    to sleep and this Scheduled Toggle like a wakeup alarm.
+
+    Warning: expect >100ms error for the delay.
+
+    Args:
+      port_id: The ID of the video input port.
+      delay_ms: Delay in milli-second for the pulse width.
+      end_level: Whether the last toggle (after the delay) should be a
+                 rising edge/Plug (=1) or a falling edge/Unplug (=0).
+    """
+    if hasattr(self, "_scheduled_hpd") and self._scheduled_hpd.is_alive():
+      raise ChameleondError("There's another HPD scheduled.")
+
+    ops = [self.UnplugHPD, self.Plug]
+    first_edge = ops[int(not end_level)]
+    last_edge = ops[int(end_level)]
+
+    def toggle_last():
+      last_edge(port_id)
+      logging.info(f"just ran scheduled {last_edge.__name__} after {delay_ms}ms")
+    self._scheduled_hpd = threading.Timer(delay_ms / 1000, toggle_last)
+    first_edge(port_id)
+    self._scheduled_hpd.start()
 
   def WaitVideoInputStable(self, port_id, timeout=None):
     """Waits the video input stable or timeout.
