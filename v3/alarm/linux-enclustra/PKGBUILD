@@ -8,10 +8,10 @@ pkgbase=linux-enclustra
 _kernelname=${pkgbase#linux}
 _desc="ARMv7 Enclustra"
 pkgver=5.14
-pkgrel=12 # This needs to be incremented with every change to this file
-_commit=58a26311720fd30786db91eee918085157f2c44e # CHROMIUM: media: chv3-fb: Move zero resolution check to queue_setup
+pkgrel=18 # This needs to be incremented with every change to this file
+_commit=5b302a664e52cef871c5e4b42a35d00821275680 # CHROMIUM: Apply framebuffer reset workaround
 arch=('armv7h')
-url="http://www.kernel.org/"
+url="https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chameleon-5.14"
 license=('GPL2')
 makedepends=('xmlto' 'docbook-xsl' 'kmod' 'inetutils' 'bc' 'git' 'uboot-tools' 'dtc')
 options=('!strip')
@@ -19,7 +19,7 @@ source=("https://chromium.googlesource.com/chromiumos/third_party/kernel/+archiv
         'config'
         '60-linux.hook')
 sha256sums=('SKIP' # gerrit produces non reproducible archives
-            'a50c04b1b344dbe29349ef012ee08590cce487ba830c65bdf6aef3bdeb6b1484'
+            'bf59528325eedaa15e94a4fa632f42eefad885265c3db864b6b24cb8a8fad0bf'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21')
 
 prepare() {

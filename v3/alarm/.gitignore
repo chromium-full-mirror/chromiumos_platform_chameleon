@@ -1,5 +1,6 @@
 # commit hash downloaded from gerrit
 *.tar.gz
+*.tar.gz.part
 
 # build files
 src/
