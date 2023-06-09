@@ -18,6 +18,7 @@ import pw_rpc.callback_client.errors
 import re
 import serial
 import subprocess
+import tempfile
 import threading
 import time
 import xmlrpc.client
@@ -69,29 +70,56 @@ def _check_output(args, encoding="utf-8", **kwargs):
     # let's crop the whitespace since it's a text output we want to parse
     return out.strip()
 
+@dataclass
 class V4L:
-  def __init__(self, path):
-    self.path = path
+  path: str
+  pixelformat: str = "RX24"
 
-  def get_resolution(self):
-    list_formats = _check_output(
-      ["v4l2-ctl", "--list-formats-ext", "-d", self.path])
+  def __post_init__(self):
+    # make sure we support self.pixelformat
+    list_formats_ext = _check_output([
+      "v4l2-ctl",
+      "--device", self.path,
+      "--list-formats-ext",
+    ])
+    assert f"'{self.pixelformat}'" in list_formats_ext
+    self.fmt_video = f"pixelformat={self.pixelformat}"
 
-    # last word will have the resolution in "widthxheight" format
-    return tuple(int(d) for d in list_formats.split()[-1].split("x"))
+  INFO_RE = re.compile("Width/Height\s*: (?P<width>\d+)/(?P<height>\d+).*Size Image\s*: (?P<size>\d+)", re.DOTALL)
+  @classmethod
+  def parse_frame_info(cls, info):
+    if not (match := cls.INFO_RE.search(info)):
+      raise ChameleondError(f"INFO_RE can't parse:", info)
+
+    frame_info_dict = match.groupdict()
+    for field in ("width", "height", "size"):
+      frame_info_dict[field] = int(frame_info_dict[field])
+
+    return frame_info_dict
+
+  def get_frame_size(self):
+    info = _check_output([
+      "v4l2-ctl",
+      "--device", self.path,
+      "--set-fmt-video", self.fmt_video,
+      "--all",
+    ])
+    return self.parse_frame_info(info)
 
   def get_frame(self, count=1, timeout=5):
-    return _check_output(
-      [
+    buf = tempfile.NamedTemporaryFile(prefix="chameleond_", suffix=".fb")
+    info = _check_output([
         "v4l2-ctl",
+        "--device", self.path,
+        "--set-fmt-video", self.fmt_video,
         "--stream-mmap",
         "--stream-count", str(count),
-        "--device", self.path,
-        "--stream-to", "-"
+        "--stream-to", buf.name,
+        "--all",
       ],
-      encoding=None, # these are raw bytes
       timeout=timeout,
     )
+    return buf, self.parse_frame_info(info)
 
   def __repr__(self):
     return f"{self.__class__.__name__}({self.path!r})"
@@ -517,8 +545,11 @@ class ChameleondDriver(ChameleondInterface):
         for other_port_id, other_port in enumerate(self.PORTS):
           if port is other_port:
             continue
-          if other_port.is_ite and self.IsPlugged(other_port_id):
-              raise ChameleondError(f"Port {other_port} already connected, don't want to disconnect it.")
+          if self.IsPlugged(other_port_id):
+            if other_port.is_ite:
+              raise ChameleondError(f"Other {other_port} already connected to ITE path.")
+            if port.external_name == other_port.external_name:
+              raise ChameleondError(f"Other path {other_port} connected to the same external port.")
 
       # set routing via the EC
       self.videomux_service.set(
@@ -692,16 +723,17 @@ class ChameleondDriver(ChameleondInterface):
       finally:
         logging.disable(logging.NOTSET)
 
-    logging.info(f"EC says VideoStable, what about V4L? {end_time - time.time():.2f} seconds left")
+      logging.info(f"EC says VideoStable, what about V4L? {end_time - time.time():.2f} seconds left")
 
     # Make sure v4l can give us at least 1 good frame
-    buf = None
+    frame_size = 0
     try:
-      while not buf:
+      while not frame_size:
         v4l_frame_timeout = None
         if end_time != float("inf"):
           v4l_frame_timeout = end_time - time.time()
-        buf = port.video_dev.get_frame(timeout=v4l_frame_timeout)
+        _buf, frame_info = port.video_dev.get_frame(timeout=v4l_frame_timeout)
+        frame_size = frame_info["size"]
     except subprocess.TimeoutExpired:
       logging.warning("WaitVideoInputStable timed out at V4L")
       return False
@@ -771,36 +803,10 @@ class ChameleondDriver(ChameleondInterface):
     """
     port = self.PORTS[port_id]
     assert port.has_video
-    resolution = port.video_dev.get_resolution()
-    return resolution
+    r = port.video_dev.get_frame_size()
+    return (r["width"], r["height"])
 
-  def _AutoFillArea(self, port_id, x, y, width, height):
-    """Verifies the area argument correctness and fills the default values.
-
-    It keeps x=None and y=None if all of the x, y, width, and height are None.
-    That hints FPGA to use a full-screen capture, not a cropped-sccren capture.
-
-    Args:
-      port_id: The ID of the video input port.
-      x: The X position of the top-left corner.
-      y: The Y position of the top-left corner.
-      width: The width of the area.
-      height: The height of the area.
-
-    Returns:
-      A tuple of (x, y, width, height)
-
-    Raises:
-      ChameleondError if the area is not specified correctly.
-    """
-    if (x, y, width, height) == (None, ) * 4:
-      return (None, None) + self.DetectResolution(port_id)
-    elif (x, y) == (None, ) * 2 or None not in (x, y, width, height):
-      return (x, y, width, height)
-    else:
-      raise ChameleondError("Some of area arguments are not specified.")
-
-  def CaptureVideo(self, port_id, total_frame, x=None, y=None, width=None,
+  def CaptureVideo(self, port_id, frame_count, x=None, y=None, width=None,
                    height=None):
     """Captures the video stream on the given video input to the buffer.
 
@@ -823,29 +829,44 @@ class ChameleondDriver(ChameleondInterface):
       height: The height of the area of crop.
     """
 
-    x, y, width, height = self._AutoFillArea(port_id, x, y, width, height)
+    if (x, y, width, height) != (None, ) * 4:
+      raise NotImplementedError("frame cropping")
 
-    dev = self.PORTS[port_id].video_dev
+    port = self.PORTS[port_id]
+    dev = port.video_dev
+    if port.is_ite:
+      ec_frame_info = self._GetITEVideoParams(port)
+      # TODO: provide different bpp if needed to v4l
+
     self.frame_buffer.clear()
 
-    # TODO(amstan): pass total_frame to v4l2_ctl instead of a loop
-    for i in range(total_frame):
-      raw_frame = numpy.frombuffer(dev.get_frame(), dtype=numpy.uint8)
+    buf, v4l_frame_info = dev.get_frame(frame_count)
+    if port.is_ite:
+      assert ec_frame_info["hactive"] == v4l_frame_info["width"] and \
+              ec_frame_info["vactive"] == v4l_frame_info["height"], \
+              "Resolution directly from EC should match what we get via FPGA + V4L"
 
-      # fully interpret dimensions, format is BGR32
-      frame = raw_frame.reshape(height, width, 4)
+    raw_buffer = numpy.memmap(buf.name, dtype=numpy.uint8)
+    assert len(raw_buffer), "We should have gotten something from V4L"
 
-      # convert to RGB24
-      frame = frame[...,(2,1,0)]
+    # fully interpret dimensions
+    frames = raw_buffer.reshape(
+      frame_count,
+      v4l_frame_info["height"], v4l_frame_info["width"],
+      -1, # let channels get autodetected for now
+    )
 
-      # TODO: Make use of x, y, width, height to crop in software
+    # convert to RGB24 if needed
+    frames = frames[...,(2,1,0)]
 
+    # TODO: Make use of x, y, width, height to crop in software
+
+    for i, frame in enumerate(frames):
       self.frame_buffer.append(frame)
 
+      if i==0: logging.debug(f"Captured {frame.size=} {frame.shape=}")
       peek = frame.flatten()[:20].tobytes().hex()
-      logging.debug(f"frame[{i}] {frame.size=} {frame.shape=} {peek}...")
-
-      assert frame.size, "We should have gotten something from V4L"
+      logging.debug(f"frames[{i}] {peek}...")
 
   def GetCapturedResolution(self):
     """Gets the resolution of the last captured frame.
@@ -894,6 +915,37 @@ class ChameleondDriver(ChameleondInterface):
     self.CaptureVideo(port_id, self._DEFAULT_FRAME_LIMIT, x, y, width, height)
     return self.ReadCapturedFrame(self._DEFAULT_FRAME_INDEX)
 
+  def _GetITEVideoParams(self, port):
+    assert port.has_video
+    assert port.is_ite
+
+    p = self.it68051_service.get_video_params()
+
+    assert p.v_total == sum((p.v_front_porch, p.v_sync_width, p.v_back_porch, p.v_active))
+    assert p.h_total == sum((p.h_front_porch, p.h_sync_width, p.h_back_porch, p.h_active))
+
+    return {
+      'clock': p.pclk / 1e3, # Convert kHz to MHz
+
+      'htotal': p.h_total,
+      'hfront_porch': p.h_front_porch,
+      'hsync_width': p.h_sync_width,
+      'hback_porch': p.h_back_porch,
+      'hactive': p.h_active,
+      'hsync_polarity': p.h_sync_polarity_is_positive,
+
+      'vtotal': p.v_total,
+      'vfront_porch': p.v_front_porch,
+      'vsync_width': p.v_sync_width,
+      'vback_porch': p.v_back_porch,
+      'vactive': p.v_active,
+      'vsync_polarity': p.v_sync_polarity_is_positive,
+
+      'frame_rate': p.frame_rate,
+      'interlaced': not p.is_progressive,
+      'bpc': 8, # EC + ITE are hardcoded to 8, 10 might be possible
+    }
+
   def GetVideoParams(self, port_id):
     """Gets video parameters.
 
@@ -904,38 +956,12 @@ class ChameleondDriver(ChameleondInterface):
       A dict containing video parameters.
     """
     port = self.PORTS[port_id]
-    assert port.has_video
 
     if port.is_ite:
-      p = self.it68051_service.get_video_params()
-
-      assert (p.h_active, p.v_active) == self.DetectResolution(port_id), \
-             "Resolution directly from EC should match what we get via FPGA + V4L"
-
-      assert p.v_total == sum((p.v_front_porch, p.v_sync_width, p.v_back_porch, p.v_active))
-      assert p.h_total == sum((p.h_front_porch, p.h_sync_width, p.h_back_porch, p.h_active))
-
-      ret = {
-        'clock': p.pclk / 1e3, # Convert kHz to MHz
-
-        'htotal': p.h_total,
-        'hfront_porch': p.h_front_porch,
-        'hsync_width': p.h_sync_width,
-        'hback_porch': p.h_back_porch,
-        'hactive': p.h_active,
-        'hsync_polarity': p.h_sync_polarity_is_positive,
-
-        'vtotal': p.v_total,
-        'vfront_porch': p.v_front_porch,
-        'vsync_width': p.v_sync_width,
-        'vback_porch': p.v_back_porch,
-        'vactive': p.v_active,
-        'vsync_polarity': p.v_sync_polarity_is_positive,
-
-        'frame_rate': p.frame_rate,
-        'interlaced': not p.is_progressive,
-        'bpc': 8, # EC + ITE are hardcoded to 8, 10 might be possible
-      }
+      ec_reply = self._GetITEVideoParams()
+      assert (ec_reply["hactive"], ec_reply["vactive"]) == self.DetectResolution(port_id), \
+              "Resolution directly from EC should match what we get via FPGA + V4L"
+      return ec_reply
     else:
       raise NotImplementedError("Need to ask the FPGA Logic")
 
