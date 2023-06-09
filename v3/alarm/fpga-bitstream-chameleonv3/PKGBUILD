@@ -3,37 +3,36 @@
 
 buildarch=4
 
-_version=v3-82-g1ef838f4
+_version=v3-184-gcf50534
 pkgname=fpga-bitstream-chameleonv3
 pkgver=$(echo ${_version}|sed "s/-/_/g")
 pkgrel=1
 pkgdesc="FPGA Bitstream for Chameleon v3"
 arch=('armv7h')
-url='https://chrome-internal.googlesource.com/chromeos/platform/video-chameleon'
-license=('Custom')
+url='https://chromium.googlesource.com/chromiumos/platform/chameleon/+/refs/heads/main/v3/fpga/'
+license=('BSD')
 provides=('fpga-bitstream')
-makedepends=('uboot-tools')
 _fpga_types=(
   '270-2'
-  '270-3'
   '480-2'
 )
-source=('fpga.its')
-for type in "${_fpga_types[@]}"; do source+=("${_version}-${type}.rbf"); done
-sha256sums=('e42cf2dddc07c837a42302c8143ab5c80abe49f2de8714c083244d6ff30404fd'
-            'a8df4f93a20ae3c3ff5a19a78e4cece634ab87cf40d93c110748fa44919d85f3'
-            '64550128e6915690444e2defb525d77c73a3590d01df4cbfb5a6ac439c0689ec'
-            '8e1706f47176fd3fe8fd0a4f10ec2d3a3d97c0e2ab7f7f11144c94f85500ae50')
+for type in "${_fpga_types[@]}"; do
+  source+=("https://storage.googleapis.com/chromeos-hardware-tools-chameleon-v3/intermediate/fpga/${_version}-${type}.itb");
+done
+sha256sums=('a92411f0ef621940d609dfa114b8f47c93a233f6bb63e02896c58c674fb42cbd'
+            'f19863ed55e9925948aaecfc9660a98aeae623d88cdcf954afe0aeec51a3d980')
 
 build() {
-  for type in "${_fpga_types[@]}"; do
-    sed "s/RBF/${_version}-${type}.rbf/" < fpga.its > ${_version}-${type}.its
-    mkimage -E -f ${_version}-${type}.its fpga-${_version}-${type}.itb
+  # rbf->itb already done by the fpga synthesis scripts
+
+  # rename .itb files to have fpga- in the name
+  for file in *.itb; do
+    mv $file fpga-$file
   done
 }
 
 package() {
-  install *.itb -Dt "${pkgdir}"/boot/
+  install fpga-*.itb -Dt "${pkgdir}"/boot/
 
   # Make links to the latest version so u-boot doesn't need to know the
   # particular version numbered filename but can still get to it.
