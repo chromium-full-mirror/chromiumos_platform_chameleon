@@ -63,6 +63,7 @@ class FastPairService(Service):
         self.add_characteristic(KeyBasedPairingChrc(bus, 1, self))
         self.add_characteristic(PasskeyChrc(bus, 2, self))
         self.add_characteristic(AccountKeyChrc(bus, 3, self))
+        self.add_characteristic(AdditionalDataChrc(bus, 4, self))
 
         self._device = device
         self._account_keys = []
@@ -470,6 +471,51 @@ class PasskeyChrc(Characteristic):
                 GATT_CHRC_IFACE, {'Value': [dbus.Byte(b) for b in encrypted_response]},
                 [])
 
+class AdditionalDataChrc(Characteristic):
+    """Additional Data Characteristic"""
+
+    CHRC_UUID = 'FE2C1237-8366-4814-8EB0-01DE32100BEA'
+
+    # This Additional Data Characteristic is defined in the spec here:
+    # https://developers.google.com/nearby/fast-pair/specifications/characteristics#AdditionalData
+    # The implementation is currently a mock that supports 'write' and 'notify' but is a no-op
+    # for both.
+    # TODO(b/286997038): Allow the Provider implementation to support device name changes via this
+    # Additional Data characteristic.
+
+    def __init__(self, bus, index, service):
+        Characteristic.__init__(self, bus, index, self.CHRC_UUID,
+                                                        ['write', 'notify'], service)
+
+        self._notifying = False
+
+    def StartNotify(self):
+        """Called by dbus - requests notifications"""
+
+        logging.info('AdditionalDataChrc: StartNotify')
+        if self._notifying:
+            return
+
+        self._notifying = True
+
+    def StopNotify(self):
+        """Called by dbus - requests stop to notifications"""
+
+        logging.info('AdditionalDataChrc: StopNotify')
+        if not self._notifying:
+            return
+
+        self._notifying = False
+
+    def WriteValue(self, value, _):
+        """Called by dbus - writes a value to this characteristic"""
+
+        logging.info('AdditionalDataChrc: WriteValue: %s', b64encode(bytes(value)))
+
+        # Notify response.
+        self.PropertiesChanged(
+                GATT_CHRC_IFACE, {'Value': []},
+                [])
 
 class AccountKeyChrc(Characteristic):
     """Account Key Characteristic"""
