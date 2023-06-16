@@ -76,7 +76,7 @@ def _check_output(args, encoding="utf-8", **kwargs):
 @dataclass
 class V4L:
   path: str
-  pixelformat: str = "RX24"
+  pixelformat: str
 
   def __post_init__(self):
     # make sure we support self.pixelformat
@@ -139,6 +139,36 @@ class V4L:
         info = None
     return buf, info
 
+  def clear_edid(self):
+    _check_output([
+      "v4l2-ctl",
+      "--device", self.path,
+      "--clear-edid"
+    ])
+
+  def get_edid(self):
+    try:
+      return _check_output([
+        "v4l2-ctl",
+        "--device", self.path,
+        "--get-edid", "format=raw"
+      ], encoding=None)
+    except subprocess.CalledProcessError:
+      return b""
+
+  def set_edid(self, new_edid):
+    edid_file = tempfile.NamedTemporaryFile(prefix="chameleond_", suffix=".edid", mode="wb")
+    edid_file.write(new_edid)
+    edid_file.flush()
+    cmd = [
+      "v4l2-ctl",
+      "--device", self.path,
+      "--set-edid", f"file={edid_file.name},format=raw"
+    ]
+    stderr = _check_output(cmd, encoding=None, stderr=subprocess.STDOUT)
+    if stderr:
+      raise ChameleondError(stderr)
+
   def __repr__(self):
     return f"{self.__class__.__name__}({self.path!r})"
 
@@ -177,16 +207,14 @@ class ChameleondDriver(ChameleondInterface):
 
       self.edid = None
 
-  chameleon_parallel_framebuffer = V4L("/dev/video0")
+  ite_v4l_dev = V4L("/dev/v4l/by-path/platform-c0060500.video-video-index0", pixelformat="RX24")
   PORTS = [
-    #Port("DP1",        video_dev=V4L("/dev/video1")),
-    #Port("DP2",        video_dev=V4L("/dev/video2")),
-    #Port("HDMI1",      video_dev=V4L("/dev/video3")),
-    #Port("HDMI2",      video_dev=V4L("/dev/video4")),
-    Port("ITE_DP1",    video_dev=chameleon_parallel_framebuffer),
-    Port("ITE_DP2",    video_dev=chameleon_parallel_framebuffer),
-    Port("ITE_HDMI1",  video_dev=chameleon_parallel_framebuffer),
-    Port("ITE_HDMI2",  video_dev=chameleon_parallel_framebuffer),
+    Port("DP1",        video_dev=V4L("/dev/v4l/by-path/platform-c0060a00.video-video-index0", pixelformat="RGB3")), # SST
+    Port("DP2",        video_dev=V4L("/dev/v4l/by-path/platform-c0060600.video-video-index0", pixelformat="RGB3")), # MST
+    Port("ITE_DP1",    video_dev=ite_v4l_dev),
+    Port("ITE_DP2",    video_dev=ite_v4l_dev),
+    Port("ITE_HDMI1",  video_dev=ite_v4l_dev),
+    Port("ITE_HDMI2",  video_dev=ite_v4l_dev),
     #PORT("LINE_IN",   audio_dev=), # SSM2603
     #PORT("AUDIO_OUT", audio_dev=), # SSM2603
     #PORT("MIC",       audio_dev=), # SSM2603
@@ -216,6 +244,8 @@ class ChameleondDriver(ChameleondInterface):
 
     logging.info("Versions:\n" +
                   pprint.pformat(self.GetVersions(), sort_dicts=False))
+
+    self._reset_in_fpga_decoders()
 
   def GetVersions(self):
     """Get versions for various components of Chameleon.
@@ -290,11 +320,21 @@ class ChameleondDriver(ChameleondInterface):
 
     return versions
 
+  def _reset_in_fpga_decoders(self):
+    """Reset the in-fpga decoder states."""
+
+    # Disconect by default the in-fpga decoder HPDs
+    for port_id, port in enumerate(self.PORTS):
+      if port.has_video and not port.is_ite:
+        self.Unplug(port_id)
+
   def Reset(self):
     """Resets Chameleon board."""
     # Let's reset the EC!
     _check_output("sudo gpioset -t0 -d open-drain --by-name STM32_RST_L=0", shell=True)
     _check_output("sudo gpioset -t0 -d open-drain --by-name STM32_RST_L=1", shell=True)
+
+    self._reset_in_fpga_decoders()
 
     # Block until we can talk to it
     for attempt in range(5):
@@ -496,6 +536,8 @@ class ChameleondDriver(ChameleondInterface):
       self._send_cached_edid_to_hardware(port)
       if port.is_ite:
         logging.warning("Might be too late to send EDID to ITE chip after port's been plugged.")
+      else:
+        logging.warning("New EDID will be used after next Plug() or FireHpdPulse()")
 
   def _send_cached_edid_to_hardware(self, port):
     """Actually send EDID cached by python to the hardware.
@@ -509,13 +551,15 @@ class ChameleondDriver(ChameleondInterface):
     Args:
       port: Port() instance
     """
-    if port.edid is None:
-      logging.warning(f"We're not sure what EDID to use for {port}, leaving what the hardware has (either default or previous).")
-      return
     if port.is_ite:
+      if port.edid is None:
+        logging.warning(f"We're not sure what EDID to use for {port}, leaving what the hardware has (either default or previous).")
+        return
       self.it68051_service.write_edid(raw_edid=port.edid)
-    else:
-      raise NotImplementedError("Need to tell the FPGA Logic")
+    else: # in-fpga decoder
+      if port.edid is None:
+        raise ChameleondError(f"{port} needs to have an EDID applied first before plugging.")
+      port.video_dev.set_edid(port.edid)
 
   def IsPlugged(self, port_id):
     """Returns true if the port is emulated as plugged.
@@ -545,6 +589,9 @@ class ChameleondDriver(ChameleondInterface):
         # make sure we're emitting hpd
         if self.it68051_service.get_hpd(port=port.ite_port).on_off == 0:
           return False
+      else: # in-fpga decoder
+        # HPD is active when V4L has an EDID set
+        return bool(port.video_dev.get_edid())
 
     # If nothing caught yet, it's probably connected
     return True
@@ -558,15 +605,14 @@ class ChameleondDriver(ChameleondInterface):
     port = self.PORTS[port_id]
 
     if port.has_video:
-      if port.is_ite:
-        for other_port_id, other_port in enumerate(self.PORTS):
-          if port is other_port:
-            continue
-          if self.IsPlugged(other_port_id):
-            if other_port.is_ite:
-              raise ChameleondError(f"Other {other_port} already connected to ITE path.")
-            if port.external_name == other_port.external_name:
-              raise ChameleondError(f"Other path {other_port} connected to the same external port.")
+      for other_port_id, other_port in enumerate(self.PORTS):
+        if port is other_port:
+          continue
+        if self.IsPlugged(other_port_id):
+          if port.is_ite and other_port.is_ite:
+            raise ChameleondError(f"Other {other_port} already connected to ITE path.")
+          if port.external_name == other_port.external_name:
+            raise ChameleondError(f"Other path {other_port} connected to the same external port.")
 
       # set routing via the EC
       self.videomux_service.set(
@@ -575,14 +621,16 @@ class ChameleondDriver(ChameleondInterface):
       if port.is_ite:
         self.it68051_service.select_port(port=port.ite_port)
       else:
-        raise NotImplementedError("Need to tell the FPGA Logic")
+        # fpga decoder routing is always hardcoded into separate v4l devices
+        pass # so no need to mux at this layer
 
       self._send_cached_edid_to_hardware(port)
 
       if port.is_ite:
         self.it68051_service.set_hpd(port=port.ite_port, on_off=1)
       else:
-        raise NotImplementedError("Need to tell the FPGA Logic")
+        # HPD was already asserted by just setting the edid a little up
+        assert port.video_dev.get_edid(), f"by now {port} should have had an EDID set"
 
     # If we switch v4l frameworks, perhaps re-open the device here
 
@@ -608,7 +656,8 @@ class ChameleondDriver(ChameleondInterface):
     if port.is_ite:
       self.it68051_service.set_hpd(port=port.ite_port, on_off=0)
     else:
-      raise NotImplementedError("Need to tell the FPGA Logic")
+      # Clearing EDID deasserts HPD
+      port.video_dev.clear_edid()
 
   def FireHpdPulse(self, port_id,
                    deassert_interval_usec, assert_interval_usec=None,
@@ -873,8 +922,9 @@ class ChameleondDriver(ChameleondInterface):
       -1, # let channels get autodetected for now
     )
 
-    # convert to RGB24 if needed
-    frames = frames[...,(2,1,0)]
+    if dev.pixelformat == "RX24": # TODO(b/287467394): remove this
+      # convert to RGB3 if needed
+      frames = frames[...,(2,1,0)]
 
     # TODO: Make use of x, y, width, height to crop in software
 
@@ -980,7 +1030,7 @@ class ChameleondDriver(ChameleondInterface):
               "Resolution directly from EC should match what we get via FPGA + V4L"
       return ec_reply
     else:
-      raise NotImplementedError("Need to ask the FPGA Logic")
+      raise NotImplementedError("Need to ask the FPGA Logic for VideoParams")
 
     # *_offset is weird in the interface.py, defined as:
     # ```offset from start edge to active edge```
