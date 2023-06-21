@@ -1,0 +1,17 @@
+{ "" "" "" "ap_gpio_iobuf_0: Used altera_gpio 21.0.0 (instead of 20.0.0)" {  } {  } 0 0 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*arria10_hps_0: Cannot meet requested frequency of 1000 MHz for MPU base (C0). We can acheive 1000.405 MHz (PLL counter set to 1.0 )" {  } {  } 0 0 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "ap: \"No matching role found for arria10_hps_0:*A*USER*\"" {  } {  } 0 0 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Verilog HDL warning at ap_altera_arria10_interface_generator_140_4ftjihq.sv(*): identifier intermediate is used before its declaration" {  } {  } 0 16749 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Verilog HDL warning at hps_a10_lib.v(*): parameter 'WIDTH' declared inside generate block shall be treated as localparam" {  } {  } 0 17498 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 21442 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 13461 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 13469 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 16735 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 12620 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 21610 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 127003 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Verilog HDL warning at hps_a10_lib.v(1172): parameter 'WIDTH' declared inside generate block shall be treated as localparam" {  } {  } 0 17498 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 21442 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 16749 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 13469 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "*" {  } {  } 0 12620 "" 0 0 "Design Software" 0 -1 0 ""}
