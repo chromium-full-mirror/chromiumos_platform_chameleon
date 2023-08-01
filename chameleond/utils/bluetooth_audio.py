@@ -260,6 +260,30 @@ class BluetoothAudio(BluezPeripheral):
     return (PERIPHERAL_DEVICE_CLASS[PeripheralKit.BLUETOOTH_AUDIO] &
             CLASS_OF_SERVICE_MASK)
 
+  def GetCapabilities(self):
+    """Get the capabilities of the emulated device.
+
+    Returns:
+      A dictionary from the parent plus the additional capabilities
+      provided by the emulated audio device.
+    """
+    caps = super().GetCapabilities()
+    # An example pipewire version looks like
+    #   /usr/bin/pipewire
+    #   Compiled with libpipewire 0.3.70
+    #   Linked with libpipewire 0.3.70
+    ver = SystemTools.OutputAsPi(self.PIPEWIRE, '--version',
+                                 use_local_version=False)
+    if ver:
+      for line in ver.splitlines():
+        elements = line.split()
+        if 'libpipewire' in elements:
+          # The capability keys are all upper case.
+          caps[self.PIPEWIRE.upper()] = elements[-1]
+          break
+    logging.info('%s capabilities: %s', self.GetAdvertisedName(), caps)
+    return caps
+
   def _PollForCondition(self, condition, timeout=10, sleep_interval=1,
                         desc=None):
     try:

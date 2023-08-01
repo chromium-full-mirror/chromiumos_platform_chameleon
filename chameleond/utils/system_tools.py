@@ -51,6 +51,7 @@ class _SystemTools(object):
       'pactl.local': '/usr/local/bin/pactl',
       'pactl': '/usr/bin/pactl',
       'pgrep': '/usr/bin/pgrep',
+      'pipewire': '/usr/bin/pipewire',
       'pixeldump': '/usr/bin/pixeldump',
       'playerctl':'/usr/bin/playerctl',
       'printer': '/usr/bin/printer',
