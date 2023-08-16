@@ -620,9 +620,12 @@ class BluetoothAudio(BluezPeripheral):
     self._record = SystemTools.RunInSubprocessAsPi(
         'pacat', args, self._UsingLocalVersion(audio_profile))
 
-    # The process needs some time to start.
-    time.sleep(1)
-
+    # Polling until the pacat process fully launches.
+    # Otherwise, we may hit the error:
+    #   FileNotFoundError: [Errno 2] No such file or directory:
+    #                      '/tmp/audio/a2dp_recorded_by_peer.raw'
+    self._PollForCondition(lambda: os.path.isfile(file_path),
+                           desc=f'{file_path} created')
     self._recorded_file = open(file_path, 'rb')
     return True
 
