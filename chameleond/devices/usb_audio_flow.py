@@ -15,12 +15,12 @@ import subprocess
 import tempfile
 
 from . import chameleon_common  # pylint: disable=W0611, C0411
+from chameleond.devices import analog_audio_testbed
 from chameleond.devices import chameleon_device
 from chameleond.utils import audio
 from chameleond.utils import serial_utils
 from chameleond.utils import system_tools
 from six.moves import range
-
 
 class USBAudioFlowError(Exception):
   """Exception raised when there is any error in USBAudioFlow."""
@@ -113,6 +113,9 @@ class USBAudioFlow(chameleon_device.Flow):
 
     Enables audio gadget driver.
     """
+    if analog_audio_testbed.Exists():
+      logging.info('Analog audio testbed detected.')
+      analog_audio_testbed.SwitchRelay(True)
     self._usb_ctrl.EnableDriver()
 
   def Unplug(self):
@@ -120,6 +123,9 @@ class USBAudioFlow(chameleon_device.Flow):
 
     Disables audio gadget driver.
     """
+    if analog_audio_testbed.Exists():
+      logging.info('Analog audio testbed detected.')
+      analog_audio_testbed.SwitchRelay(False)
     self._usb_ctrl.DisableDriver()
 
   def DoFSM(self):
