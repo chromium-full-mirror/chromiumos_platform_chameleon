@@ -23,6 +23,8 @@ UPDATER_NAME='chameleon-updater'
 LIGHTTPD_NAME='lighttpd'
 TEST_DATA_DIR='/usr/share/autotest'
 
+SYSTEMD_USER_WANTS_PATH="/etc/systemd/user"
+
 . "${CWD}/bundle_common"
 
 PLATFORM="$1"
@@ -253,6 +255,29 @@ END
         mv -f "${TMP_COMMITS_LOG}" "${COMMITS_LOG}"
         chmod a+r "${COMMITS_LOG}"
     fi
+}
+
+disable_audio_processes() {
+    # Directory containing symlinks in systemd
+    SOURCE_DIR="${SYSTEMD_USER_WANTS_PATH}"
+
+    # Destination directory to which the symlinks will be moved
+    DEST_DIR="/home/pi/.config/removed"
+
+    # Move the audio service symlinks in systemd.
+    find "${SOURCE_DIR}" -type l \( \
+            -name 'wireplumber*' -o \
+            -name 'pulseaudio*' -o \
+            -name 'pipewire*' \) | while read -r link; do
+        subdir=$(dirname "${link}")
+        fullpath="${DEST_DIR}${subdir}"
+        mkdir -p "${fullpath}"
+
+        # Move the symlink
+        mv "$link" "${fullpath}"
+    done
+
+    echo It is intended not to start audio processes at system boot.
 }
 
 update_system () {
@@ -504,6 +529,14 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         pgrep pulseaudio > /dev/null && killall pulseaudio
         pgrep ofonod > /dev/null && killall ofonod
     fi
+
+    # For pipewire audio processes, we must ensure that they are disabled
+    # in systemd. Otherwise, multiple process instances may be started
+    # accidentally by the chameleon process and confuse the pipewire server
+    # which usually result in flaky test results.
+    # By disabling pipewire processes, it means to remove the related
+    # symlinks in the systemd paths.
+    disable_audio_processes
 
     # Finished deploying raspberrypi.
     exit
