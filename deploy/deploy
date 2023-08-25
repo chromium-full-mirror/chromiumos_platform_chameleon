@@ -499,22 +499,10 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         service bluetooth restart
         "${INITD_DIR}/${CHAMELEOND_NAME}" restart
 
-        # Restart pulseaudio as user pi.
+        # Kill any lingering audio servers.
+        # The audio servers should be started by tests dynamically.
         pgrep pulseaudio > /dev/null && killall pulseaudio
-        if runuser -l pi -c "pulseaudio --start"; then
-            echo "pulseaudio is running"
-        else
-            echo "Failed to start pulseaudio"
-            exit
-        fi
-
-        # Restart ofono.
-        if service ofono restart > /dev/null; then
-            echo "ofono is running"
-        else
-            echo "Failed to start ofono"
-            exit
-        fi
+        pgrep ofonod > /dev/null && killall ofonod
     fi
 
     # Finished deploying raspberrypi.
