@@ -13,7 +13,6 @@ COMMIT="${DIST_PATH}/commit"
 COMMITS_LOG="/var/log/chameleon_commits"
 
 INITD_DIR='/etc/init.d'
-CHAMELEOND_DIR='/usr/bin'
 CHAMELEOND_NAME='chameleond'
 DISPLAYD_NAME='displayd'
 NETWORKING_NAME='networking'
@@ -29,6 +28,7 @@ TEST_DATA_DIR='/usr/share/autotest'
 PLATFORM="$1"
 PY_VERSION="$2"
 NEEDS_SYSTEM_UPDATE="$3"
+CHAMELEOND_DIR="$4"
 
 if [ "${PLATFORM}" = "raspberrypi" ] || [ "${PLATFORM}" = "x86-generic" ]; then
     IS_BLUETOOTH_PEER=1
@@ -187,24 +187,24 @@ validate_audio_test_data_packages_installation() {
     fi
 }
 
-provide_daemon_symlinks(){
-    ALT_CHAMELEON_DIR='/usr/local/bin'
+check_daemon_path(){
     SCRIPT_NAME="run_$1"
+    UNWANTED_DAEMON_DIR='/usr/local/bin'
 
-    if [ ! -e "${CHAMELEOND_DIR}/${SCRIPT_NAME}" ] && \
-       [ -e "${ALT_CHAMELEON_DIR}/${SCRIPT_NAME}" ]; then
-        printf "Creating symlink for script %s\n" "${SCRIPT_NAME}"
-
-        (cd "${CHAMELEOND_DIR}" && \
-            ln -s "${ALT_CHAMELEON_DIR}/${SCRIPT_NAME}" "${SCRIPT_NAME}")
+    if [ -e "${CHAMELEOND_DIR}/${SCRIPT_NAME}" ]; then
+        printf "daemon found: %s\n" "${CHAMELEOND_DIR}/${SCRIPT_NAME}"
+    elif [ -e "${UNWANTED_DAEMON_DIR}/${SCRIPT_NAME}" ]; then
+        die "daemon in unwanted path: ${UNWANTED_DAEMON_DIR}/${SCRIPT_NAME}"
+    else
+        die "daemon not found: ${SCRIPT_NAME}"
     fi
 }
 
-create_daemon_symlinks() {
-    provide_daemon_symlinks "${CHAMELEOND_NAME}"
-    provide_daemon_symlinks "${DISPLAYD_NAME}"
-    provide_daemon_symlinks "${STREAM_SERVER_NAME}"
-    provide_daemon_symlinks "${SCHEDULER_NAME}"
+check_daemon_paths() {
+    check_daemon_path "${CHAMELEOND_NAME}"
+    check_daemon_path "${DISPLAYD_NAME}"
+    check_daemon_path "${STREAM_SERVER_NAME}"
+    check_daemon_path "${SCHEDULER_NAME}"
 }
 
 install_daemon_and_config () {
@@ -310,13 +310,10 @@ END
     apt-clone show-diff ${CHAMELEOND_NAME}_${PLATFORM}_apt-clone.tar.gz
 }
 
-# For Bluetooth peer, create symlinks if daemons were installed in
-# /usr/local/bin instead of /usr/bin where chameleond expects them. This seems
-# to be least invasive way to resolve disagreement without either breaking fizz
-# or fpga device.
+# For Bluetooth peers, the installation path for daemon scripts is set to
+# `/usr/bin`.
 if [ -n "${IS_BLUETOOTH_PEER}" ]; then
-    create_daemon_symlinks
-    CHAMELEOND_DIR="/usr/local/bin"
+    check_daemon_paths
 fi
 
 mkdir -p "${INITD_DIR}"

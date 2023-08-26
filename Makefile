@@ -23,6 +23,7 @@ CONFFILES = chameleond.conf
 IDENTITY_FILE := ~/.ssh/testing_rsa  # follow https://chromium.googlesource.com/chromiumos/docs/+/main/developer_guide.md#set-up-ssh-connection-between-chroot-and-dut
 COMMIT_FILE := $(DISTDIR)/commit
 PY_VERSION_FILE := $(DISTDIR)/py_version
+CHAMELEOND_DIR := /usr/bin
 
 # Set python3 as default after all teams using chameleon finish switching
 # to python3.
@@ -126,8 +127,14 @@ else
 endif
 
 ifeq ($(PY_VERSION), python3)
-	@echo python3 setup.py install -f $(SETUP_SUFFIX)
-	@python3 setup.py install -f $(SETUP_SUFFIX)
+	# Ensure that the scripts are installed under CHAMELEOND_DIR (/usr/bin).
+	# Otherwise, the installation path might vary unpredictably between
+	# /usr/bin and /usr/local/bin.
+	# This path aligns with the CHAMELEOND_DIR in deploy/deploy.
+	@echo python3 setup.py install -f $(SETUP_SUFFIX) \
+		--install-scripts=$(CHAMELEOND_DIR)
+	@python3 setup.py install -f $(SETUP_SUFFIX) \
+		--install-scripts=$(CHAMELEOND_DIR)
 else
 	@echo python2 setup.py install -f $(SETUP_SUFFIX)
 	@python setup.py install -f $(SETUP_SUFFIX)
@@ -139,7 +146,8 @@ ifeq ($(PLATFORM), Chrome OS)
 	@echo Please do \"\$ start chameleond\" or \"\$ restart chameleond\".
 else
 	@BUNDLE_VERSION=$(BUNDLE_VERSION) CHAMELEON_BOARD=$(CHAMELEON_BOARD) \
-	deploy/deploy $(PLATFORM) $(PY_VERSION) $(NEEDS_SYSTEM_UPDATE)
+	deploy/deploy $(PLATFORM) $(PY_VERSION) $(NEEDS_SYSTEM_UPDATE) \
+	$(CHAMELEOND_DIR)
 	@echo Installing chameleon package on $(PLATFORM) platform is completed.
 endif
 
