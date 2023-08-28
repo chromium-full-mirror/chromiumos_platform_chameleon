@@ -9,3 +9,7 @@ tags
 
 # ./utils/screenshot likes making these files
 image*.png
+
+# Intellij/Jetbrains IDEs
+/.idea
+*.iml
