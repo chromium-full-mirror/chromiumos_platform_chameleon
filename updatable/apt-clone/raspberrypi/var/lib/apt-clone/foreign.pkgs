@@ -63,9 +63,6 @@ locales 2.28-10+rpt2+rpi1 Raspberry Pi Foundation
 mesa-va-drivers 19.3.2-1~bpo10+1~rpt4 Raspberry Pi Foundation
 mesa-vdpau-drivers 19.3.2-1~bpo10+1~rpt4 Raspberry Pi Foundation
 multiarch-support 2.28-10+rpt2+rpi1 Raspberry Pi Foundation
-openssh-client 1:7.9p1-10+deb10u2+rpt1 Raspberry Pi Foundation
-openssh-server 1:7.9p1-10+deb10u2+rpt1 Raspberry Pi Foundation
-openssh-sftp-server 1:7.9p1-10+deb10u2+rpt1 Raspberry Pi Foundation
 pi-bluetooth 0.1.18 Raspberry Pi Foundation
 policykit-1 0.105-25+rpt1 Raspberry Pi Foundation
 pulseaudio 12.2-4+deb10u1+rpi3 Raspberry Pi Foundation
