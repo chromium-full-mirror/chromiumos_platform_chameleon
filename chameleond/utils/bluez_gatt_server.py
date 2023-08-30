@@ -32,6 +32,10 @@ from .hci_cmd import HciCommands, HciTool
 
 mainloop = None
 
+# Advertising parameter own address type
+PUBLIC_DEVICE_ADDRESS = 0x00
+RANDOM_DEVICE_ADDRESS = 0x01
+
 
 class GATTServer(object):
   """Bluez gatt server implementation"""
@@ -83,6 +87,7 @@ class GATTServer(object):
     # Start with discoverable enabled
     self._adv_local_name = PERIPHERAL_DEVICE_NAME[self.peripheral_type]
     self._discoverable = True
+    self._own_address_type = PUBLIC_DEVICE_ADDRESS
     self._ConfigureAdvertisements()
 
     # Add a handler for changes in state, specifically requesting caller's
@@ -191,7 +196,8 @@ class GATTServer(object):
 
     # Advertise with low duty-cycle (30-35ms) to make discovery faster
     rapid_adv = HciCommands.le_set_advertising_params(
-        interval_min=0x30, interval_max=0x38)
+        interval_min=0x30, interval_max=0x38,
+        own_address_type=self._own_address_type)
 
     cmds = [stop_adv, set_adv_data_cmd, set_adv_resp_cmd, rapid_adv, start_adv
            ] if self._discoverable else [stop_adv]
@@ -221,6 +227,13 @@ class GATTServer(object):
   def SetAdvLocalName(self, adv_local_name):
     self._adv_local_name = adv_local_name
     self._ConfigureAdvertisements()
+
+  def SetOwnAddressType(self, addr_type):
+    """Change own address type for advertising parameters."""
+    if addr_type != PUBLIC_DEVICE_ADDRESS and addr_type != RANDOM_DEVICE_ADDRESS:
+      logging.error("Address type not supported: " + hex(addr_type))
+      return
+    self._own_address_type = addr_type
 
   def GetAdvLocalName(self):
     return self._adv_local_name

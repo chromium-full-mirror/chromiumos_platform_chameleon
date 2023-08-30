@@ -41,7 +41,8 @@ from .bluetooth_peripheral_kit import PeripheralKitException
 from .bluez_service_consts import PERIPHERAL_DEVICE_CLASS, \
     PERIPHERAL_DEVICE_NAME, BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH, \
     BTD_CONF_FILE, PERIPHERAL_BTD_FLAGS
-from .bluez_gatt_server import GATTServer
+from .bluez_gatt_server import GATTServer, PUBLIC_DEVICE_ADDRESS, \
+    RANDOM_DEVICE_ADDRESS
 from .hci_cmd import HciCommands, HciTool
 from six.moves import range
 
@@ -752,6 +753,11 @@ class BluezPeripheral(PeripheralKit):
     if not self.AdapterPowerOn():
       logging.error('Unable to power on adapter')
       return False
+
+    if self._gatt_server:
+      self._gatt_server.SetOwnAddressType(RANDOM_DEVICE_ADDRESS if enable
+                                          else PUBLIC_DEVICE_ADDRESS)
+
     return True
 
 
