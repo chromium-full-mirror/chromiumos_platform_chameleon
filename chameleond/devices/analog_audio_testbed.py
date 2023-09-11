@@ -36,6 +36,7 @@ def Exists():
     logging.info("Checking the existence of analog audio testbed...")
     output = subprocess.check_output(['aplay','-l']).decode('utf-8')
     ext_card = re.search("([\d]): ICUSBAUDIO7D", output)
+    logging.info('Analog audio testbed existence: {}'.format(bool(ext_card)))
     return bool(ext_card)
 
 def SwitchRelay(active):

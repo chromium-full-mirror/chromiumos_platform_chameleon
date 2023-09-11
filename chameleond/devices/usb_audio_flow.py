@@ -124,7 +124,6 @@ class USBAudioFlow(chameleon_device.Flow):
     Disables audio gadget driver.
     """
     if analog_audio_testbed.Exists():
-      logging.info('Analog audio testbed detected.')
       analog_audio_testbed.SwitchRelay(False)
     self._usb_ctrl.DisableDriver()
 
