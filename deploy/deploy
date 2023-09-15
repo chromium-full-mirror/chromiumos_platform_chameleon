@@ -246,15 +246,23 @@ BUNDLE_COMMIT_HASH="${commit_hash}"
 CHAMELEON_BOARD="${CHAMELEON_BOARD}"
 END
     mv -f "${CONFIG_TMP}" "${CONFIG_FILE}"
+}
 
-    if [ "${DAEMON_NAME}" = "${CHAMELEOND_NAME}" ]; then
-        now="$(date -u "+%Y-%m-%d_%H:%M:%S")_UTC"
-        TMP_COMMITS_LOG="$(mktemp /tmp/chameleon_commits.XXXXXX)"
-        [ -f "${COMMITS_LOG}" ] && cp "${COMMITS_LOG}" "${TMP_COMMITS_LOG}"
-        echo "${commit_hash} ${now}" >> "${TMP_COMMITS_LOG}"
-        mv -f "${TMP_COMMITS_LOG}" "${COMMITS_LOG}"
-        chmod a+r "${COMMITS_LOG}"
-    fi
+# Updates the commit log at the end to signify successful deployment.
+# Should be the last step preformed so that any command errors that come before
+# it prevent it from running.
+update_chameleond_commits_log () {
+    # Prepare log entry.
+    commit_hash="$(cat ${COMMIT})"
+    now="$(date -u "+%Y-%m-%d_%H:%M:%S")_UTC"
+    log_entry="${commit_hash} ${now}"
+
+    # Write log entry (keeping at most 100 lines in log)
+    TMP_COMMITS_LOG="$(mktemp /tmp/chameleon_commits.XXXXXX)"
+    [ -f "${COMMITS_LOG}" ] && tail -99 "${COMMITS_LOG}" > "${TMP_COMMITS_LOG}"
+    echo "${commit_hash} ${now}" >> "${TMP_COMMITS_LOG}"
+    mv -f "${TMP_COMMITS_LOG}" "${COMMITS_LOG}"
+    chmod a+r "${COMMITS_LOG}"
 }
 
 disable_audio_processes() {
@@ -539,6 +547,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     disable_audio_processes
 
     # Finished deploying raspberrypi.
+    update_chameleond_commits_log
     exit
 fi
 
@@ -593,6 +602,7 @@ if [ "${PLATFORM}" = "cyclone5" ]; then
     fi
 
     if [ -n "${need_reboot}" ]; then
+        update_chameleond_commits_log
         echo 'Reboot the board to validate the FPGA configuration...'
         reboot
     else
@@ -603,5 +613,9 @@ if [ "${PLATFORM}" = "cyclone5" ]; then
         if [ -e "${INITD_DIR}/${LIGHTTPD_NAME}" ]; then
             "${INITD_DIR}/${LIGHTTPD_NAME}" stop
         fi
+        update_chameleond_commits_log
     fi
+    exit
 fi
+
+update_chameleond_commits_log
