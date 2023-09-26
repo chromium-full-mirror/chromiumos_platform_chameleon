@@ -20,9 +20,10 @@ import logging
 import re
 import subprocess
 
-from RPi import GPIO
-
 LIST_OF_RPI_GPIO_PINs = [20, 21, 26]
+
+class _AnalogAudioTestbedException(Exception):
+    """Error in _Analog audio testbed."""
 
 def Exists():
     """Returns a Boolean of existence of analog audio testbed.
@@ -64,6 +65,12 @@ def SwitchRelay(active):
         True if you want to connect the circuit.
         False if you want to disconnect the circuit (for hardware detection)
     """
+    if not Exists():
+        raise _AnalogAudioTestbedException("Relay doesn't exist.")
+
+    # import from here to avoid breaking V2
+    from RPi import GPIO
+
     logging.info("Switching GPIO Relay. TRRS Circuit connection: %s", active)
     GPIO.setmode(GPIO.BCM)
     for pin in LIST_OF_RPI_GPIO_PINs:
