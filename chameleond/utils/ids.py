@@ -38,6 +38,8 @@ BLUETOOTH_TESTER = 30
 BLE_PHONE = 31
 BLUETOOTH_AUDIO = 32
 BLE_FAST_PAIR = 33
+USB_MFG_AUDIO_IN = 34
+USB_MFG_AUDIO_OUT = 35
 
 # device names
 DEVICE_NAMES = {
@@ -78,20 +80,24 @@ DEVICE_NAMES = {
     BLUETOOTH_AUDIO: 'bluetooth_audio',
     # A Bluetooth peripheral which implements the Fast Pair protocol
     BLE_FAST_PAIR: 'ble_fast_pair',
+    # USB multi-functional audio gadget (e.g. Headset with volume control)
+    USB_MFG_AUDIO_IN: 'usb_mfg_audio_in',
+    USB_MFG_AUDIO_OUT: 'usb_mfg_audio_out',
 }
 
 
 # Input/output ports
-INPUT_PORTS = [DP1, DP2, HDMI, VGA, MIC, LINEIN, USB_AUDIO_IN]
-OUTPUT_PORTS = [LINEOUT, USB_AUDIO_OUT]
+INPUT_PORTS = [DP1, DP2, HDMI, VGA, MIC, LINEIN, USB_AUDIO_IN, USB_MFG_AUDIO_IN]
+OUTPUT_PORTS = [LINEOUT, USB_AUDIO_OUT, USB_MFG_AUDIO_OUT]
 
 # Ports that support audio/video
 AUDIO_PORTS = [DP1, DP2, HDMI, MIC, LINEIN, LINEOUT, USB_AUDIO_IN,
-               USB_AUDIO_OUT]
+               USB_AUDIO_OUT, USB_MFG_AUDIO_IN, USB_MFG_AUDIO_OUT]
 VIDEO_PORTS = [DP1, DP2, HDMI, VGA]
 
 # Ports that support USB audio
-USB_AUDIO_PORTS = [USB_AUDIO_IN, USB_AUDIO_OUT]
+USB_AUDIO_PORTS = [USB_AUDIO_IN, USB_AUDIO_OUT, USB_MFG_AUDIO_IN,
+                   USB_MFG_AUDIO_OUT]
 
 # Ports that support USB HID
 USB_HID_PORTS = [USB_KEYBOARD, USB_TOUCH]
