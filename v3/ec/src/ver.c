@@ -22,8 +22,6 @@ static int cmd_ver(const struct shell *shell, size_t argc, char **argv)
 
 	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
 		      "EC = %s\n", EC_VER);
-	shell_fprintf(shell, SHELL_VT100_COLOR_DEFAULT,
-		      "ITE = %s\n", ITE_VER);
 	return 0;
 }
 SHELL_CMD_REGISTER(ver, NULL, "get build version", cmd_ver);
@@ -40,7 +38,6 @@ static int version_init(void)
 {
 	printk("\n");
 	printk("v3/ec build %s\n", EC_VER);
-	printk("private/ite build %s\n", ITE_VER);
 
 	return 0;
 }

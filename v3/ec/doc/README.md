@@ -60,6 +60,14 @@ Output files are in `~/zephyrproject/build/zephyr`
 * zephyr.elf
 * zephyr.hex
 
+## IT68051 driver
+
+ITE has open-sourced their EVB code, which was the basis of the `it68051`
+driver in the Chameleon application.
+
+If you are a Googler, you can access the previous history of the code at
+https://chrome-internal.googlesource.com/chromeos/platform/chameleon-private-ite
+
 # Running the Chameleon Embedded Controller Application
 
 This section describes how to build and use the Chameleon application on

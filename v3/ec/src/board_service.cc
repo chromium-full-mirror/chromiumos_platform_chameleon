@@ -73,7 +73,6 @@ board_service::get_code_version(const ::Empty &request,
 	static_cast<void>(request);
 
 	strncpy(response.ec_ver, EC_VER, 63);
-	strncpy(response.ite_ver, ITE_VER, 63);
 
 	return ::pw::OkStatus();
 }

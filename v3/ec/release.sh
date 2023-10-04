@@ -29,12 +29,9 @@ CHAMELEON=~/"${CHROOT:-chromiumos}"/src/platform/chameleon/v3
 # Directory for the EC PKGBUILD
 PKG="${CHAMELEON}"/alarm/ec-firmware-chameleonv3-bin
 
-# Get the git tags for the public and private code
+# Get the git tag for the EC code
 pushd "${CHAMELEON}"/ec
 PUBLIC=$(git describe --tags)
-popd
-pushd "${CHAMELEON}"/ec/private/ite
-PRIVATE=$(git describe --tags)
 popd
 
 # Get the hash for HEAD for Zephyr and the STM32 HAL
@@ -56,7 +53,6 @@ cp ~/zephyrproject/build/zephyr/zephyr.bin "${PKG}"/"${PUBLIC}".bin
 # Create the manifest
 cat <<EOF >"${PKG}"/"${PUBLIC}".txt
 v3/ec build ${PUBLIC}
-private/ite build ${PRIVATE}
 zephyr ${ZEPHYR}
 modules/hal/stm32 ${HAL}
 pigweed ${PIGWEED}
