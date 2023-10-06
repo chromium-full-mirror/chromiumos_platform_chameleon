@@ -6,9 +6,9 @@
 buildarch=4
 
 pkgname=ec-firmware-chameleonv3-bin
-_version=v3-142-g914bc9f
+_version=v3-204-gdbbba05
 pkgver=$(echo ${_version}|sed "s/-/_/g")
-pkgrel=2
+pkgrel=1
 provides=('ec-firmware-chameleonv3')
 pkgdesc="EC Firmware for Chameleon v3"
 arch=('armv7h')
@@ -16,9 +16,9 @@ url='https://chromium.googlesource.com/chromiumos/platform/chameleon/+/refs/head
 license=('Custom')
 optdepends=('libgpiod: access the EC bootloader pins'
             'stm32flash: speaks the bootloader protocol to flash the image')
-source=("${_version}.bin"
+source=("https://storage.googleapis.com/chromeos-hardware-tools-chameleon-v3/intermediate/ec/${_version}.bin"
         'flash_ec')
-sha256sums=('4c9d1bb0e5df04912b5d3998a3a308ae2a137c2d061a1db65c2407e82a81b84d'
+sha256sums=('f3a1511cdc8425779b3ada3aaf1017b3526b78a29bebbd0f14519962e85b13cb'
             'ab3d0943145e667bbf0e184cb5b5dc3a36fe55269f168a379d74e5f804fe8ef2')
 
 # build() {
