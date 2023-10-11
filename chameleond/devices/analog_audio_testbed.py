@@ -20,10 +20,13 @@ import logging
 import re
 import subprocess
 
+
 LIST_OF_RPI_GPIO_PINs = [20, 21, 26]
+
 
 class _AnalogAudioTestbedException(Exception):
     """Error in _Analog audio testbed."""
+
 
 def Exists():
     """Returns a Boolean of existence of analog audio testbed.
@@ -35,10 +38,11 @@ def Exists():
         True if USB sound card is attached. False otherwise.
     """
     logging.info("Checking the existence of analog audio testbed...")
-    output = subprocess.check_output(['aplay','-l']).decode('utf-8')
+    output = subprocess.check_output(["aplay", "-l"]).decode("utf-8")
     ext_card = re.search("([\d]): ICUSBAUDIO7D", output)
-    logging.info('Analog audio testbed existence: {}'.format(bool(ext_card)))
+    logging.info("Analog audio testbed existence: {}".format(bool(ext_card)))
     return bool(ext_card)
+
 
 def SwitchRelay(active):
     """Switch the NO (normally opened) Relay.

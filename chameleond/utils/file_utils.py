@@ -5,11 +5,12 @@
 
 """File utilities."""
 
-def TruncateToZero(path):
-  """Truncates a file size to 0.
 
-  Args:
-    path: Path to the file.
-  """
-  with open(path, 'w'):
-    pass
+def TruncateToZero(path):
+    """Truncates a file size to 0.
+
+    Args:
+      path: Path to the file.
+    """
+    with open(path, "w"):
+        pass

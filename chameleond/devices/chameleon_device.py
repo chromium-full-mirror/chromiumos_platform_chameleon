@@ -2,6 +2,7 @@
 # Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Chameleon device's basic class.."""
 
 from __future__ import print_function
@@ -10,123 +11,126 @@ from . import chameleon_common  # pylint: disable=W0611, C0411
 
 
 class ChameleonDevice(object):
-  """A basic class of chameleon devices.
+    """A basic class of chameleon devices.
 
-  It provides the basic interfaces of Chameleon devices.
-  """
-  _DEVICE_NAME = 'Unknown'  # A subclass should override it.
-
-  def __init__(self, device_name=None):
-    """Constructs a ChameleonDevice object.
-
-    Args:
-      device_name: Specify device name of this chameleon device. If it is not
-      specified it will use _DEVICE_NAME as its device_name.
+    It provides the basic interfaces of Chameleon devices.
     """
-    if device_name:
-      self._device_name = device_name
-    else:
-      self._device_name = self._DEVICE_NAME
 
-  def IsDetected(self):
-    """Returns if the device can be detected."""
-    raise NotImplementedError('IsDetected')
+    _DEVICE_NAME = "Unknown"  # A subclass should override it.
 
-  def InitDevice(self):
-    """Init the real device of chameleon board."""
-    raise NotImplementedError('InitDevice')
+    def __init__(self, device_name=None):
+        """Constructs a ChameleonDevice object.
 
-  def Reset(self):
-    """Reset chameleon device."""
-    raise NotImplementedError('Reset')
+        Args:
+          device_name: Specify device name of this chameleon device. If it is not
+          specified it will use _DEVICE_NAME as its device_name.
+        """
+        if device_name:
+            self._device_name = device_name
+        else:
+            self._device_name = self._DEVICE_NAME
 
-  # TODO(mojahsu): Since we define the names in ids.py, we can remove it.
-  def GetDeviceName(self):
-    """Returns the human readable string for the device."""
-    return self._device_name
+    def IsDetected(self):
+        """Returns if the device can be detected."""
+        raise NotImplementedError("IsDetected")
+
+    def InitDevice(self):
+        """Init the real device of chameleon board."""
+        raise NotImplementedError("InitDevice")
+
+    def Reset(self):
+        """Reset chameleon device."""
+        raise NotImplementedError("Reset")
+
+    # TODO(mojahsu): Since we define the names in ids.py, we can remove it.
+    def GetDeviceName(self):
+        """Returns the human readable string for the device."""
+        return self._device_name
 
 
 class Flow(ChameleonDevice):
-  """An abstraction of the entire flow for a specific input.
+    """An abstraction of the entire flow for a specific input.
 
-  It provides the basic interfaces of Chameleond driver for a specific input.
-  Using this abstraction, each flow can have its own behavior. No need to
-  share the same Chameleond driver code.
-  """
-  def IsPhysicalPlugged(self):
-    """Returns if the physical cable is plugged."""
-    raise NotImplementedError('IsPhysicalPlugged')
+    It provides the basic interfaces of Chameleond driver for a specific input.
+    Using this abstraction, each flow can have its own behavior. No need to
+    share the same Chameleond driver code.
+    """
 
-  def IsPlugged(self):
-    """Returns if the flow is plugged."""
-    raise NotImplementedError('IsPlugged')
+    def IsPhysicalPlugged(self):
+        """Returns if the physical cable is plugged."""
+        raise NotImplementedError("IsPhysicalPlugged")
 
-  def Plug(self):
-    """Emulates plug."""
-    raise NotImplementedError('Plug')
+    def IsPlugged(self):
+        """Returns if the flow is plugged."""
+        raise NotImplementedError("IsPlugged")
 
-  def Unplug(self):
-    """Emulates unplug."""
-    raise NotImplementedError('Unplug')
+    def Plug(self):
+        """Emulates plug."""
+        raise NotImplementedError("Plug")
 
-  def Select(self):
-    """Selects the flow."""
-    raise NotImplementedError('Select')
+    def Unplug(self):
+        """Emulates unplug."""
+        raise NotImplementedError("Unplug")
 
-  def DoFSM(self):
-    """Does the Finite-State-Machine to ensure the input flow ready."""
-    pass
+    def Select(self):
+        """Selects the flow."""
+        raise NotImplementedError("Select")
 
-  # TODO(mojahsu): Add connector Type back. we may have 2 devices with the same
-  # type. It't not suitable to use GetDeviceName to replace it.
-  def GetConnectorType(self):
-    """Returns the human readable string for the connector type."""
-    return self.GetDeviceName()
+    def DoFSM(self):
+        """Does the Finite-State-Machine to ensure the input flow ready."""
+        pass
+
+    # TODO(mojahsu): Add connector Type back. we may have 2 devices with the same
+    # type. It't not suitable to use GetDeviceName to replace it.
+    def GetConnectorType(self):
+        """Returns the human readable string for the connector type."""
+        return self.GetDeviceName()
 
 
 class VirtualFlow(ChameleonDevice):
-  """An abstraction of the entire flow for a specific input.
+    """An abstraction of the entire flow for a specific input.
 
-  It provides the basic interfaces of Chameleond driver for a specific input.
-  Using this abstraction, each flow can have its own behavior. No need to
-  share the same Chameleond driver code.
-  """
-  def InitDevice(self):
-    """Init the tty of the kit attached to the chameleon board."""
-    pass
+    It provides the basic interfaces of Chameleond driver for a specific input.
+    Using this abstraction, each flow can have its own behavior. No need to
+    share the same Chameleond driver code.
+    """
 
-  def Reset(self):
-    """Reset chameleon device."""
-    pass
+    def InitDevice(self):
+        """Init the tty of the kit attached to the chameleon board."""
+        pass
 
-  def IsPhysicalPlugged(self):
-    """Returns if the physical cable is plugged."""
-    return True
+    def Reset(self):
+        """Reset chameleon device."""
+        pass
 
-  def IsPlugged(self):
-    """Returns if the flow is plugged."""
-    return True
+    def IsPhysicalPlugged(self):
+        """Returns if the physical cable is plugged."""
+        return True
 
-  def IsDetected(self):
-    """Returns if the device can be detected."""
-    return True
+    def IsPlugged(self):
+        """Returns if the flow is plugged."""
+        return True
 
-  def Plug(self):
-    """Emulates plug."""
-    pass
+    def IsDetected(self):
+        """Returns if the device can be detected."""
+        return True
 
-  def Unplug(self):
-    """Emulates unplug."""
-    pass
+    def Plug(self):
+        """Emulates plug."""
+        pass
 
-  def Select(self):
-    """Selects the flow."""
-    pass
+    def Unplug(self):
+        """Emulates unplug."""
+        pass
 
-  def DoFSM(self):
-    """Does the Finite-State-Machine to ensure the input flow ready."""
-    pass
+    def Select(self):
+        """Selects the flow."""
+        pass
 
-  def GetConnectorType(self):
-    """Returns the human readable string for the connector type."""
-    return self.GetDeviceName()
+    def DoFSM(self):
+        """Does the Finite-State-Machine to ensure the input flow ready."""
+        pass
+
+    def GetConnectorType(self):
+        """Returns the human readable string for the connector type."""
+        return self.GetDeviceName()

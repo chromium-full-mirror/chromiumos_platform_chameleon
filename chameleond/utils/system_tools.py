@@ -3,6 +3,7 @@
 # Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """System tools required for Chameleond execution."""
 
 from __future__ import absolute_import
@@ -19,358 +20,364 @@ import six
 
 
 class _SystemTools(object):
-  """A class to wrap the required tools for Chameleond execution."""
+    """A class to wrap the required tools for Chameleond execution."""
 
-  _TOOL_PATHS = {
-      'aplay': '/usr/bin/aplay',
-      'arecord': '/usr/bin/arecord',
-      'avsync': '/usr/bin/avsync',
-      'bluetoothd': '/usr/sbin/bluetoothd',
-      'btmon': '/usr/bin/btmon',
-      'chameleond': '/etc/init.d/chameleond',
-      'date': '/bin/date',
-      'dut-control': '/usr/local/bin/dut-control',
-      'grep': '/bin/grep',
-      'histogram': '/usr/bin/histogram',
-      'hpd_control': '/usr/bin/hpd_control',
-      'i2cdump': '/usr/local/sbin/i2cdump',
-      'i2cget': '/usr/local/sbin/i2cget',
-      'i2cset': '/usr/local/sbin/i2cset',
-      'id': '/usr/bin/id',
-      'killall': '/usr/bin/killall',
-      'logger': '/usr/bin/logger',
-      'lsmod': '/sbin/lsmod',
-      'lspci': 'lspci',
-      'memtool': '/usr/bin/memtool',
-      'modinfo': '/sbin/modinfo',
-      'modprobe': '/sbin/modprobe',
-      'mpris-proxy': '/usr/bin/mpris-proxy',
-      'ofono': '/usr/sbin/ofonod',
-      'pacat.local': '/usr/local/bin/pacat',
-      'pacat': '/usr/bin/pacat',
-      'pactl.local': '/usr/local/bin/pactl',
-      'pactl': '/usr/bin/pactl',
-      'pgrep': '/usr/bin/pgrep',
-      'pipewire': '/usr/bin/pipewire',
-      'pixeldump': '/usr/bin/pixeldump',
-      'playerctl':'/usr/bin/playerctl',
-      'printer': '/usr/bin/printer',
-      'pulseaudio.local': '/usr/local/bin/pulseaudio',
-      'pulseaudio': '/usr/bin/pulseaudio',
-      'pw-record': '/usr/bin/pw-record',
-      'reboot': '/sbin/reboot',
-      'scp': '/usr/bin/scp',
-      'service': '/usr/sbin/service',
-      'servod': '/usr/local/bin/servod',
-      'ssh': '/usr/bin/ssh',
-      'su': '/bin/su',
-      # Although systemd should theoretically be in /usr/bin,
-      # the debian distro sometimes only installs it in /bin.
-      'systemctl': '/bin/systemctl',
-      'tail': '/usr/bin/tail',
-      'uname': '/bin/uname',
-      'wget': '/usr/bin/wget',
-      'wpctl': '/usr/bin/wpctl',
-  }
+    _TOOL_PATHS = {
+        "aplay": "/usr/bin/aplay",
+        "arecord": "/usr/bin/arecord",
+        "avsync": "/usr/bin/avsync",
+        "bluetoothd": "/usr/sbin/bluetoothd",
+        "btmon": "/usr/bin/btmon",
+        "chameleond": "/etc/init.d/chameleond",
+        "date": "/bin/date",
+        "dut-control": "/usr/local/bin/dut-control",
+        "grep": "/bin/grep",
+        "histogram": "/usr/bin/histogram",
+        "hpd_control": "/usr/bin/hpd_control",
+        "i2cdump": "/usr/local/sbin/i2cdump",
+        "i2cget": "/usr/local/sbin/i2cget",
+        "i2cset": "/usr/local/sbin/i2cset",
+        "id": "/usr/bin/id",
+        "killall": "/usr/bin/killall",
+        "logger": "/usr/bin/logger",
+        "lsmod": "/sbin/lsmod",
+        "lspci": "lspci",
+        "memtool": "/usr/bin/memtool",
+        "modinfo": "/sbin/modinfo",
+        "modprobe": "/sbin/modprobe",
+        "mpris-proxy": "/usr/bin/mpris-proxy",
+        "ofono": "/usr/sbin/ofonod",
+        "pacat.local": "/usr/local/bin/pacat",
+        "pacat": "/usr/bin/pacat",
+        "pactl.local": "/usr/local/bin/pactl",
+        "pactl": "/usr/bin/pactl",
+        "pgrep": "/usr/bin/pgrep",
+        "pipewire": "/usr/bin/pipewire",
+        "pixeldump": "/usr/bin/pixeldump",
+        "playerctl": "/usr/bin/playerctl",
+        "printer": "/usr/bin/printer",
+        "pulseaudio.local": "/usr/local/bin/pulseaudio",
+        "pulseaudio": "/usr/bin/pulseaudio",
+        "pw-record": "/usr/bin/pw-record",
+        "reboot": "/sbin/reboot",
+        "scp": "/usr/bin/scp",
+        "service": "/usr/sbin/service",
+        "servod": "/usr/local/bin/servod",
+        "ssh": "/usr/bin/ssh",
+        "su": "/bin/su",
+        # Although systemd should theoretically be in /usr/bin,
+        # the debian distro sometimes only installs it in /bin.
+        "systemctl": "/bin/systemctl",
+        "tail": "/usr/bin/tail",
+        "uname": "/bin/uname",
+        "wget": "/usr/bin/wget",
+        "wpctl": "/usr/bin/wpctl",
+    }
 
-  def __init__(self):
-    """Constructs a _SystemTools object."""
-    self._CheckRequiredTools()
-    self._pi_args = 'su - pi -c'.split()
-    # The pi environment is only needed when running bluetooth audio tests.
-    self._pi_env = {}
-    self._pi_uid = None
+    def __init__(self):
+        """Constructs a _SystemTools object."""
+        self._CheckRequiredTools()
+        self._pi_args = "su - pi -c".split()
+        # The pi environment is only needed when running bluetooth audio tests.
+        self._pi_env = {}
+        self._pi_uid = None
 
-  def SetUpPiEnv(self, uid):
-    """Set up a proper environment for the user pi.
+    def SetUpPiEnv(self, uid):
+        """Set up a proper environment for the user pi.
 
-    Some audio processes have to be run as the user pi.
+        Some audio processes have to be run as the user pi.
 
-    Args:
-      uid: the pi user id
+        Args:
+          uid: the pi user id
 
-    We need to set XDG_RUNTIME_DIR for pi for pulseaudio tools to run
-    correctly. Setting environmental variable DBUS_SESSION_BUS_ADDRESS to force
-    the pulseaudio to connect to an existing DBSU session before starting a new
-    one.
-    """
-    self._pi_uid = uid
-    self._pi_env = os.environ.copy()
-    self._pi_env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
-    self._pi_env['DBUS_SESSION_BUS_ADDRESS'] = f'/run/user/{uid}/bus'
+        We need to set XDG_RUNTIME_DIR for pi for pulseaudio tools to run
+        correctly. Setting environmental variable DBUS_SESSION_BUS_ADDRESS to force
+        the pulseaudio to connect to an existing DBSU session before starting a new
+        one.
+        """
+        self._pi_uid = uid
+        self._pi_env = os.environ.copy()
+        self._pi_env["XDG_RUNTIME_DIR"] = f"/run/user/{uid}"
+        self._pi_env["DBUS_SESSION_BUS_ADDRESS"] = f"/run/user/{uid}/bus"
 
-  def GetToolPath(self, name):
-    """Get the path of the tool.
+    def GetToolPath(self, name):
+        """Get the path of the tool.
 
-    Args:
-      name: Name of the system tool.
+        Args:
+          name: Name of the system tool.
 
-    Returns:
-      The path of the tool; or None if not found.
-    """
-    return self._TOOL_PATHS.get(name)
+        Returns:
+          The path of the tool; or None if not found.
+        """
+        return self._TOOL_PATHS.get(name)
 
-  def _CheckRequiredTools(self):
-    """Checks all the required tools exist.
+    def _CheckRequiredTools(self):
+        """Checks all the required tools exist.
 
-    Raises:
-      SystemToolsError if missing a tool.
-    """
-    for path in list(self._TOOL_PATHS.values()):
-      if not os.path.isfile(path):
-        # It is okay that some tools may not exist in a particular platform.
-        logging.warning('IOError: Required tool %s not existed', path)
+        Raises:
+          SystemToolsError if missing a tool.
+        """
+        for path in list(self._TOOL_PATHS.values()):
+            if not os.path.isfile(path):
+                # It is okay that some tools may not exist in a particular platform.
+                logging.warning("IOError: Required tool %s not existed", path)
 
-  def _MakeCommandForPi(self, name, args_str, use_local_version=False):
-    """Combines the system tool and its parameters into a list.
+    def _MakeCommandForPi(self, name, args_str, use_local_version=False):
+        """Combines the system tool and its parameters into a list.
 
-    In python3, the following subprocess methods take env as a keyword
-    argument:
-      - subprocess.Popen
-      - subprocess.run
-      - subprocess.check_output
-    To pass environment variables to a method other than those above, e.g.,
-    subprocess.call, the environment variables must be positioned before the
-    tool name.
+        In python3, the following subprocess methods take env as a keyword
+        argument:
+          - subprocess.Popen
+          - subprocess.run
+          - subprocess.check_output
+        To pass environment variables to a method other than those above, e.g.,
+        subprocess.call, the environment variables must be positioned before the
+        tool name.
 
-    However, subprocess.check_output seems to have an issue such that the
-    env keyword argument does not take effect. Instead, the environment
-    string must be positioned before the tool name. To simplify and ensure
-    consistency across all subprocess methods, the environment string is
-    placed before the tool name, and the env keyword argument is not used.
+        However, subprocess.check_output seems to have an issue such that the
+        env keyword argument does not take effect. Instead, the environment
+        string must be positioned before the tool name. To simplify and ensure
+        consistency across all subprocess methods, the environment string is
+        placed before the tool name, and the env keyword argument is not used.
 
-    Args:
-      name: the name of the system tool.
-      args_str: the args string (not a list)
-      use_local_version: True to use a local version of the executable.
-          Default value is False to favor the native version.
+        Args:
+          name: the name of the system tool.
+          args_str: the args string (not a list)
+          use_local_version: True to use a local version of the executable.
+              Default value is False to favor the native version.
 
-    Returns:
-      A list representing the complete command.
-    """
-    xdg_runtime_dir = self._pi_env.get('XDG_RUNTIME_DIR', '')
-    dbus_session_bus_addr = self._pi_env.get('DBUS_SESSION_BUS_ADDRESS', '')
-    s1 = f'XDG_RUNTIME_DIR={xdg_runtime_dir}'
-    s2 = f'DBUS_SESSION_BUS_ADDRESS={dbus_session_bus_addr}'
-    env_str = ' '.join([s1, s2])
+        Returns:
+          A list representing the complete command.
+        """
+        xdg_runtime_dir = self._pi_env.get("XDG_RUNTIME_DIR", "")
+        dbus_session_bus_addr = self._pi_env.get("DBUS_SESSION_BUS_ADDRESS", "")
+        s1 = f"XDG_RUNTIME_DIR={xdg_runtime_dir}"
+        s2 = f"DBUS_SESSION_BUS_ADDRESS={dbus_session_bus_addr}"
+        env_str = " ".join([s1, s2])
 
-    tool_path = self._FindPreferredExecutablePath(name, use_local_version)
-    command = self._pi_args + [' '.join([env_str, tool_path, args_str])]
-    logging.info('command: %s', str(command))
-    return command
+        tool_path = self._FindPreferredExecutablePath(name, use_local_version)
+        command = self._pi_args + [" ".join([env_str, tool_path, args_str])]
+        logging.info("command: %s", str(command))
+        return command
 
-  def _MakeCommand(self, name, args):
-    """Combines the system tool and its parameters into a list.
+    def _MakeCommand(self, name, args):
+        """Combines the system tool and its parameters into a list.
 
-    Args:
-      name: Name of the system tool.
-      args: List of arguments passed in by user.
+        Args:
+          name: Name of the system tool.
+          args: List of arguments passed in by user.
 
-    Returns:
-      A list representing the complete command.
-    """
-    command = [self._TOOL_PATHS[name]] + [str(arg) for arg in args]
-    logging.info('command: %s', str(command))
-    return command
+        Returns:
+          A list representing the complete command.
+        """
+        command = [self._TOOL_PATHS[name]] + [str(arg) for arg in args]
+        logging.info("command: %s", str(command))
+        return command
 
-  def OrigCall(self, name, *args):
-    """Calls the tool with arguments using subprocess.call().
+    def OrigCall(self, name, *args):
+        """Calls the tool with arguments using subprocess.call().
 
-    Args:
-      name: The name of the tool.
-      *args: The arguments of the tool.
-    """
-    command = self._MakeCommand(name, args)
-    return subprocess.call(command)
+        Args:
+          name: The name of the tool.
+          *args: The arguments of the tool.
+        """
+        command = self._MakeCommand(name, args)
+        return subprocess.call(command)
 
-  def OrigCallAsPi(self, name, args_str):
-    """Calls the tool with arguments as Pi using subprocess.call().
+    def OrigCallAsPi(self, name, args_str):
+        """Calls the tool with arguments as Pi using subprocess.call().
 
-    This is primarily used on Raspberry Pi as the chameleon host. This is
-    needed as some commands, in pulseaudio and pipewire, are required
-    to run with pi as the user. The chameleond root user is not allowed to
-    access pulseaudio and pipewire for security concern.
+        This is primarily used on Raspberry Pi as the chameleon host. This is
+        needed as some commands, in pulseaudio and pipewire, are required
+        to run with pi as the user. The chameleond root user is not allowed to
+        access pulseaudio and pipewire for security concern.
 
-    Args:
-      name: The name of the tool.
-      args_str: the args string (not a list)
-    """
-    command = self._MakeCommandForPi(name, args_str)
-    return subprocess.call(command)
+        Args:
+          name: The name of the tool.
+          args_str: the args string (not a list)
+        """
+        command = self._MakeCommandForPi(name, args_str)
+        return subprocess.call(command)
 
-  def Call(self, name, *args):
-    """Calls the tool with arguments using subprocess.check_call().
+    def Call(self, name, *args):
+        """Calls the tool with arguments using subprocess.check_call().
 
-    Args:
-      name: The name of the tool.
-      *args: The arguments of the tool.
-    """
-    command = self._MakeCommand(name, args)
-    subprocess.check_call(command)
+        Args:
+          name: The name of the tool.
+          *args: The arguments of the tool.
+        """
+        command = self._MakeCommand(name, args)
+        subprocess.check_call(command)
 
-  def Output(self, name, *args):
-    """Calls the tool with arguments and returns its output.
+    def Output(self, name, *args):
+        """Calls the tool with arguments and returns its output.
 
-    Args:
-      name: The name of the tool.
-      *args: The arguments of the tool.
+        Args:
+          name: The name of the tool.
+          *args: The arguments of the tool.
 
-    Returns:
-      The output message of the call, including stderr message.
-    """
-    command = self._MakeCommand(name, args)
-    try:
-      output = subprocess.check_output(command, stderr=subprocess.STDOUT)
-    except Exception as e:
-      logging.error('Output error: %s', e)
-      return ''
+        Returns:
+          The output message of the call, including stderr message.
+        """
+        command = self._MakeCommand(name, args)
+        try:
+            output = subprocess.check_output(command, stderr=subprocess.STDOUT)
+        except Exception as e:
+            logging.error("Output error: %s", e)
+            return ""
 
-    if sys.version_info >= (3, 0):
-      return output.decode()
-    else:
-      return output
+        if sys.version_info >= (3, 0):
+            return output.decode()
+        else:
+            return output
 
-  def _FindPreferredExecutablePath(self, name, use_local_version=False):
-    """Find the preferred executable path.
+    def _FindPreferredExecutablePath(self, name, use_local_version=False):
+        """Find the preferred executable path.
 
-    For some daemons, e.g., pulseaudio, there may exist a locally made
-    version. In this situation, the executables will reside in
-    /usr/local/bin instead of the original /usr/bin when they are installed.
+        For some daemons, e.g., pulseaudio, there may exist a locally made
+        version. In this situation, the executables will reside in
+        /usr/local/bin instead of the original /usr/bin when they are installed.
 
-    Args:
-      name: The name of the tool.
-      use_local_version: True to use a local version of the executable.
-                         Default value is False to favor the native version.
+        Args:
+          name: The name of the tool.
+          use_local_version: True to use a local version of the executable.
+                             Default value is False to favor the native version.
 
-    Returns:
-      The preferred executable path if a locally made version exists;
-      otherwise, the original installed path.
-    """
-    local_name = name + '.local'
-    local_path = self._TOOL_PATHS.get(local_name)
+        Returns:
+          The preferred executable path if a locally made version exists;
+          otherwise, the original installed path.
+        """
+        local_name = name + ".local"
+        local_path = self._TOOL_PATHS.get(local_name)
 
-    if (use_local_version and bool(local_path) and os.path.isfile(local_path)):
-      return local_path
-    else:
-      return self._TOOL_PATHS.get(name)
+        if (
+            use_local_version
+            and bool(local_path)
+            and os.path.isfile(local_path)
+        ):
+            return local_path
+        else:
+            return self._TOOL_PATHS.get(name)
 
-  def OutputAsPi(self, name, args_str, use_local_version):
-    """Calls the tool with arguments as Pi and returns its output.
+    def OutputAsPi(self, name, args_str, use_local_version):
+        """Calls the tool with arguments as Pi and returns its output.
 
-    This is primarily used on Raspberry Pi as the chameleon host. This is
-    needed as some commands, e.g., pactl and pacat in pulseaudio, require
-    to run with pi as the user. The chameleond root user is not allowed to
-    access pulseaudio for security concern.
+        This is primarily used on Raspberry Pi as the chameleon host. This is
+        needed as some commands, e.g., pactl and pacat in pulseaudio, require
+        to run with pi as the user. The chameleond root user is not allowed to
+        access pulseaudio for security concern.
 
-    Args:
-      name: The name of the tool.
-      args_str: the args string (not a list)
-      use_local_version: True to use a local version of the executable
+        Args:
+          name: The name of the tool.
+          args_str: the args string (not a list)
+          use_local_version: True to use a local version of the executable
 
-    Returns:
-      The output message of the call, including stderr message.
-    """
-    command = self._MakeCommandForPi(name, args_str,
-                                     use_local_version=use_local_version)
+        Returns:
+          The output message of the call, including stderr message.
+        """
+        command = self._MakeCommandForPi(
+            name, args_str, use_local_version=use_local_version
+        )
 
-    try:
-      output = subprocess.check_output(command)
-    except Exception as e:
-      logging.error('Output error: %s', e)
-      return ''
+        try:
+            output = subprocess.check_output(command)
+        except Exception as e:
+            logging.error("Output error: %s", e)
+            return ""
 
-    if sys.version_info >= (3, 0):
-      return output.decode()
-    else:
-      return output
+        if sys.version_info >= (3, 0):
+            return output.decode()
+        else:
+            return output
 
-  def DelayedCall(self, time, name, *args):
-    """Calls the tool with arguments after a given delay.
+    def DelayedCall(self, time, name, *args):
+        """Calls the tool with arguments after a given delay.
 
-    The method returns first before the execution.
+        The method returns first before the execution.
 
-    Args:
-      time: The time in second.
-      name: The name of the tool.
-      *args: The arguments of the tool.
-    """
-    threading.Timer(time, lambda: self.Call(name, *args)).start()
+        Args:
+          time: The time in second.
+          name: The name of the tool.
+          *args: The arguments of the tool.
+        """
+        threading.Timer(time, lambda: self.Call(name, *args)).start()
 
-  def RunInSubprocess(self, name, *args):
-    """Calls the tool and run it in a separate process.
+    def RunInSubprocess(self, name, *args):
+        """Calls the tool and run it in a separate process.
 
-    This tool will be useful for starting and later killing aplay and arecord
-    processes which have to be interrupted. The command outputs are channelled
-    to stdout and/or stderr.
+        This tool will be useful for starting and later killing aplay and arecord
+        processes which have to be interrupted. The command outputs are channelled
+        to stdout and/or stderr.
 
-    Args:
-      name: The name of the tool.
-      *args: The arguments of the tool.
+        Args:
+          name: The name of the tool.
+          *args: The arguments of the tool.
 
-    Returns:
-      process: The subprocess spawned for the command.
-    """
-    return self.RunInSubprocessOutputToFile(name, subprocess.PIPE, *args)
+        Returns:
+          process: The subprocess spawned for the command.
+        """
+        return self.RunInSubprocessOutputToFile(name, subprocess.PIPE, *args)
 
-  def RunInSubprocessAsPi(self, name, args_str, use_local_version):
-    """Calls the tool and run it in a separate process as user Pi.
+    def RunInSubprocessAsPi(self, name, args_str, use_local_version):
+        """Calls the tool and run it in a separate process as user Pi.
 
-    This is primarily used on Raspberry Pi as the chameleon host. This is
-    needed as some commands, e.g., pactl and pacat in pulseaudio, require
-    to run with pi as the user. The chameleond root user is not allowed to
-    access pulseaudio for security concern.
+        This is primarily used on Raspberry Pi as the chameleon host. This is
+        needed as some commands, e.g., pactl and pacat in pulseaudio, require
+        to run with pi as the user. The chameleond root user is not allowed to
+        access pulseaudio for security concern.
 
-    Args:
-      name: The name of the tool.
-      args_str: the args string (not a list)
-      use_local_version: True to use a local version of the executable
+        Args:
+          name: The name of the tool.
+          args_str: the args string (not a list)
+          use_local_version: True to use a local version of the executable
 
-    Returns:
-      process: The subprocess spawned for the command.
-    """
-    command = self._MakeCommandForPi(name, args_str,
-                                     use_local_version=use_local_version)
-    process = subprocess.Popen(command, stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    process.name = name
-    return process
+        Returns:
+          process: The subprocess spawned for the command.
+        """
+        command = self._MakeCommandForPi(
+            name, args_str, use_local_version=use_local_version
+        )
+        process = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        process.name = name
+        return process
 
-  def RunInSubprocessOutputToFile(self, name, handle, *args):
-    """Calls the tool and run it in a separate process, and outputs to a file.
+    def RunInSubprocessOutputToFile(self, name, handle, *args):
+        """Calls the tool and run it in a separate process, and outputs to a file.
 
-    Args:
-      name: The name of the tool.
-      handle: The file handle to output stdout and stderr.
-      *args: The arguments of the tool.
+        Args:
+          name: The name of the tool.
+          handle: The file handle to output stdout and stderr.
+          *args: The arguments of the tool.
 
-    Returns:
-      process: The subprocess spawned for the command.
-    """
-    command = self._MakeCommand(name, args)
-    process = subprocess.Popen(command,
-                               stdout=handle,
-                               stderr=handle)
-    process.name = name
-    return process
+        Returns:
+          process: The subprocess spawned for the command.
+        """
+        command = self._MakeCommand(name, args)
+        process = subprocess.Popen(command, stdout=handle, stderr=handle)
+        process.name = name
+        return process
 
-  def GetSubprocessOutput(self, process, decode=True):
-    """Returns the output of the command called in the process spawned.
+    def GetSubprocessOutput(self, process, decode=True):
+        """Returns the output of the command called in the process spawned.
 
-    Args:
-      process: The subprocess in which a command is called.
-      decode: If true, decode output from byte strings to strings.
+        Args:
+          process: The subprocess in which a command is called.
+          decode: If true, decode output from byte strings to strings.
 
-    Returns:
-      A tuple (return_code, out, err).
-      return_code: 0 on success, 1 on error.
-      out: Content of command output to stdout, usually when command succeeds.
-      err: Content of command output to stderr when an error occurs.
-    """
-    out, err = process.communicate()
-    return_code = process.returncode
-    if decode:
-      return (return_code, six.ensure_text(out), six.ensure_text(err))
-    return (return_code, out, six.ensure_text(err))
+        Returns:
+          A tuple (return_code, out, err).
+          return_code: 0 on success, 1 on error.
+          out: Content of command output to stdout, usually when command succeeds.
+          err: Content of command output to stderr when an error occurs.
+        """
+        out, err = process.communicate()
+        return_code = process.returncode
+        if decode:
+            return (return_code, six.ensure_text(out), six.ensure_text(err))
+        return (return_code, out, six.ensure_text(err))
+
 
 # Singleton
 SystemTools = _SystemTools()

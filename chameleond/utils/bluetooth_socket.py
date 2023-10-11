@@ -4,12 +4,13 @@
 # found in the LICENSE file.
 
 import array
-import btsocket
 import fcntl
 import logging
+import os
 import socket
 import struct
-import os
+
+import btsocket
 
 
 # Constants from lib/mgmt.h in BlueZ source
@@ -17,179 +18,179 @@ MGMT_INDEX_NONE = 0xFFFF
 
 MGMT_HDR_SIZE = 6
 
-MGMT_STATUS_SUCCESS            = 0x00
-MGMT_STATUS_UNKNOWN_COMMAND    = 0x01
-MGMT_STATUS_NOT_CONNECTED      = 0x02
-MGMT_STATUS_FAILED             = 0x03
-MGMT_STATUS_CONNECT_FAILED     = 0x04
-MGMT_STATUS_AUTH_FAILED        = 0x05
-MGMT_STATUS_NOT_PAIRED         = 0x06
-MGMT_STATUS_NO_RESOURCES       = 0x07
-MGMT_STATUS_TIMEOUT            = 0x08
-MGMT_STATUS_ALREADY_CONNECTED  = 0x09
-MGMT_STATUS_BUSY               = 0x0a
-MGMT_STATUS_REJECTED           = 0x0b
-MGMT_STATUS_NOT_SUPPORTED      = 0x0c
-MGMT_STATUS_INVALID_PARAMS     = 0x0d
-MGMT_STATUS_DISCONNECTED       = 0x0e
-MGMT_STATUS_NOT_POWERED        = 0x0f
-MGMT_STATUS_CANCELLED          = 0x10
-MGMT_STATUS_INVALID_INDEX      = 0x11
-MGMT_STATUS_RFKILLED           = 0x12
+MGMT_STATUS_SUCCESS = 0x00
+MGMT_STATUS_UNKNOWN_COMMAND = 0x01
+MGMT_STATUS_NOT_CONNECTED = 0x02
+MGMT_STATUS_FAILED = 0x03
+MGMT_STATUS_CONNECT_FAILED = 0x04
+MGMT_STATUS_AUTH_FAILED = 0x05
+MGMT_STATUS_NOT_PAIRED = 0x06
+MGMT_STATUS_NO_RESOURCES = 0x07
+MGMT_STATUS_TIMEOUT = 0x08
+MGMT_STATUS_ALREADY_CONNECTED = 0x09
+MGMT_STATUS_BUSY = 0x0A
+MGMT_STATUS_REJECTED = 0x0B
+MGMT_STATUS_NOT_SUPPORTED = 0x0C
+MGMT_STATUS_INVALID_PARAMS = 0x0D
+MGMT_STATUS_DISCONNECTED = 0x0E
+MGMT_STATUS_NOT_POWERED = 0x0F
+MGMT_STATUS_CANCELLED = 0x10
+MGMT_STATUS_INVALID_INDEX = 0x11
+MGMT_STATUS_RFKILLED = 0x12
 
-MGMT_OP_READ_VERSION           = 0x0001
-MGMT_OP_READ_COMMANDS          = 0x0002
-MGMT_OP_READ_INDEX_LIST        = 0x0003
-MGMT_OP_READ_INFO              = 0x0004
-MGMT_OP_SET_POWERED            = 0x0005
-MGMT_OP_SET_DISCOVERABLE       = 0x0006
-MGMT_OP_SET_CONNECTABLE        = 0x0007
-MGMT_OP_SET_FAST_CONNECTABLE   = 0x0008
-MGMT_OP_SET_PAIRABLE           = 0x0009
-MGMT_OP_SET_LINK_SECURITY      = 0x000A
-MGMT_OP_SET_SSP                = 0x000B
-MGMT_OP_SET_HS                 = 0x000C
-MGMT_OP_SET_LE                 = 0x000D
-MGMT_OP_SET_DEV_CLASS          = 0x000E
-MGMT_OP_SET_LOCAL_NAME         = 0x000F
-MGMT_OP_ADD_UUID               = 0x0010
-MGMT_OP_REMOVE_UUID            = 0x0011
-MGMT_OP_LOAD_LINK_KEYS         = 0x0012
-MGMT_OP_LOAD_LONG_TERM_KEYS    = 0x0013
-MGMT_OP_DISCONNECT             = 0x0014
-MGMT_OP_GET_CONNECTIONS        = 0x0015
-MGMT_OP_PIN_CODE_REPLY         = 0x0016
-MGMT_OP_PIN_CODE_NEG_REPLY     = 0x0017
-MGMT_OP_SET_IO_CAPABILITY      = 0x0018
-MGMT_OP_PAIR_DEVICE            = 0x0019
-MGMT_OP_CANCEL_PAIR_DEVICE     = 0x001A
-MGMT_OP_UNPAIR_DEVICE          = 0x001B
-MGMT_OP_USER_CONFIRM_REPLY     = 0x001C
+MGMT_OP_READ_VERSION = 0x0001
+MGMT_OP_READ_COMMANDS = 0x0002
+MGMT_OP_READ_INDEX_LIST = 0x0003
+MGMT_OP_READ_INFO = 0x0004
+MGMT_OP_SET_POWERED = 0x0005
+MGMT_OP_SET_DISCOVERABLE = 0x0006
+MGMT_OP_SET_CONNECTABLE = 0x0007
+MGMT_OP_SET_FAST_CONNECTABLE = 0x0008
+MGMT_OP_SET_PAIRABLE = 0x0009
+MGMT_OP_SET_LINK_SECURITY = 0x000A
+MGMT_OP_SET_SSP = 0x000B
+MGMT_OP_SET_HS = 0x000C
+MGMT_OP_SET_LE = 0x000D
+MGMT_OP_SET_DEV_CLASS = 0x000E
+MGMT_OP_SET_LOCAL_NAME = 0x000F
+MGMT_OP_ADD_UUID = 0x0010
+MGMT_OP_REMOVE_UUID = 0x0011
+MGMT_OP_LOAD_LINK_KEYS = 0x0012
+MGMT_OP_LOAD_LONG_TERM_KEYS = 0x0013
+MGMT_OP_DISCONNECT = 0x0014
+MGMT_OP_GET_CONNECTIONS = 0x0015
+MGMT_OP_PIN_CODE_REPLY = 0x0016
+MGMT_OP_PIN_CODE_NEG_REPLY = 0x0017
+MGMT_OP_SET_IO_CAPABILITY = 0x0018
+MGMT_OP_PAIR_DEVICE = 0x0019
+MGMT_OP_CANCEL_PAIR_DEVICE = 0x001A
+MGMT_OP_UNPAIR_DEVICE = 0x001B
+MGMT_OP_USER_CONFIRM_REPLY = 0x001C
 MGMT_OP_USER_CONFIRM_NEG_REPLY = 0x001D
-MGMT_OP_USER_PASSKEY_REPLY     = 0x001E
+MGMT_OP_USER_PASSKEY_REPLY = 0x001E
 MGMT_OP_USER_PASSKEY_NEG_REPLY = 0x001F
-MGMT_OP_READ_LOCAL_OOB_DATA    = 0x0020
-MGMT_OP_ADD_REMOTE_OOB_DATA    = 0x0021
+MGMT_OP_READ_LOCAL_OOB_DATA = 0x0020
+MGMT_OP_ADD_REMOTE_OOB_DATA = 0x0021
 MGMT_OP_REMOVE_REMOTE_OOB_DATA = 0x0022
-MGMT_OP_START_DISCOVERY        = 0x0023
-MGMT_OP_STOP_DISCOVERY         = 0x0024
-MGMT_OP_CONFIRM_NAME           = 0x0025
-MGMT_OP_BLOCK_DEVICE           = 0x0026
-MGMT_OP_UNBLOCK_DEVICE         = 0x0027
-MGMT_OP_SET_DEVICE_ID          = 0x0028
-MGMT_OP_SET_ADVERTISING        = 0x0029
-MGMT_OP_SET_BREDR              = 0x002A
-MGMT_OP_SET_STATIC_ADDRESS     = 0x002B
-MGMT_OP_SET_SCAN_PARAMS        = 0x002C
-MGMT_OP_SET_SECURE_CONN        = 0x002D
-MGMT_OP_SET_DEBUG_KEYS         = 0x002E
-MGMT_OP_SET_PRIVACY            = 0x002F
-MGMT_OP_LOAD_IRKS              = 0x0030
-MGMT_OP_GET_CONN_INFO          = 0x0031
-MGMT_OP_GET_CLOCK_INFO         = 0x0032
-MGMT_OP_ADD_DEVICE             = 0x0033
-MGMT_OP_REMOVE_DEVICE          = 0x0034
-MGMT_OP_LOAD_CONN_PARAM        = 0x0035
+MGMT_OP_START_DISCOVERY = 0x0023
+MGMT_OP_STOP_DISCOVERY = 0x0024
+MGMT_OP_CONFIRM_NAME = 0x0025
+MGMT_OP_BLOCK_DEVICE = 0x0026
+MGMT_OP_UNBLOCK_DEVICE = 0x0027
+MGMT_OP_SET_DEVICE_ID = 0x0028
+MGMT_OP_SET_ADVERTISING = 0x0029
+MGMT_OP_SET_BREDR = 0x002A
+MGMT_OP_SET_STATIC_ADDRESS = 0x002B
+MGMT_OP_SET_SCAN_PARAMS = 0x002C
+MGMT_OP_SET_SECURE_CONN = 0x002D
+MGMT_OP_SET_DEBUG_KEYS = 0x002E
+MGMT_OP_SET_PRIVACY = 0x002F
+MGMT_OP_LOAD_IRKS = 0x0030
+MGMT_OP_GET_CONN_INFO = 0x0031
+MGMT_OP_GET_CLOCK_INFO = 0x0032
+MGMT_OP_ADD_DEVICE = 0x0033
+MGMT_OP_REMOVE_DEVICE = 0x0034
+MGMT_OP_LOAD_CONN_PARAM = 0x0035
 MGMT_OP_READ_UNCONF_INDEX_LIST = 0x0036
-MGMT_OP_READ_CONFIG_INFO       = 0x0037
-MGMT_OP_SET_EXTERNAL_CONFIG    = 0x0038
-MGMT_OP_SET_PUBLIC_ADDRESS     = 0x0039
+MGMT_OP_READ_CONFIG_INFO = 0x0037
+MGMT_OP_SET_EXTERNAL_CONFIG = 0x0038
+MGMT_OP_SET_PUBLIC_ADDRESS = 0x0039
 
-MGMT_EV_CMD_COMPLETE           = 0x0001
-MGMT_EV_CMD_STATUS             = 0x0002
-MGMT_EV_CONTROLLER_ERROR       = 0x0003
-MGMT_EV_INDEX_ADDED            = 0x0004
-MGMT_EV_INDEX_REMOVED          = 0x0005
-MGMT_EV_NEW_SETTINGS           = 0x0006
-MGMT_EV_CLASS_OF_DEV_CHANGED   = 0x0007
-MGMT_EV_LOCAL_NAME_CHANGED     = 0x0008
-MGMT_EV_NEW_LINK_KEY           = 0x0009
-MGMT_EV_NEW_LONG_TERM_KEY      = 0x000A
-MGMT_EV_DEVICE_CONNECTED       = 0x000B
-MGMT_EV_DEVICE_DISCONNECTED    = 0x000C
-MGMT_EV_CONNECT_FAILED         = 0x000D
-MGMT_EV_PIN_CODE_REQUEST       = 0x000E
-MGMT_EV_USER_CONFIRM_REQUEST   = 0x000F
-MGMT_EV_USER_PASSKEY_REQUEST   = 0x0010
-MGMT_EV_AUTH_FAILED            = 0x0011
-MGMT_EV_DEVICE_FOUND           = 0x0012
-MGMT_EV_DISCOVERING            = 0x0013
-MGMT_EV_DEVICE_BLOCKED         = 0x0014
-MGMT_EV_DEVICE_UNBLOCKED       = 0x0015
-MGMT_EV_DEVICE_UNPAIRED        = 0x0016
-MGMT_EV_PASSKEY_NOTIFY         = 0x0017
-MGMT_EV_NEW_IRK                = 0x0018
-MGMT_EV_NEW_CSRK               = 0x0019
-MGMT_EV_DEVICE_ADDED           = 0x001a
-MGMT_EV_DEVICE_REMOVED         = 0x001b
-MGMT_EV_NEW_CONN_PARAM         = 0x001c
-MGMT_EV_UNCONF_INDEX_ADDED     = 0x001d
-MGMT_EV_UNCONF_INDEX_REMOVED   = 0x001e
-MGMT_EV_NEW_CONFIG_OPTIONS     = 0x001f
+MGMT_EV_CMD_COMPLETE = 0x0001
+MGMT_EV_CMD_STATUS = 0x0002
+MGMT_EV_CONTROLLER_ERROR = 0x0003
+MGMT_EV_INDEX_ADDED = 0x0004
+MGMT_EV_INDEX_REMOVED = 0x0005
+MGMT_EV_NEW_SETTINGS = 0x0006
+MGMT_EV_CLASS_OF_DEV_CHANGED = 0x0007
+MGMT_EV_LOCAL_NAME_CHANGED = 0x0008
+MGMT_EV_NEW_LINK_KEY = 0x0009
+MGMT_EV_NEW_LONG_TERM_KEY = 0x000A
+MGMT_EV_DEVICE_CONNECTED = 0x000B
+MGMT_EV_DEVICE_DISCONNECTED = 0x000C
+MGMT_EV_CONNECT_FAILED = 0x000D
+MGMT_EV_PIN_CODE_REQUEST = 0x000E
+MGMT_EV_USER_CONFIRM_REQUEST = 0x000F
+MGMT_EV_USER_PASSKEY_REQUEST = 0x0010
+MGMT_EV_AUTH_FAILED = 0x0011
+MGMT_EV_DEVICE_FOUND = 0x0012
+MGMT_EV_DISCOVERING = 0x0013
+MGMT_EV_DEVICE_BLOCKED = 0x0014
+MGMT_EV_DEVICE_UNBLOCKED = 0x0015
+MGMT_EV_DEVICE_UNPAIRED = 0x0016
+MGMT_EV_PASSKEY_NOTIFY = 0x0017
+MGMT_EV_NEW_IRK = 0x0018
+MGMT_EV_NEW_CSRK = 0x0019
+MGMT_EV_DEVICE_ADDED = 0x001A
+MGMT_EV_DEVICE_REMOVED = 0x001B
+MGMT_EV_NEW_CONN_PARAM = 0x001C
+MGMT_EV_UNCONF_INDEX_ADDED = 0x001D
+MGMT_EV_UNCONF_INDEX_REMOVED = 0x001E
+MGMT_EV_NEW_CONFIG_OPTIONS = 0x001F
 
 # Settings returned by MGMT_OP_READ_INFO
-MGMT_SETTING_POWERED            = 0x00000001
-MGMT_SETTING_CONNECTABLE        = 0x00000002
-MGMT_SETTING_FAST_CONNECTABLE   = 0x00000004
-MGMT_SETTING_DISCOVERABLE       = 0x00000008
-MGMT_SETTING_PAIRABLE           = 0x00000010
-MGMT_SETTING_LINK_SECURITY      = 0x00000020
-MGMT_SETTING_SSP                = 0x00000040
-MGMT_SETTING_BREDR              = 0x00000080
-MGMT_SETTING_HS                 = 0x00000100
-MGMT_SETTING_LE                 = 0x00000200
-MGMT_SETTING_ADVERTISING        = 0x00000400
+MGMT_SETTING_POWERED = 0x00000001
+MGMT_SETTING_CONNECTABLE = 0x00000002
+MGMT_SETTING_FAST_CONNECTABLE = 0x00000004
+MGMT_SETTING_DISCOVERABLE = 0x00000008
+MGMT_SETTING_PAIRABLE = 0x00000010
+MGMT_SETTING_LINK_SECURITY = 0x00000020
+MGMT_SETTING_SSP = 0x00000040
+MGMT_SETTING_BREDR = 0x00000080
+MGMT_SETTING_HS = 0x00000100
+MGMT_SETTING_LE = 0x00000200
+MGMT_SETTING_ADVERTISING = 0x00000400
 MGMT_SETTING_SECURE_CONNECTIONS = 0x00000800
-MGMT_SETTING_DEBUG_KEYS         = 0x00001000
-MGMT_SETTING_PRIVACY            = 0x00002000
-MGMT_SETTING_CONTROLLER_CONFIG  = 0x00004000
+MGMT_SETTING_DEBUG_KEYS = 0x00001000
+MGMT_SETTING_PRIVACY = 0x00002000
+MGMT_SETTING_CONTROLLER_CONFIG = 0x00004000
 
 # Options returned by MGMT_OP_READ_CONFIG_INFO
-MGMT_OPTION_EXTERNAL_CONFIG    = 0x00000001
-MGMT_OPTION_PUBLIC_ADDRESS     = 0x00000002
+MGMT_OPTION_EXTERNAL_CONFIG = 0x00000001
+MGMT_OPTION_PUBLIC_ADDRESS = 0x00000002
 
 # Disconnect reason returned in MGMT_EV_DEVICE_DISCONNECTED
-MGMT_DEV_DISCONN_UNKNOWN       = 0x00
-MGMT_DEV_DISCONN_TIMEOUT       = 0x01
-MGMT_DEV_DISCONN_LOCAL_HOST    = 0x02
-MGMT_DEV_DISCONN_REMOTE        = 0x03
+MGMT_DEV_DISCONN_UNKNOWN = 0x00
+MGMT_DEV_DISCONN_TIMEOUT = 0x01
+MGMT_DEV_DISCONN_LOCAL_HOST = 0x02
+MGMT_DEV_DISCONN_REMOTE = 0x03
 
 # Flags returned in MGMT_EV_DEVICE_FOUND
-MGMT_DEV_FOUND_CONFIRM_NAME    = 0x01
-MGMT_DEV_FOUND_LEGACY_PAIRING  = 0x02
+MGMT_DEV_FOUND_CONFIRM_NAME = 0x01
+MGMT_DEV_FOUND_LEGACY_PAIRING = 0x02
 
 
 # EIR Data field types
-EIR_FLAGS                      = 0x01
-EIR_UUID16_SOME                = 0x02
-EIR_UUID16_ALL                 = 0x03
-EIR_UUID32_SOME                = 0x04
-EIR_UUID32_ALL                 = 0x05
-EIR_UUID128_SOME               = 0x06
-EIR_UUID128_ALL                = 0x07
-EIR_NAME_SHORT                 = 0x08
-EIR_NAME_COMPLETE              = 0x09
-EIR_TX_POWER                   = 0x0A
-EIR_CLASS_OF_DEV               = 0x0D
-EIR_SSP_HASH                   = 0x0E
-EIR_SSP_RANDOMIZER             = 0x0F
-EIR_DEVICE_ID                  = 0x10
-EIR_GAP_APPEARANCE             = 0x19
+EIR_FLAGS = 0x01
+EIR_UUID16_SOME = 0x02
+EIR_UUID16_ALL = 0x03
+EIR_UUID32_SOME = 0x04
+EIR_UUID32_ALL = 0x05
+EIR_UUID128_SOME = 0x06
+EIR_UUID128_ALL = 0x07
+EIR_NAME_SHORT = 0x08
+EIR_NAME_COMPLETE = 0x09
+EIR_TX_POWER = 0x0A
+EIR_CLASS_OF_DEV = 0x0D
+EIR_SSP_HASH = 0x0E
+EIR_SSP_RANDOMIZER = 0x0F
+EIR_DEVICE_ID = 0x10
+EIR_GAP_APPEARANCE = 0x19
 
 
 # Derived from lib/hci.h
-HCIGETDEVLIST                  = 0x800448d2
-HCIGETDEVINFO                  = 0x800448d3
+HCIGETDEVLIST = 0x800448D2
+HCIGETDEVINFO = 0x800448D3
 
-HCI_UP                         = 1 << 0
-HCI_INIT                       = 1 << 1
-HCI_RUNNING                    = 1 << 2
-HCI_PSCAN                      = 1 << 3
-HCI_ISCAN                      = 1 << 4
-HCI_AUTH                       = 1 << 5
-HCI_ENCRYPT                    = 1 << 6
-HCI_INQUIRY                    = 1 << 7
-HCI_RAW                        = 1 << 8
+HCI_UP = 1 << 0
+HCI_INIT = 1 << 1
+HCI_RUNNING = 1 << 2
+HCI_PSCAN = 1 << 3
+HCI_ISCAN = 1 << 4
+HCI_AUTH = 1 << 5
+HCI_ENCRYPT = 1 << 6
+HCI_INQUIRY = 1 << 7
+HCI_RAW = 1 << 8
 
 
 def parse_eir(eirdata):
@@ -206,36 +207,41 @@ def parse_eir(eirdata):
     while pos < len(eirdata):
         # Byte at the current position is the field length, which should be
         # zero at the end of the structure.
-        (field_len,) = struct.unpack('B', memoryview(eirdata)[pos : pos + 1])
+        (field_len,) = struct.unpack("B", memoryview(eirdata)[pos : pos + 1])
         if field_len == 0:
             break
         # Next byte is the field type, and the rest of the field is the data.
         # Note that the length field doesn't include itself so that's why the
         # offsets and lengths look a little odd.
-        (field_type,) = struct.unpack('B',
-                                      memoryview(eirdata)[pos + 1 : pos + 2])
-        data = eirdata[pos+2:pos+field_len+1]
+        (field_type,) = struct.unpack(
+            "B", memoryview(eirdata)[pos + 1 : pos + 2]
+        )
+        data = eirdata[pos + 2 : pos + field_len + 1]
         pos += field_len + 1
         # Parse the individual fields to make the data meaningful.
         if field_type == EIR_NAME_SHORT or field_type == EIR_NAME_COMPLETE:
-            data = data.rstrip('\0')
+            data = data.rstrip("\0")
         # Place in the dictionary keyed by type.
         fields[field_type] = data
 
     return fields
 
 
-
 class BluetoothSocketError(Exception):
     """Error raised for general issues with BluetoothSocket."""
+
     pass
+
 
 class BluetoothInvalidPacketError(Exception):
     """Error raised when an invalid packet is received from the socket."""
+
     pass
+
 
 class BluetoothControllerError(Exception):
     """Error raised when the Controller Error event is received."""
+
     pass
 
 
@@ -255,13 +261,14 @@ class BluetoothSocket(btsocket.socket):
     """
 
     def __init__(self):
-        super(BluetoothSocket, self).__init__(family=btsocket.AF_BLUETOOTH,
-                                              type=socket.SOCK_RAW,
-                                              proto=btsocket.BTPROTO_HCI)
+        super(BluetoothSocket, self).__init__(
+            family=btsocket.AF_BLUETOOTH,
+            type=socket.SOCK_RAW,
+            proto=btsocket.BTPROTO_HCI,
+        )
         self.events = []
 
-
-    def send_command(self, code, index, data=''):
+    def send_command(self, code, index, data=""):
         """Send a command to the socket.
 
         To send a command, wait for the reply event, and parse it use
@@ -273,12 +280,11 @@ class BluetoothSocket(btsocket.socket):
 
         """
         # Send the command to the kernel
-        msg = struct.pack('<HHH', code, index, len(data)) + data
+        msg = struct.pack("<HHH", code, index, len(data)) + data
 
         length = self.send(msg)
         if length != len(msg):
-            raise BluetoothSocketError('Short write on socket')
-
+            raise BluetoothSocketError("Short write on socket")
 
     def recv_event(self):
         """Receive a single event from the socket.
@@ -299,22 +305,23 @@ class BluetoothSocket(btsocket.socket):
         data = bytearray(512)
         try:
             (nbytes, ancdata, msg_flags, address) = self.recvmsg_into(
-                    (hdr, data))
+                (hdr, data)
+            )
         except btsocket.timeout as e:
-            raise BluetoothSocketError('Error receiving event: %s' % e)
+            raise BluetoothSocketError("Error receiving event: %s" % e)
         if nbytes < MGMT_HDR_SIZE:
-            raise BluetoothInvalidPacketError('Packet shorter than header')
+            raise BluetoothInvalidPacketError("Packet shorter than header")
 
         # Parse the header
-        (event, index, length) = struct.unpack_from('<HHH', memoryview(hdr))
+        (event, index, length) = struct.unpack_from("<HHH", memoryview(hdr))
         if nbytes < MGMT_HDR_SIZE + length:
-            raise BluetoothInvalidPacketError('Packet shorter than length')
+            raise BluetoothInvalidPacketError("Packet shorter than length")
 
         return (event, index, data[:length])
 
-
-    def send_command_and_wait(self, cmd_code, cmd_index, cmd_data=b'',
-                              expected_length=None):
+    def send_command_and_wait(
+        self, cmd_code, cmd_index, cmd_data=b"", expected_length=None
+    ):
         """Send a command to the socket and wait for the reply.
 
         Additional events are appended to the events list of the socket object.
@@ -339,71 +346,108 @@ class BluetoothSocket(btsocket.socket):
             if event == MGMT_EV_CMD_COMPLETE:
                 if index != cmd_index:
                     raise BluetoothInvalidPacketError(
-                            ('Response for wrong controller index received: ' +
-                             '0x%04d (expected 0x%04d)' % (index, cmd_index)))
+                        (
+                            "Response for wrong controller index received: "
+                            + "0x%04d (expected 0x%04d)" % (index, cmd_index)
+                        )
+                    )
                 if len(data) < 3:
                     raise BluetoothInvalidPacketError(
-                            ('Incorrect command complete event data length: ' +
-                             '%d (expected at least 3)' % len(data)))
+                        (
+                            "Incorrect command complete event data length: "
+                            + "%d (expected at least 3)" % len(data)
+                        )
+                    )
 
-                (code, status) = struct.unpack_from('<HB',
-                                                    memoryview(data)[0 : 3])
-                logging.debug('[0x%04x] command 0x%04x complete: 0x%02x',
-                              index, code, status)
+                (code, status) = struct.unpack_from(
+                    "<HB", memoryview(data)[0:3]
+                )
+                logging.debug(
+                    "[0x%04x] command 0x%04x complete: 0x%02x",
+                    index,
+                    code,
+                    status,
+                )
 
                 if code != cmd_code:
                     raise BluetoothInvalidPacketError(
-                            ('Response for wrong command code received: ' +
-                             '0x%04d (expected 0x%04d)' % (code, cmd_code)))
+                        (
+                            "Response for wrong command code received: "
+                            + "0x%04d (expected 0x%04d)" % (code, cmd_code)
+                        )
+                    )
 
                 response_length = len(data) - 3
-                if (expected_length is not None and
-                    response_length != expected_length):
+                if (
+                    expected_length is not None
+                    and response_length != expected_length
+                ):
                     raise BluetoothInvalidPacketError(
-                            ('Incorrect length of data for response: ' +
-                             '%d (expected %d)' % (response_length,
-                                                   expected_length)))
+                        (
+                            "Incorrect length of data for response: "
+                            + "%d (expected %d)"
+                            % (response_length, expected_length)
+                        )
+                    )
 
                 return (status, data[3:])
 
             elif event == MGMT_EV_CMD_STATUS:
                 if index != cmd_index:
                     raise BluetoothInvalidPacketError(
-                            ('Response for wrong controller index received: ' +
-                             '0x%04d (expected 0x%04d)' % (index, cmd_index)))
+                        (
+                            "Response for wrong controller index received: "
+                            + "0x%04d (expected 0x%04d)" % (index, cmd_index)
+                        )
+                    )
                 if len(data) != 3:
                     raise BluetoothInvalidPacketError(
-                            ('Incorrect command status event data length: ' +
-                             '%d (expected 3)' % len(data)))
+                        (
+                            "Incorrect command status event data length: "
+                            + "%d (expected 3)" % len(data)
+                        )
+                    )
 
-                (code, status) = struct.unpack_from('<HB',
-                                                    memoryview(data)[0 : 3])
-                logging.debug('[0x%04x] command 0x%02x status: 0x%02x',
-                              index, code, status)
+                (code, status) = struct.unpack_from(
+                    "<HB", memoryview(data)[0:3]
+                )
+                logging.debug(
+                    "[0x%04x] command 0x%02x status: 0x%02x",
+                    index,
+                    code,
+                    status,
+                )
 
                 if code != cmd_code:
                     raise BluetoothInvalidPacketError(
-                            ('Response for wrong command code received: ' +
-                             '0x%04d (expected 0x%04d)' % (code, cmd_code)))
+                        (
+                            "Response for wrong command code received: "
+                            + "0x%04d (expected 0x%04d)" % (code, cmd_code)
+                        )
+                    )
 
                 return (status, None)
 
             elif event == MGMT_EV_CONTROLLER_ERROR:
                 if len(data) != 1:
                     raise BluetoothInvalidPacketError(
-                        ('Incorrect controller error event data length: ' +
-                         '%d (expected 1)' % len(data)))
+                        (
+                            "Incorrect controller error event data length: "
+                            + "%d (expected 1)" % len(data)
+                        )
+                    )
 
-                (error_code) = struct.unpack_from('<B', memoryview(data)[0 : 1])
+                (error_code) = struct.unpack_from("<B", memoryview(data)[0:1])
 
-                raise BluetoothControllerError('Controller error: %d' %
-                                               error_code)
+                raise BluetoothControllerError(
+                    "Controller error: %d" % error_code
+                )
 
             else:
-                logging.debug('[0x%04x] event 0x%02x length: %d',
-                              index, event, len(data))
+                logging.debug(
+                    "[0x%04x] event 0x%02x length: %d", index, event, len(data)
+                )
                 self.events.append((event, index, data))
-
 
     def wait_for_events(self, index, events):
         """Wait for and return the first of a set of events specified.
@@ -430,34 +474,54 @@ class BluetoothSocket(btsocket.socket):
             elif event == MGMT_EV_CMD_COMPLETE:
                 if len(data) < 3:
                     raise BluetoothInvalidPacketError(
-                            ('Incorrect command complete event data length: ' +
-                             '%d (expected at least 3)' % len(data)))
+                        (
+                            "Incorrect command complete event data length: "
+                            + "%d (expected at least 3)" % len(data)
+                        )
+                    )
 
-                (code, status) = struct.unpack_from('<HB',
-                                                    memoryview(data)[0 : 3])
-                logging.debug('[0x%04x] command 0x%04x complete: 0x%02x '
-                              '(Ignored)', index, code, status)
+                (code, status) = struct.unpack_from(
+                    "<HB", memoryview(data)[0:3]
+                )
+                logging.debug(
+                    "[0x%04x] command 0x%04x complete: 0x%02x " "(Ignored)",
+                    index,
+                    code,
+                    status,
+                )
 
             elif event == MGMT_EV_CMD_STATUS:
                 if len(data) != 3:
                     raise BluetoothInvalidPacketError(
-                            ('Incorrect command status event data length: ' +
-                             '%d (expected 3)' % len(data)))
+                        (
+                            "Incorrect command status event data length: "
+                            + "%d (expected 3)" % len(data)
+                        )
+                    )
 
-                (code, status) = struct.unpack_from('<HB',
-                                                    memoryview(data)[0 : 3])
-                logging.debug('[0x%04x] command 0x%02x status: 0x%02x '
-                              '(Ignored)', index, code, status)
+                (code, status) = struct.unpack_from(
+                    "<HB", memoryview(data)[0:3]
+                )
+                logging.debug(
+                    "[0x%04x] command 0x%02x status: 0x%02x " "(Ignored)",
+                    index,
+                    code,
+                    status,
+                )
 
             elif event == MGMT_EV_CONTROLLER_ERROR:
                 if len(data) != 1:
                     raise BluetoothInvalidPacketError(
-                        ('Incorrect controller error event data length: ' +
-                         '%d (expected 1)' % len(data)))
+                        (
+                            "Incorrect controller error event data length: "
+                            + "%d (expected 1)" % len(data)
+                        )
+                    )
 
-                (error_code) = struct.unpack_from('<B', memoryview(data)[0 : 1])
-                logging.debug('[0x%04x] controller error: %d (Ignored)',
-                              index, error_code)
+                (error_code) = struct.unpack_from("<B", memoryview(data)[0:1])
+                logging.debug(
+                    "[0x%04x] controller error: %d (Ignored)", index, error_code
+                )
 
             else:
                 self.events.append((event, index, data))
@@ -481,9 +545,10 @@ class BluetoothControlSocket(BluetoothSocket):
         # Certain features will depend on the management version and revision,
         # so check those now.
         (version, revision) = self.read_version()
-        logging.debug('MGMT API %d.%d', version, revision)
-        self._kernel_confirms_name = (
-                (version > 1) or ((version == 1) and (revision >= 5)))
+        logging.debug("MGMT API %d.%d", version, revision)
+        self._kernel_confirms_name = (version > 1) or (
+            (version == 1) and (revision >= 5)
+        )
 
     def read_version(self):
         """Read the version of the management interface.
@@ -492,15 +557,13 @@ class BluetoothControlSocket(BluetoothSocket):
 
         """
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_READ_VERSION,
-                MGMT_INDEX_NONE,
-                expected_length=3)
+            MGMT_OP_READ_VERSION, MGMT_INDEX_NONE, expected_length=3
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (version, revision) = struct.unpack_from('<BH', memoryview(data))
+        (version, revision) = struct.unpack_from("<BH", memoryview(data))
         return (version, revision)
-
 
     def read_supported_commands(self):
         """Read the supported management commands and events.
@@ -509,38 +572,44 @@ class BluetoothControlSocket(BluetoothSocket):
 
         """
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_READ_COMMANDS,
-                MGMT_INDEX_NONE)
+            MGMT_OP_READ_COMMANDS, MGMT_INDEX_NONE
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
         if len(data) < 4:
             raise BluetoothInvalidPacketError(
-                    ('Incorrect length of data for response: ' +
-                     '%d (expected at least 4)' % len(data)))
+                (
+                    "Incorrect length of data for response: "
+                    + "%d (expected at least 4)" % len(data)
+                )
+            )
 
-        (ncommands, nevents) = struct.unpack_from('<HH',
-                                                  memoryview(data)[0 : 4])
+        (ncommands, nevents) = struct.unpack_from("<HH", memoryview(data)[0:4])
         offset = 4
         expected_length = offset + (ncommands * 2) + (nevents * 2)
         if len(data) != expected_length:
             raise BluetoothInvalidPacketError(
-                    ('Incorrect length of data for response: ' +
-                     '%d (expected %d)' % (len(data), expected_length)))
+                (
+                    "Incorrect length of data for response: "
+                    + "%d (expected %d)" % (len(data), expected_length)
+                )
+            )
 
         commands = []
         while len(commands) < ncommands:
-            commands.extend(struct.unpack_from(
-                    '<H', memoryview(data)[offset : offset + 2]))
+            commands.extend(
+                struct.unpack_from("<H", memoryview(data)[offset : offset + 2])
+            )
             offset += 2
 
         events = []
         while len(events) < nevents:
-            events.extend(struct.unpack_from(
-                    '<H', memoryview(data)[offset : offset + 2]))
+            events.extend(
+                struct.unpack_from("<H", memoryview(data)[offset : offset + 2])
+            )
             offset += 2
 
         return (commands, events)
-
 
     def read_index_list(self):
         """Read the list of currently known controllers.
@@ -549,31 +618,37 @@ class BluetoothControlSocket(BluetoothSocket):
 
         """
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_READ_INDEX_LIST,
-                MGMT_INDEX_NONE)
+            MGMT_OP_READ_INDEX_LIST, MGMT_INDEX_NONE
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
         if len(data) < 2:
             raise BluetoothInvalidPacketError(
-                    ('Incorrect length of data for response: ' +
-                     '%d (expected at least 2)' % len(data)))
+                (
+                    "Incorrect length of data for response: "
+                    + "%d (expected at least 2)" % len(data)
+                )
+            )
 
-        (nindexes,) = struct.unpack_from('<H', memoryview(data)[0 : 2])
+        (nindexes,) = struct.unpack_from("<H", memoryview(data)[0:2])
         offset = 2
         expected_length = offset + (nindexes * 2)
         if len(data) != expected_length:
             raise BluetoothInvalidPacketError(
-                    ('Incorrect length of data for response: ' +
-                     '%d (expected %d)' % (len(data), expected_length)))
+                (
+                    "Incorrect length of data for response: "
+                    + "%d (expected %d)" % (len(data), expected_length)
+                )
+            )
 
         indexes = []
         while len(indexes) < nindexes:
-            indexes.extend(struct.unpack_from(
-                    '<H', memoryview(data)[offset : offset + 2]))
+            indexes.extend(
+                struct.unpack_from("<H", memoryview(data)[offset : offset + 2])
+            )
             offset += 2
 
         return indexes
-
 
     def read_info(self, index):
         """Read the state and basic information of a controller.
@@ -590,30 +665,40 @@ class BluetoothControlSocket(BluetoothSocket):
 
         """
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_READ_INFO,
-                index,
-                expected_length=280)
+            MGMT_OP_READ_INFO, index, expected_length=280
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (address, bluetooth_version, manufacturer,
-         supported_settings, current_settings,
-         class_of_device_lo, class_of_device_mid, class_of_device_hi,
-         name, short_name) = struct.unpack_from(
-                '<6sBHLL3B249s11s', memoryview(data))
+        (
+            address,
+            bluetooth_version,
+            manufacturer,
+            supported_settings,
+            current_settings,
+            class_of_device_lo,
+            class_of_device_mid,
+            class_of_device_hi,
+            name,
+            short_name,
+        ) = struct.unpack_from("<6sBHLL3B249s11s", memoryview(data))
 
         return (
-                ':'.join('%02X' % x
-                         for x in reversed(struct.unpack('6B', address))),
-                bluetooth_version,
-                manufacturer,
-                supported_settings,
-                current_settings,
-                (class_of_device_lo |(class_of_device_mid << 8) |
-                        (class_of_device_hi << 16)),
-                name.decode().rstrip('\0'),
-                short_name.decode().rstrip('\0'))
-
+            ":".join(
+                "%02X" % x for x in reversed(struct.unpack("6B", address))
+            ),
+            bluetooth_version,
+            manufacturer,
+            supported_settings,
+            current_settings,
+            (
+                class_of_device_lo
+                | (class_of_device_mid << 8)
+                | (class_of_device_hi << 16)
+            ),
+            name.decode().rstrip("\0"),
+            short_name.decode().rstrip("\0"),
+        )
 
     def set_powered(self, index, powered):
         """Set the powered state of a controller.
@@ -624,18 +709,15 @@ class BluetoothControlSocket(BluetoothSocket):
         @return New controller settings on success, None on failure.
 
         """
-        msg_data = struct.pack('<B', bool(powered))
+        msg_data = struct.pack("<B", bool(powered))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_POWERED,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_POWERED, index, msg_data, expected_length=4
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_discoverable(self, index, discoverable, timeout=0):
         """Set the discoverable state of a controller.
@@ -650,20 +732,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<BH', bool(discoverable), timeout)
+        msg_data = struct.pack("<BH", bool(discoverable), timeout)
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_DISCOVERABLE,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_DISCOVERABLE, index, msg_data, expected_length=4
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not discoverable:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_connectable(self, index, connectable):
         """Set the connectable state of a controller.
@@ -675,20 +754,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(connectable))
+        msg_data = struct.pack("<B", bool(connectable))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_CONNECTABLE,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_CONNECTABLE, index, msg_data, expected_length=4
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not connectable:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_fast_connectable(self, index, connectable):
         """Set the fast connectable state of a controller.
@@ -707,11 +783,10 @@ class BluetoothControlSocket(BluetoothSocket):
                 powered down, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(connectable))
+        msg_data = struct.pack("<B", bool(connectable))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_FAST_CONNECTABLE,
-                index,
-                msg_data)
+            MGMT_OP_SET_FAST_CONNECTABLE, index, msg_data
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not connectable:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
@@ -723,12 +798,14 @@ class BluetoothControlSocket(BluetoothSocket):
             return 0
         elif len(data) != 4:
             raise BluetoothInvalidPacketError(
-                    ('Incorrect length of data for response: ' +
-                     '%d (expected 4)' % len(data)))
+                (
+                    "Incorrect length of data for response: "
+                    + "%d (expected 4)" % len(data)
+                )
+            )
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_pairable(self, index, pairable):
         """Set the pairable state of a controller.
@@ -740,18 +817,15 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(pairable))
+        msg_data = struct.pack("<B", bool(pairable))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_PAIRABLE,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_PAIRABLE, index, msg_data, expected_length=4
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_link_security(self, index, link_security):
         """Set the link security state of a controller.
@@ -766,20 +840,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(link_security))
+        msg_data = struct.pack("<B", bool(link_security))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_LINK_SECURITY,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_LINK_SECURITY, index, msg_data, expected_length=4
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not link_security:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_ssp(self, index, ssp):
         """Set the whether a controller supports Simple Secure Pairing.
@@ -791,20 +862,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(ssp))
+        msg_data = struct.pack("<B", bool(ssp))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_SSP,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_SSP, index, msg_data, expected_length=4
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not ssp:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_hs(self, index, hs):
         """Set the whether a controller supports Bluetooth High Speed.
@@ -816,20 +884,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(hs))
+        msg_data = struct.pack("<B", bool(hs))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_HS,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_HS, index, msg_data, expected_length=4
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not hs:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_le(self, index, le):
         """Set the whether a controller supports Bluetooth Low Energy.
@@ -841,20 +906,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(le))
+        msg_data = struct.pack("<B", bool(le))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_LE,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_LE, index, msg_data, expected_length=4
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not le:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_device_class(self, index, major, minor):
         """Set the device class of the controller.
@@ -874,20 +936,23 @@ class BluetoothControlSocket(BluetoothSocket):
         @return New three-octet device class on success, None on failure.
 
         """
-        msg_data = struct.pack('<BB', major, minor)
+        msg_data = struct.pack("<BB", major, minor)
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_DEV_CLASS,
-                index,
-                msg_data,
-                expected_length=3)
+            MGMT_OP_SET_DEV_CLASS, index, msg_data, expected_length=3
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (class_of_device_lo, class_of_device_mid,
-         class_of_device_hi) = struct.unpack_from('<3B', memoryview(data))
-        return (class_of_device_lo |(class_of_device_mid << 8) |
-                (class_of_device_hi << 16))
-
+        (
+            class_of_device_lo,
+            class_of_device_mid,
+            class_of_device_hi,
+        ) = struct.unpack_from("<3B", memoryview(data))
+        return (
+            class_of_device_lo
+            | (class_of_device_mid << 8)
+            | (class_of_device_hi << 16)
+        )
 
     def set_local_name(self, index, name, short_name):
         """Set the local name of the controller.
@@ -901,19 +966,17 @@ class BluetoothControlSocket(BluetoothSocket):
         """
         # Truncate the provided parameters and then zero-pad using struct
         # so we pass a fixed-length null-terminated string to the kernel.
-        msg_data = struct.pack('<249s11s', name[:248].encode(),
-                               short_name[:10].encode())
+        msg_data = struct.pack(
+            "<249s11s", name[:248].encode(), short_name[:10].encode()
+        )
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_LOCAL_NAME,
-                index,
-                msg_data,
-                expected_length=260)
+            MGMT_OP_SET_LOCAL_NAME, index, msg_data, expected_length=260
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (name, short_name) = struct.unpack_from('<249s11s', memoryview(data))
-        return (name.decode().rstrip('\0'), short_name.decode().rstrip('\0'))
-
+        (name, short_name) = struct.unpack_from("<249s11s", memoryview(data))
+        return (name.decode().rstrip("\0"), short_name.decode().rstrip("\0"))
 
     def set_privacy(self, index, enable):
         """Set the LE privacy state of a controller.
@@ -924,16 +987,14 @@ class BluetoothControlSocket(BluetoothSocket):
         @return New controller settings on success, None on failure.
         """
         irk = os.urandom(16)
-        msg_data = struct.pack('<B16s', enable, irk)
-        (status, data) = self.send_command_and_wait(MGMT_OP_SET_PRIVACY,
-                                                    index,
-                                                    msg_data,
-                                                    expected_length=4)
+        msg_data = struct.pack("<B16s", enable, irk)
+        (status, data) = self.send_command_and_wait(
+            MGMT_OP_SET_PRIVACY, index, msg_data, expected_length=4
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def start_discovery(self, index, address_type):
         """Start discovering remote devices.
@@ -947,18 +1008,15 @@ class BluetoothControlSocket(BluetoothSocket):
                 None on failure.
 
         """
-        msg_data = struct.pack('<B', address_type)
+        msg_data = struct.pack("<B", address_type)
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_START_DISCOVERY,
-                index,
-                msg_data,
-                expected_length=1)
+            MGMT_OP_START_DISCOVERY, index, msg_data, expected_length=1
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (address_type,) = struct.unpack_from('<B', memoryview(data))
+        (address_type,) = struct.unpack_from("<B", memoryview(data))
         return address_type
-
 
     def stop_discovery(self, index, address_type):
         """Stop discovering remote devices.
@@ -974,18 +1032,15 @@ class BluetoothControlSocket(BluetoothSocket):
                 None on failure.
 
         """
-        msg_data = struct.pack('<B', address_type)
+        msg_data = struct.pack("<B", address_type)
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_STOP_DISCOVERY,
-                index,
-                msg_data,
-                expected_length=1)
+            MGMT_OP_STOP_DISCOVERY, index, msg_data, expected_length=1
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (address_type,) = struct.unpack_from('<B', memoryview(data))
+        (address_type,) = struct.unpack_from("<B", memoryview(data))
         return address_type
-
 
     def get_discovered_devices(self, index):
         """Return list of discovered remote devices.
@@ -1008,64 +1063,76 @@ class BluetoothControlSocket(BluetoothSocket):
         discovering = True
         while discovering:
             (event, data) = self.wait_for_events(
-                    index,
-                    ( MGMT_EV_DISCOVERING, MGMT_EV_DEVICE_FOUND ))
+                index, (MGMT_EV_DISCOVERING, MGMT_EV_DEVICE_FOUND)
+            )
 
             if event == MGMT_EV_DISCOVERING:
                 if len(data) != 2:
                     raise BluetoothInvalidPacketError(
-                            ('Incorrect discovering event data length: ' +
-                             '%d (expected 2)' % len(data)))
+                        (
+                            "Incorrect discovering event data length: "
+                            + "%d (expected 2)" % len(data)
+                        )
+                    )
 
-                (address_type,
-                 discovering) = struct.unpack_from('<BB', memoryview(data))
+                (address_type, discovering) = struct.unpack_from(
+                    "<BB", memoryview(data)
+                )
 
             elif event == MGMT_EV_DEVICE_FOUND:
                 if len(data) < 14:
                     raise BluetoothInvalidPacketError(
-                            ('Incorrect device found event data length: ' +
-                             '%d (expected at least 14)' % len(data)))
+                        (
+                            "Incorrect device found event data length: "
+                            + "%d (expected at least 14)" % len(data)
+                        )
+                    )
 
-                (address, address_type, rssi,
-                 flags, eir_len) = struct.unpack_from('<6sBbLH',
-                                                      memoryview(data)[0 : 14])
+                (
+                    address,
+                    address_type,
+                    rssi,
+                    flags,
+                    eir_len,
+                ) = struct.unpack_from("<6sBbLH", memoryview(data)[0:14])
 
                 if len(data) != 14 + eir_len:
                     raise BluetoothInvalidPacketError(
-                            ('Incorrect device found event data length: ' +
-                             '%d (expected %d)' % (len(data), 14 + eir_len)))
+                        (
+                            "Incorrect device found event data length: "
+                            + "%d (expected %d)" % (len(data), 14 + eir_len)
+                        )
+                    )
 
-                devices.append((
-                        ':'.join('%02X' % x
-                                 for x in reversed(
-                                        struct.unpack('6B', address))),
+                devices.append(
+                    (
+                        ":".join(
+                            "%02X" % x
+                            for x in reversed(struct.unpack("6B", address))
+                        ),
                         address_type,
                         rssi,
                         flags,
-                        bytes(data[14:])
-                ))
+                        bytes(data[14:]),
+                    )
+                )
 
                 # The kernel might want us to confirm whether or not we
                 # know the name of the device. We don't really care whether
                 # or not this works, we just have to do it to get the EIR
                 # Request.
                 if flags & MGMT_DEV_FOUND_CONFIRM_NAME:
-                    msg_data = struct.pack('<6sBB',
-                                           address, address_type, False)
+                    msg_data = struct.pack(
+                        "<6sBB", address, address_type, False
+                    )
                     if self._kernel_confirms_name:
                         self.send_command_and_wait(
-                                MGMT_OP_CONFIRM_NAME,
-                                index,
-                                msg_data)
+                            MGMT_OP_CONFIRM_NAME, index, msg_data
+                        )
                     else:
-                        self.send_command(
-                                MGMT_OP_CONFIRM_NAME,
-                                index,
-                                msg_data)
-
+                        self.send_command(MGMT_OP_CONFIRM_NAME, index, msg_data)
 
         return devices
-
 
     def set_advertising(self, index, advertising):
         """Set the whether a controller is advertising via LE.
@@ -1077,20 +1144,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(advertising))
+        msg_data = struct.pack("<B", bool(advertising))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_ADVERTISING,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_ADVERTISING, index, msg_data, expected_length=4
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not advertising:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_bredr(self, index, bredr):
         """Set the whether a controller supports Bluetooth BR/EDR (classic).
@@ -1102,20 +1166,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(bredr))
+        msg_data = struct.pack("<B", bool(bredr))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_BREDR,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_BREDR, index, msg_data, expected_length=4
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not bredr:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def set_secure_connections(self, index, secure_conn):
         """Set whether a controller supports secure connections.
@@ -1127,20 +1188,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack('<B', bool(secure_conn))
+        msg_data = struct.pack("<B", bool(secure_conn))
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_SET_SECURE_CONN,
-                index,
-                msg_data,
-                expected_length=4)
+            MGMT_OP_SET_SECURE_CONN, index, msg_data, expected_length=4
+        )
         if status == MGMT_STATUS_NOT_SUPPORTED and not secure_conn:
             return 0
         elif status != MGMT_STATUS_SUCCESS:
             return None
 
-        (current_settings, ) = struct.unpack_from('<L', memoryview(data))
+        (current_settings,) = struct.unpack_from("<L", memoryview(data))
         return current_settings
-
 
     def add_device(self, index, address, address_type, action):
         """Add a device to the action list.
@@ -1154,18 +1212,18 @@ class BluetoothControlSocket(BluetoothSocket):
                 None on failure.
 
         """
-        msg_data = struct.pack('<6sBB', address, address_type, action)
+        msg_data = struct.pack("<6sBB", address, address_type, action)
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_ADD_DEVICE,
-                index,
-                msg_data,
-                expected_length=7)
+            MGMT_OP_ADD_DEVICE, index, msg_data, expected_length=7
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (address, address_type,) = struct.unpack_from('<6sB', memoryview(data))
+        (
+            address,
+            address_type,
+        ) = struct.unpack_from("<6sB", memoryview(data))
         return (address, address_type)
-
 
     def remove_device(self, index, address, address_type):
         """Remove a device from the action list.
@@ -1178,16 +1236,17 @@ class BluetoothControlSocket(BluetoothSocket):
                 None on failure.
 
         """
-        msg_data = struct.pack('<6sB', address, address_type)
+        msg_data = struct.pack("<6sB", address, address_type)
         (status, data) = self.send_command_and_wait(
-                MGMT_OP_REMOVE_DEVICE,
-                index,
-                msg_data,
-                expected_length=7)
+            MGMT_OP_REMOVE_DEVICE, index, msg_data, expected_length=7
+        )
         if status != MGMT_STATUS_SUCCESS:
             return None
 
-        (address, address_type,) = struct.unpack_from('<6sB', memoryview(data))
+        (
+            address,
+            address_type,
+        ) = struct.unpack_from("<6sB", memoryview(data))
         return (address, address_type)
 
 
@@ -1218,38 +1277,60 @@ class BluetoothRawSocket(BluetoothSocket):
                 None on failure.
 
         """
-        buf = array.array('B', [0] * 96)
+        buf = array.array("B", [0] * 96)
         fcntl.ioctl(self.fileno(), HCIGETDEVINFO, buf, 1)
 
-        ( dev_id, name, address, flags, dev_type, features, pkt_type,
-          link_policy, link_mode, acl_mtu, acl_pkts, sco_mtu, sco_pkts,
-          err_rx, err_tx, cmd_tx, evt_rx, acl_tx, acl_rx, sco_tx, sco_rx,
-          byte_rx, byte_tx ) = struct.unpack_from(
-                '@H8s6sIBQIIIHHHHIIIIIIIIII', buf)
+        (
+            dev_id,
+            name,
+            address,
+            flags,
+            dev_type,
+            features,
+            pkt_type,
+            link_policy,
+            link_mode,
+            acl_mtu,
+            acl_pkts,
+            sco_mtu,
+            sco_pkts,
+            err_rx,
+            err_tx,
+            cmd_tx,
+            evt_rx,
+            acl_tx,
+            acl_rx,
+            sco_tx,
+            sco_rx,
+            byte_rx,
+            byte_tx,
+        ) = struct.unpack_from("@H8s6sIBQIIIHHHHIIIIIIIIII", buf)
 
         return (
-                dev_id,
-                name.rstrip('\0'),
-                ':'.join('%02X' % x
-                         for x in reversed(struct.unpack('6B', address))),
-                flags,
-                (dev_type & 0x30) >> 4,
-                dev_type & 0x0f,
-                features,
-                pkt_type,
-                link_policy,
-                link_mode,
-                acl_mtu,
-                acl_pkts,
-                sco_mtu,
-                sco_pkts,
-                err_rx,
-                err_tx,
-                cmd_tx,
-                evt_rx,
-                acl_tx,
-                acl_rx,
-                sco_tx,
-                sco_rx,
-                byte_rx,
-                byte_tx)
+            dev_id,
+            name.rstrip("\0"),
+            ":".join(
+                "%02X" % x for x in reversed(struct.unpack("6B", address))
+            ),
+            flags,
+            (dev_type & 0x30) >> 4,
+            dev_type & 0x0F,
+            features,
+            pkt_type,
+            link_policy,
+            link_mode,
+            acl_mtu,
+            acl_pkts,
+            sco_mtu,
+            sco_pkts,
+            err_rx,
+            err_tx,
+            cmd_tx,
+            evt_rx,
+            acl_tx,
+            acl_rx,
+            sco_tx,
+            sco_rx,
+            byte_rx,
+            byte_tx,
+        )

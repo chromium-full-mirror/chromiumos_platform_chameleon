@@ -7,92 +7,93 @@
 """This module implements Better Together over GATT service on bluez"""
 
 try:
-  from gi.repository import GObject
+    from gi.repository import GObject
 except ImportError:
-  import gobject as GObject
+    import gobject as GObject
 
-from utils.example_gatt_server import Characteristic, GATT_CHRC_IFACE, Service
-from utils.bluez_le_hid_service import (
-    LEApplication, BatteryService, DevInfoService)
+from utils.bluez_le_hid_service import BatteryService
+from utils.bluez_le_hid_service import DevInfoService
+from utils.bluez_le_hid_service import LEApplication
+from utils.example_gatt_server import Characteristic
+from utils.example_gatt_server import GATT_CHRC_IFACE
+from utils.example_gatt_server import Service
 
 
 class PhoneLEBetterTogetherApplication(LEApplication):
-  """Fake Better together application"""
+    """Fake Better together application"""
 
-  def __init__(self, bus, device_type):
-    LEApplication.__init__(self, bus)
+    def __init__(self, bus, device_type):
+        LEApplication.__init__(self, bus)
 
-    # Add ProximityAuth, Battery, and Device info primary services
-    self.AddService(ProximityAuthService(bus, 0))
-    self.AddService(BatteryService(bus, 1))
-    self.AddService(DevInfoService(bus, 2))
+        # Add ProximityAuth, Battery, and Device info primary services
+        self.AddService(ProximityAuthService(bus, 0))
+        self.AddService(BatteryService(bus, 1))
+        self.AddService(DevInfoService(bus, 2))
+
 
 class ProximityAuthService(Service):
-  """ProximityAuth service"""
-  SERVICE_UUID = 'b3b7e28e-a000-3e17-bd86-6e97b9e28c11'
+    """ProximityAuth service"""
 
-  def __init__(self, bus, index):
-    Service.__init__(self, bus, index, self.SERVICE_UUID, True)
-    tx_chrc = MessageTXChrc(bus, 0, self)
-    self.add_characteristic(tx_chrc)
-    self.add_characteristic(MessageRXChrc(bus, 1, self, tx_chrc))
+    SERVICE_UUID = "b3b7e28e-a000-3e17-bd86-6e97b9e28c11"
+
+    def __init__(self, bus, index):
+        Service.__init__(self, bus, index, self.SERVICE_UUID, True)
+        tx_chrc = MessageTXChrc(bus, 0, self)
+        self.add_characteristic(tx_chrc)
+        self.add_characteristic(MessageRXChrc(bus, 1, self, tx_chrc))
+
 
 class MessageTXChrc(Characteristic):
-  """Characteristic that transports the ProximityAuth message"""
+    """Characteristic that transports the ProximityAuth message"""
 
-  CHRC_UUID = '00000100-0004-1000-8000-001A11000102'
+    CHRC_UUID = "00000100-0004-1000-8000-001A11000102"
 
-  def __init__(self, bus, index, service):
-    Characteristic.__init__(
-        self, bus, index,
-        self.CHRC_UUID,
-        ['read', 'write', 'indicate', 'notify'],
-        service)
-    self.notifying = False
+    def __init__(self, bus, index, service):
+        Characteristic.__init__(
+            self,
+            bus,
+            index,
+            self.CHRC_UUID,
+            ["read", "write", "indicate", "notify"],
+            service,
+        )
+        self.notifying = False
 
-  def StartNotify(self):
-    """Called by dbus - requests notifications"""
+    def StartNotify(self):
+        """Called by dbus - requests notifications"""
 
-    if self.notifying:
-      return
+        if self.notifying:
+            return
 
-    self.notifying = True
+        self.notifying = True
 
+    def StopNotify(self):
+        """Called by dbus - requests stop to notifications"""
 
-  def StopNotify(self):
-    """Called by dbus - requests stop to notifications"""
+        if not self.notifying:
+            return
 
-    if not self.notifying:
-      return
+        self.notifying = False
 
-    self.notifying = False
-
-
-  def SendMessage(self, message):
-    """Send message"""
-    if self.notifying:
-      self.PropertiesChanged(
-          GATT_CHRC_IFACE,
-          {'Value': message}, [])
+    def SendMessage(self, message):
+        """Send message"""
+        if self.notifying:
+            self.PropertiesChanged(GATT_CHRC_IFACE, {"Value": message}, [])
 
 
 class MessageRXChrc(Characteristic):
-  """Characteristic that received the ProximityAuth messages"""
+    """Characteristic that received the ProximityAuth messages"""
 
-  CHRC_UUID = '00000100-0004-1000-8000-001A11000101'
+    CHRC_UUID = "00000100-0004-1000-8000-001A11000101"
 
+    def __init__(self, bus, index, service, tx_chrc):
+        Characteristic.__init__(
+            self, bus, index, self.CHRC_UUID, ["write", "notify"], service
+        )
+        self.tx_chrc = tx_chrc
 
-  def __init__(self, bus, index, service, tx_chrc):
-    Characteristic.__init__(
-        self, bus, index,
-        self.CHRC_UUID,
-        ['write', 'notify'],
-        service)
-    self.tx_chrc = tx_chrc
-
-
-  def WriteValue(self, value, options):
-    """Called by dbus - requests write to characteristic"""
-    # Better Together needs to send some message back as the response to the
-    # message received.
-    self.tx_chrc.SendMessage(value)
+    def WriteValue(self, value, options):
+        """Called by dbus - requests write to characteristic"""
+        # Better Together needs to send some message back as the response to the
+        # message received.
+        self.tx_chrc.SendMessage(value)

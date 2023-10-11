@@ -19,3 +19,5 @@ slave
 # The Zephyr RTOS uses "native_posix" as a build target, so unblock
 # just that specific usage.
 native_posix
+dummy
+sanity

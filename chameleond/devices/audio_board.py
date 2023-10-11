@@ -1,826 +1,893 @@
 # Copyright 2015 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """This module provides interface to control audio board."""
 
 import logging
 import time
 
-from . import chameleon_common  # pylint: disable=W0611, C0411
 from chameleond.devices import chameleon_device
-from chameleond.utils import i2c
 from chameleond.utils import chameleon_io as io
+from chameleond.utils import i2c
+
+from . import chameleon_common  # pylint: disable=W0611, C0411
 
 
 class _AudioBoardIOController(object):
-  """Controls I/O expanders on audio board.
+    """Controls I/O expanders on audio board.
 
-  There are three I/O expanders on i2c bus 3,
-  address 0x20, 0x21, 0x22. Each I/O expander has 16 bits.
-  Some of the bits are set as output to control compoments on audio board.
-  Some of the bits are set as input to read status.
-  Other bits are left untouched.
-  This class provides the interface to control output or read input on certain
-  bit of certian I/O expander.
-  """
-
-  def __init__(self, i2c_bus):
-    """Constructs an _AudioBoardIOController.
-
-    Args:
-      i2c_bus: The I2cBus object.
+    There are three I/O expanders on i2c bus 3,
+    address 0x20, 0x21, 0x22. Each I/O expander has 16 bits.
+    Some of the bits are set as output to control compoments on audio board.
+    Some of the bits are set as input to read status.
+    Other bits are left untouched.
+    This class provides the interface to control output or read input on certain
+    bit of certian I/O expander.
     """
-    self._io_expanders = [
-        io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[0]),
-        io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[1]),
-        io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[2])
-    ]
 
-    for io_expander in self._io_expanders:
-      i2c_bus.AddSlave(io_expander)
+    def __init__(self, i2c_bus):
+        """Constructs an _AudioBoardIOController.
 
-    logging.info('_AudioBoardIOController created')
+        Args:
+          i2c_bus: The I2cBus object.
+        """
+        self._io_expanders = [
+            io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[0]),
+            io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[1]),
+            io.IoExpander(i2c_bus, io.IoExpander.SLAVE_ADDRESSES[2]),
+        ]
 
-  def IsDetected(self):
-    """Checks if all the I/O expanders are detected.
+        for io_expander in self._io_expanders:
+            i2c_bus.AddSlave(io_expander)
 
-    Returns:
-      True if all three I/O expanders are detected. False otherwise.
-    """
-    for io_expander in self._io_expanders:
-      if not io_expander.IsDetected():
-        logging.warning('Can not detect I/O expander at address 0x%x',
-                        io_expander.slave)
-        return False
+        logging.info("_AudioBoardIOController created")
 
-    return True
+    def IsDetected(self):
+        """Checks if all the I/O expanders are detected.
 
-  def Reset(self):
-    """Resets all ports to be input."""
-    for expander in self._io_expanders:
-      expander.SetDirection(0xffff)
+        Returns:
+          True if all three I/O expanders are detected. False otherwise.
+        """
+        for io_expander in self._io_expanders:
+            if not io_expander.IsDetected():
+                logging.warning(
+                    "Can not detect I/O expander at address 0x%x",
+                    io_expander.slave,
+                )
+                return False
 
-  def SetBit(self, index, offset, value):
-    """Sets a bit as output and sets its value to 1 or 0.
+        return True
 
-    Args:
-      index: The index number of I/O expander.
-      offset: The bit offset 0x0 to 0xf.
-      value: 1 or 0.
-    """
-    logging.info('Set I/O expander #%d, bit offset 0x%x to %d', index, offset,
-                 value)
-    self._io_expanders[index].SetBit(offset, value)
+    def Reset(self):
+        """Resets all ports to be input."""
+        for expander in self._io_expanders:
+            expander.SetDirection(0xFFFF)
 
-  def ReadBit(self, index, offset):
-    """Sets a bit as input and reads its value.
+    def SetBit(self, index, offset, value):
+        """Sets a bit as output and sets its value to 1 or 0.
 
-    Args:
-      index: The index number of I/O expander.
-      offset: The bit offset 0x0 to 0xf.
+        Args:
+          index: The index number of I/O expander.
+          offset: The bit offset 0x0 to 0xf.
+          value: 1 or 0.
+        """
+        logging.info(
+            "Set I/O expander #%d, bit offset 0x%x to %d", index, offset, value
+        )
+        self._io_expanders[index].SetBit(offset, value)
 
-    Returns:
-      1 or 0.
-    """
-    return self._io_expanders[index].ReadBit(offset)
+    def ReadBit(self, index, offset):
+        """Sets a bit as input and reads its value.
 
-  def ReadOutputBit(self, index, offset):
-    """Reads current value of an output bit.
+        Args:
+          index: The index number of I/O expander.
+          offset: The bit offset 0x0 to 0xf.
 
-    Args:
-      index: The index number of I/O expander.
-      offset: The bit offset 0x0 to 0xf.
+        Returns:
+          1 or 0.
+        """
+        return self._io_expanders[index].ReadBit(offset)
 
-    Returns:
-      1 or 0.
-    """
-    return self._io_expanders[index].ReadOutputBit(offset)
+    def ReadOutputBit(self, index, offset):
+        """Reads current value of an output bit.
+
+        Args:
+          index: The index number of I/O expander.
+          offset: The bit offset 0x0 to 0xf.
+
+        Returns:
+          1 or 0.
+        """
+        return self._io_expanders[index].ReadOutputBit(offset)
 
 
 class _AudioBoardSwitchController(object):
-  """Controls switches on audio board.
+    """Controls switches on audio board.
 
-  There are 18 switches for audio board controlling.
-  The switches are controlled through _AudioBoardIOController,
-  This class provides the interface to toggle switches on/off.
-  Here is the table of bit location of each switch:
+    There are 18 switches for audio board controlling.
+    The switches are controlled through _AudioBoardIOController,
+    This class provides the interface to toggle switches on/off.
+    Here is the table of bit location of each switch:
 
-  ===============================
+    ===============================
 
-  I/O expander 0: address 0x20
+    I/O expander 0: address 0x20
 
-  bit     15 14 13 12 11 10  9  8
-  -------------------------------
-  switch  16 15 14 13 12 11 10  9
+    bit     15 14 13 12 11 10  9  8
+    -------------------------------
+    switch  16 15 14 13 12 11 10  9
 
-  bit      7  6  5  4  3  2  1  0
-  -------------------------------
-  switch   8  7        4  3  2  1
+    bit      7  6  5  4  3  2  1  0
+    -------------------------------
+    switch   8  7        4  3  2  1
 
-  ===============================
+    ===============================
 
-  I/O expander 1: address 0x21
+    I/O expander 1: address 0x21
 
-  bit      7  6  5  4  3  2  1  0
-  -------------------------------
-  switch                       17
+    bit      7  6  5  4  3  2  1  0
+    -------------------------------
+    switch                       17
 
-  ===============================
+    ===============================
 
-  I/O expander 2: address 0x22
+    I/O expander 2: address 0x22
 
-  bit      7  6  5  4  3  2  1  0
-  -------------------------------
-  switch        25          19 18
+    bit      7  6  5  4  3  2  1  0
+    -------------------------------
+    switch        25          19 18
 
-  ===============================
-  """
-  # The mapping from switch number to expander index and bit offset.
-  # E.g., switch 8 is controlled by the first I/O expander at bit offset 7.
-  _SWITCH_EXPANDER_BIT_MAP = {
-      1: (0, 0),
-      2: (0, 1),
-      3: (0, 2),
-      4: (0, 3),
-      7: (0, 6),
-      8: (0, 7),
-      9: (0, 8),
-      10: (0, 9),
-      11: (0, 10),
-      12: (0, 11),
-      13: (0, 12),
-      14: (0, 13),
-      15: (0, 14),
-      16: (0, 15),
-      17: (1, 0),
-      18: (2, 0),
-      19: (2, 1),
-      25: (2, 5)
-  }
-
-  def __init__(self, io_controller):
-    """Constructs an _AudioBoardSwitchController.
-
-    Args:
-      io_controller: An _AudioBoardIOController object.
+    ===============================
     """
-    self._io_controller = io_controller
-    self._ResetSwitches()
 
-    logging.info('_AudioBoardSwitchController initialized')
+    # The mapping from switch number to expander index and bit offset.
+    # E.g., switch 8 is controlled by the first I/O expander at bit offset 7.
+    _SWITCH_EXPANDER_BIT_MAP = {
+        1: (0, 0),
+        2: (0, 1),
+        3: (0, 2),
+        4: (0, 3),
+        7: (0, 6),
+        8: (0, 7),
+        9: (0, 8),
+        10: (0, 9),
+        11: (0, 10),
+        12: (0, 11),
+        13: (0, 12),
+        14: (0, 13),
+        15: (0, 14),
+        16: (0, 15),
+        17: (1, 0),
+        18: (2, 0),
+        19: (2, 1),
+        25: (2, 5),
+    }
 
-  def _ResetSwitches(self):
-    """Turns off all switches."""
-    for number in list(self._SWITCH_EXPANDER_BIT_MAP.keys()):
-      self.EnableSwitch(number, False)
+    def __init__(self, io_controller):
+        """Constructs an _AudioBoardSwitchController.
 
-  def EnableSwitch(self, number, enabled):
-    """Enables/disables a switch.
+        Args:
+          io_controller: An _AudioBoardIOController object.
+        """
+        self._io_controller = io_controller
+        self._ResetSwitches()
 
-    Args:
-      number: The switch number.
-      enabled: True to enable switch. False otherwise.
-    """
-    logging.info('Set switch %d to %s', number, enabled)
-    index, offset = self._SWITCH_EXPANDER_BIT_MAP[number]
-    self._io_controller.SetBit(index, offset, 1 if enabled else 0)
+        logging.info("_AudioBoardSwitchController initialized")
+
+    def _ResetSwitches(self):
+        """Turns off all switches."""
+        for number in list(self._SWITCH_EXPANDER_BIT_MAP.keys()):
+            self.EnableSwitch(number, False)
+
+    def EnableSwitch(self, number, enabled):
+        """Enables/disables a switch.
+
+        Args:
+          number: The switch number.
+          enabled: True to enable switch. False otherwise.
+        """
+        logging.info("Set switch %d to %s", number, enabled)
+        index, offset = self._SWITCH_EXPANDER_BIT_MAP[number]
+        self._io_controller.SetBit(index, offset, 1 if enabled else 0)
 
 
 class _JackPluggerException(Exception):
-  """Error in _JackPlugger."""
-  pass
+    """Error in _JackPlugger."""
+
+    pass
 
 
 class _JackPlugger(object):
-  """Controls jack plugger.
+    """Controls jack plugger.
 
-  There is a motor in the audio box which can plug/unplug 3.5mm 4-ring
-  audio cable to/from audio jack of Cros deivce.
-  This motor is controlled by audio board using 4 pins.
-  The pins are controlled by the I/O expander on i2c bus 3,
-  address 0x21, which is the I/O expander with index 1 in
-  _AudioBoardIOController.
-  This class provides the interface to plug/unplug 3.5mm 4-ring
-  audio cable to/from audio jack.
+    There is a motor in the audio box which can plug/unplug 3.5mm 4-ring
+    audio cable to/from audio jack of Cros deivce.
+    This motor is controlled by audio board using 4 pins.
+    The pins are controlled by the I/O expander on i2c bus 3,
+    address 0x21, which is the I/O expander with index 1 in
+    _AudioBoardIOController.
+    This class provides the interface to plug/unplug 3.5mm 4-ring
+    audio cable to/from audio jack.
 
-  Here is the table of bit location.
+    Here is the table of bit location.
 
-  =================================
+    =================================
 
-  I/O expander 1: address 0x21
+    I/O expander 1: address 0x21
 
-  bit      11     10      9      8
-  ---------------------------------
-  pin   stat1  stat0   cmd1   cmd0   (Model 1)
-  pin   stat0  stat1   cmd1   cmd0   (Model 2)
+    bit      11     10      9      8
+    ---------------------------------
+    pin   stat1  stat0   cmd1   cmd0   (Model 1)
+    pin   stat0  stat1   cmd1   cmd0   (Model 2)
 
-  =================================
+    =================================
 
-  The usages of 4 pins are defined as followes.
+    The usages of 4 pins are defined as followes.
 
-  cmd0, cmd1 to set motor action.
+    cmd0, cmd1 to set motor action.
 
-  cmd0   cmd1         action
-  --------------------------
-     0      1         plug
-     1      0         unplug
+    cmd0   cmd1         action
+    --------------------------
+       0      1         plug
+       1      0         unplug
 
-  stat0, stat1 to read current status reported from the motor.
+    stat0, stat1 to read current status reported from the motor.
 
-  stat0 stat1         status
-  --------------------------
-     0      1         plug
-     1      0         unplug
-  """
-  # The I/O expander index is 1.
-  _INDEX = 1
-  # The mapping from register name to bit offset. The current design of jack
-  # pluggers is different from 2018. The stat0 and stat1 are opposite.
-  _MODEL_2018_BIT_MAP = {'cmd0': 8, 'cmd1': 9, 'stat0': 10, 'stat1': 11}
-  _MODEL_CUR_BIT_MAP = {'cmd0': 8, 'cmd1': 9, 'stat0': 11, 'stat1': 10}
-  # The mapping from plug state to string.
-  _STATE_TO_STR = {True: 'Plug', False: 'Unplug'}
-  _DELAY_AFTER_PLUG_UNPLUG = 4
-
-  def __init__(self, io_controller):
-    """Constructs an _JackPlugger.
-
-    Args:
-      io_controller: An _AudioBoardIOController object.
+    stat0 stat1         status
+    --------------------------
+       0      1         plug
+       1      0         unplug
     """
-    self._io_controller = io_controller
-    self._bit_map = self._DetectBitMap()
-    self.Reset()
 
-    logging.info('_JackPlugger initialized')
+    # The I/O expander index is 1.
+    _INDEX = 1
+    # The mapping from register name to bit offset. The current design of jack
+    # pluggers is different from 2018. The stat0 and stat1 are opposite.
+    _MODEL_2018_BIT_MAP = {"cmd0": 8, "cmd1": 9, "stat0": 10, "stat1": 11}
+    _MODEL_CUR_BIT_MAP = {"cmd0": 8, "cmd1": 9, "stat0": 11, "stat1": 10}
+    # The mapping from plug state to string.
+    _STATE_TO_STR = {True: "Plug", False: "Unplug"}
+    _DELAY_AFTER_PLUG_UNPLUG = 4
 
-  def _DetectBitMap(self):
-    # Try to plug the jack
-    self._io_controller.SetBit(self._INDEX, self._MODEL_2018_BIT_MAP['cmd0'], 0)
-    self._io_controller.SetBit(self._INDEX, self._MODEL_2018_BIT_MAP['cmd1'], 1)
-    time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
-    plug_v0 = self._io_controller.ReadBit(self._INDEX,
-                                          self._MODEL_2018_BIT_MAP['stat0'])
-    plug_v1 = self._io_controller.ReadBit(self._INDEX,
-                                          self._MODEL_2018_BIT_MAP['stat1'])
+    def __init__(self, io_controller):
+        """Constructs an _JackPlugger.
 
-    # Try to unplug the jack
-    self._io_controller.SetBit(self._INDEX, self._MODEL_2018_BIT_MAP['cmd0'], 1)
-    self._io_controller.SetBit(self._INDEX, self._MODEL_2018_BIT_MAP['cmd1'], 0)
-    time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
-    unplug_v0 = self._io_controller.ReadBit(self._INDEX,
-                                            self._MODEL_2018_BIT_MAP['stat0'])
-    unplug_v1 = self._io_controller.ReadBit(self._INDEX,
-                                            self._MODEL_2018_BIT_MAP['stat1'])
+        Args:
+          io_controller: An _AudioBoardIOController object.
+        """
+        self._io_controller = io_controller
+        self._bit_map = self._DetectBitMap()
+        self.Reset()
 
-    logging.info('Detecting jack plugger model. Plug: (%d %d), Unplug: (%d %d)',
-                 plug_v0, plug_v1, unplug_v0, unplug_v1)
-    if (plug_v0, plug_v1, unplug_v0, unplug_v1) == (0, 1, 1, 0):
-      return self._MODEL_2018_BIT_MAP
-    elif (plug_v0, plug_v1, unplug_v0, unplug_v1) == (1, 0, 0, 1):
-      return self._MODEL_CUR_BIT_MAP
-    else:
-      raise _JackPluggerException('No valid jack plugger detected.')
+        logging.info("_JackPlugger initialized")
 
-  def Reset(self):
-    """Unplugs the jack and checks status."""
-    # Set to false as we want to keep the audio cables constantly unplugged.
-    # Tests require 3.5mm jack plugged ideally should be scheduled to devices
-    # with the audio_cable label.
-    self.SetPlugStateAndCheck(False)
+    def _DetectBitMap(self):
+        # Try to plug the jack
+        self._io_controller.SetBit(
+            self._INDEX, self._MODEL_2018_BIT_MAP["cmd0"], 0
+        )
+        self._io_controller.SetBit(
+            self._INDEX, self._MODEL_2018_BIT_MAP["cmd1"], 1
+        )
+        time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
+        plug_v0 = self._io_controller.ReadBit(
+            self._INDEX, self._MODEL_2018_BIT_MAP["stat0"]
+        )
+        plug_v1 = self._io_controller.ReadBit(
+            self._INDEX, self._MODEL_2018_BIT_MAP["stat1"]
+        )
 
-  def _SetPlugState(self, plug):
-    """Sets plugger state.
+        # Try to unplug the jack
+        self._io_controller.SetBit(
+            self._INDEX, self._MODEL_2018_BIT_MAP["cmd0"], 1
+        )
+        self._io_controller.SetBit(
+            self._INDEX, self._MODEL_2018_BIT_MAP["cmd1"], 0
+        )
+        time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
+        unplug_v0 = self._io_controller.ReadBit(
+            self._INDEX, self._MODEL_2018_BIT_MAP["stat0"]
+        )
+        unplug_v1 = self._io_controller.ReadBit(
+            self._INDEX, self._MODEL_2018_BIT_MAP["stat1"]
+        )
 
-    Args:
-      plug: True to plug. False otherwise.
-    """
-    if plug:
-      values = (0, 1)
-    else:
-      values = (1, 0)
+        logging.info(
+            "Detecting jack plugger model. Plug: (%d %d), Unplug: (%d %d)",
+            plug_v0,
+            plug_v1,
+            unplug_v0,
+            unplug_v1,
+        )
+        if (plug_v0, plug_v1, unplug_v0, unplug_v1) == (0, 1, 1, 0):
+            return self._MODEL_2018_BIT_MAP
+        elif (plug_v0, plug_v1, unplug_v0, unplug_v1) == (1, 0, 0, 1):
+            return self._MODEL_CUR_BIT_MAP
+        else:
+            raise _JackPluggerException("No valid jack plugger detected.")
 
-    self._io_controller.SetBit(self._INDEX, self._bit_map['cmd0'], values[0])
-    self._io_controller.SetBit(self._INDEX, self._bit_map['cmd1'], values[1])
+    def Reset(self):
+        """Unplugs the jack and checks status."""
+        # Set to false as we want to keep the audio cables constantly unplugged.
+        # Tests require 3.5mm jack plugged ideally should be scheduled to devices
+        # with the audio_cable label.
+        self.SetPlugStateAndCheck(False)
 
-  def _GetPlugState(self):
-    """Gets plugger current state.
+    def _SetPlugState(self, plug):
+        """Sets plugger state.
 
-    Returns:
-      Plugger status. True if plugged, False otherwise.
+        Args:
+          plug: True to plug. False otherwise.
+        """
+        if plug:
+            values = (0, 1)
+        else:
+            values = (1, 0)
 
-    Raises:
-      _JackPluggerException if motor status can not be queried.
-    """
-    value0 = self._io_controller.ReadBit(self._INDEX, self._bit_map['stat0'])
-    value1 = self._io_controller.ReadBit(self._INDEX, self._bit_map['stat1'])
+        self._io_controller.SetBit(
+            self._INDEX, self._bit_map["cmd0"], values[0]
+        )
+        self._io_controller.SetBit(
+            self._INDEX, self._bit_map["cmd1"], values[1]
+        )
 
-    if (value0, value1) == (0, 1):
-      return True
-    elif (value0, value1) == (1, 0):
-      return False
-    else:
-      raise _JackPluggerException(
-          'Abnormal motor status %r, %r. The plugger might stuck. Try to: \n'
-          '1. Reboot chameleon and check DUT position. \n'
-          '2. Reconnect the cable between serial port outside and '
-          'chameleon(flat cable). \n'
-          '3. Check connector between cable coming out of the plugger and the '
-          'one from the power switch. \n'
-          '4. Reboot plugger and controller from outside switch.\n', value0,
-          value1)
+    def _GetPlugState(self):
+        """Gets plugger current state.
 
-  def SetPlugStateAndCheck(self, plug):
-    """Plugs/unplugs audio jack and checks motor status.
+        Returns:
+          Plugger status. True if plugged, False otherwise.
 
-    Args:
-      plug: True to plug. False otherwise.
+        Raises:
+          _JackPluggerException if motor status can not be queried.
+        """
+        value0 = self._io_controller.ReadBit(
+            self._INDEX, self._bit_map["stat0"]
+        )
+        value1 = self._io_controller.ReadBit(
+            self._INDEX, self._bit_map["stat1"]
+        )
 
-    Raises:
-      _JackPluggerException if motor status does not meet the condition.
-    """
-    logging.info('Set plugger state to %s' % self._STATE_TO_STR[plug])
-    if self._GetPlugState() == plug:
-      logging.info('Plugger state is already %s' % self._STATE_TO_STR[plug])
-      return
+        if (value0, value1) == (0, 1):
+            return True
+        elif (value0, value1) == (1, 0):
+            return False
+        else:
+            raise _JackPluggerException(
+                "Abnormal motor status %r, %r. The plugger might stuck. Try to: \n"
+                "1. Reboot chameleon and check DUT position. \n"
+                "2. Reconnect the cable between serial port outside and "
+                "chameleon(flat cable). \n"
+                "3. Check connector between cable coming out of the plugger and the "
+                "one from the power switch. \n"
+                "4. Reboot plugger and controller from outside switch.\n",
+                value0,
+                value1,
+            )
 
-    self._SetPlugState(plug)
-    time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
-    if self._GetPlugState() != plug:
-      raise _JackPluggerException(
-          'Failed to set plug status to %s. Check the plugger.' %
-          self._STATE_TO_STR[plug])
+    def SetPlugStateAndCheck(self, plug):
+        """Plugs/unplugs audio jack and checks motor status.
+
+        Args:
+          plug: True to plug. False otherwise.
+
+        Raises:
+          _JackPluggerException if motor status does not meet the condition.
+        """
+        logging.info("Set plugger state to %s" % self._STATE_TO_STR[plug])
+        if self._GetPlugState() == plug:
+            logging.info(
+                "Plugger state is already %s" % self._STATE_TO_STR[plug]
+            )
+            return
+
+        self._SetPlugState(plug)
+        time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
+        if self._GetPlugState() != plug:
+            raise _JackPluggerException(
+                "Failed to set plug status to %s. Check the plugger."
+                % self._STATE_TO_STR[plug]
+            )
 
 
 class _BluetoothController(object):
-  """Controls bluetooth module on audio board.
+    """Controls bluetooth module on audio board.
 
-  There is a bluetooth module on audio board.
-  The pins are controlled by the I/O expander on i2c bus 3,
-  address 0x21, which is the I/O expander with index 1 in
-  _AudioBoardIOController.
-  This class provides the interface to control bluetooth module.
+    There is a bluetooth module on audio board.
+    The pins are controlled by the I/O expander on i2c bus 3,
+    address 0x21, which is the I/O expander with index 1 in
+    _AudioBoardIOController.
+    This class provides the interface to control bluetooth module.
 
-  Here is the table of bit location.
+    Here is the table of bit location.
 
-  ==================================================
+    ==================================================
 
-  I/O expander 1: address 0x21
+    I/O expander 1: address 0x21
 
-  bit           7           6           5          4
-  --------------------------------------------------
-  pin       reset volume down   volume up    forward
+    bit           7           6           5          4
+    --------------------------------------------------
+    pin       reset volume down   volume up    forward
 
-  bit           3           2           1          0
-  --------------------------------------------------
-  pin    backward   play/stop
+    bit           3           2           1          0
+    --------------------------------------------------
+    pin    backward   play/stop
 
-  ==================================================
-  """
-  # The I/O expander index is 1.
-  _INDEX = 1
-  # The mapping from register name to bit offset.
-  # TODO(cychiang) implement play/forward/backward/volume functions.
-  _BIT_RESET = 7
-
-  def __init__(self, io_controller):
-    """Constructs an _BluetoothController.
-
-    Args:
-      io_controller: An _AudioBoardIOController object.
+    ==================================================
     """
-    self._io_controller = io_controller
-    self.Reset()
 
-    logging.info('_BluetoothController initialized')
+    # The I/O expander index is 1.
+    _INDEX = 1
+    # The mapping from register name to bit offset.
+    # TODO(cychiang) implement play/forward/backward/volume functions.
+    _BIT_RESET = 7
 
-  def _SetResetPin(self, value):
-    """Sets reset pin value.
+    def __init__(self, io_controller):
+        """Constructs an _BluetoothController.
 
-    Args:
-      value: 0 or 1.
-    """
-    self._io_controller.SetBit(self._INDEX, self._BIT_RESET, value)
+        Args:
+          io_controller: An _AudioBoardIOController object.
+        """
+        self._io_controller = io_controller
+        self.Reset()
 
-  def Disable(self):
-    """Disables bluetooth module by holding the reset bit.
+        logging.info("_BluetoothController initialized")
 
-    This bluetooth module does not support disconnect command from module side.
-    Once bluetooth module is disabled, bluetooth adapter will notice this
-    bluetooth module is lost after a timeout. On Cros, this timeout duration is
-    60 seconds.
-    """
-    self._SetResetPin(0)
+    def _SetResetPin(self, value):
+        """Sets reset pin value.
 
-  def Reset(self):
-    """Resets bluetooth module.
+        Args:
+          value: 0 or 1.
+        """
+        self._io_controller.SetBit(self._INDEX, self._BIT_RESET, value)
 
-    After reset, it takes about 20 seconds for bluetooth module to become
-    available for connection. Connection attempt results in "Device or resource
-    busy" error during this time window.
-    """
-    self._SetResetPin(0)
-    self._SetResetPin(1)
+    def Disable(self):
+        """Disables bluetooth module by holding the reset bit.
 
-  def IsEnabled(self):
-    """Checks if bluetooth module is enabled.
+        This bluetooth module does not support disconnect command from module side.
+        Once bluetooth module is disabled, bluetooth adapter will notice this
+        bluetooth module is lost after a timeout. On Cros, this timeout duration is
+        60 seconds.
+        """
+        self._SetResetPin(0)
 
-    Bluetooth module is enabled when reset pin is not hold to 0.
+    def Reset(self):
+        """Resets bluetooth module.
 
-    Returns:
-      True if bluetooth module is enabled. False otherwise.
-    """
-    return (self._io_controller.ReadOutputBit(self._INDEX,
-                                              self._BIT_RESET) == 1)
+        After reset, it takes about 20 seconds for bluetooth module to become
+        available for connection. Connection attempt results in "Device or resource
+        busy" error during this time window.
+        """
+        self._SetResetPin(0)
+        self._SetResetPin(1)
+
+    def IsEnabled(self):
+        """Checks if bluetooth module is enabled.
+
+        Bluetooth module is enabled when reset pin is not hold to 0.
+
+        Returns:
+          True if bluetooth module is enabled. False otherwise.
+        """
+        return (
+            self._io_controller.ReadOutputBit(self._INDEX, self._BIT_RESET) == 1
+        )
 
 
 class AudioBusEndpointException(Exception):
-  """Exception in AudioBusEndpoint."""
-  pass
+    """Exception in AudioBusEndpoint."""
+
+    pass
 
 
 class AudioBusEndpoint(object):
-  """Endpoints on audio bus.
+    """Endpoints on audio bus.
 
-  There are four terminals on audio bus. Each terminal has two endpoints of two
-  roles, that is, one source and one sink. The role of the
-  endpoint is determined from the point of view of audio signal on the audio
-  bus. For example, headphone is seen as an output port on Cros device, but
-  it is a source endpoint for audio signal on the audio bus.
+    There are four terminals on audio bus. Each terminal has two endpoints of two
+    roles, that is, one source and one sink. The role of the
+    endpoint is determined from the point of view of audio signal on the audio
+    bus. For example, headphone is seen as an output port on Cros device, but
+    it is a source endpoint for audio signal on the audio bus.
 
-  Endpoints can be connected to audio bus independently. But in usual cases,
-  an audio bus should have no more than one source at a time.
+    Endpoints can be connected to audio bus independently. But in usual cases,
+    an audio bus should have no more than one source at a time.
 
-  The following table lists the role of each endpoint.
+    The following table lists the role of each endpoint.
 
-  Terminal               Endpoint               role
-  ---------------------------------------------------------------
-  Cros device            Heaphone               source
-  Cros device            External Microphone    sink
-  Peripheral device      Microphone             source
-  Peripheral device      Speaker                sink
-  Chameleon FPGA         LineOut                source
-  Chameleon FPGA         LineIn                 sink
-  Bluetooth module       Output port            source
-  Bluetooth module       Input port             sink
+    Terminal               Endpoint               role
+    ---------------------------------------------------------------
+    Cros device            Heaphone               source
+    Cros device            External Microphone    sink
+    Peripheral device      Microphone             source
+    Peripheral device      Speaker                sink
+    Chameleon FPGA         LineOut                source
+    Chameleon FPGA         LineIn                 sink
+    Bluetooth module       Output port            source
+    Bluetooth module       Input port             sink
 
-                         Peripheral device
-                          o  o       o  o
+                           Peripheral device
+                            o  o       o  o
 
-         o                     bus 1                          o
-  Cros   o <================================================> o   Chameleon
-  device o <================================================> o   FPGA
-         o                     bus 2                          o
+           o                     bus 1                          o
+    Cros   o <================================================> o   Chameleon
+    device o <================================================> o   FPGA
+           o                     bus 2                          o
 
-                          o  o       o  o
-                         Bluetooth module
+                            o  o       o  o
+                           Bluetooth module
 
-  Each source/sink endpoint has two switches to control the connection
-  on audio bus 1 and audio bus 2. So in total there are 16 switches for 8
-  endpoints.
-  """
-  CROS_HEADPHONE = 'Cros device headphone'
-  CROS_EXTERNAL_MICROPHONE = 'Cros device external microphone'
-  PERIPHERAL_MICROPHONE = 'Peripheral microphone'
-  PERIPHERAL_SPEAKER = 'Peripheral speaker'
-  FPGA_LINEOUT = 'Chameleon FPGA line-out'
-  FPGA_LINEIN = 'Chameleon FPGA line-in'
-  BLUETOOTH_OUTPUT = 'Bluetooth module output'
-  BLUETOOTH_INPUT = 'Bluetooth module input'
+    Each source/sink endpoint has two switches to control the connection
+    on audio bus 1 and audio bus 2. So in total there are 16 switches for 8
+    endpoints.
+    """
+
+    CROS_HEADPHONE = "Cros device headphone"
+    CROS_EXTERNAL_MICROPHONE = "Cros device external microphone"
+    PERIPHERAL_MICROPHONE = "Peripheral microphone"
+    PERIPHERAL_SPEAKER = "Peripheral speaker"
+    FPGA_LINEOUT = "Chameleon FPGA line-out"
+    FPGA_LINEIN = "Chameleon FPGA line-in"
+    BLUETOOTH_OUTPUT = "Bluetooth module output"
+    BLUETOOTH_INPUT = "Bluetooth module input"
 
 
 AUDIO_BUS_SOURCES = [
-    AudioBusEndpoint.CROS_HEADPHONE, AudioBusEndpoint.PERIPHERAL_MICROPHONE,
-    AudioBusEndpoint.FPGA_LINEOUT, AudioBusEndpoint.BLUETOOTH_OUTPUT
+    AudioBusEndpoint.CROS_HEADPHONE,
+    AudioBusEndpoint.PERIPHERAL_MICROPHONE,
+    AudioBusEndpoint.FPGA_LINEOUT,
+    AudioBusEndpoint.BLUETOOTH_OUTPUT,
 ]
 
 AUDIO_BUS_SINKS = [
     AudioBusEndpoint.CROS_EXTERNAL_MICROPHONE,
-    AudioBusEndpoint.PERIPHERAL_SPEAKER, AudioBusEndpoint.FPGA_LINEIN,
-    AudioBusEndpoint.BLUETOOTH_INPUT
+    AudioBusEndpoint.PERIPHERAL_SPEAKER,
+    AudioBusEndpoint.FPGA_LINEIN,
+    AudioBusEndpoint.BLUETOOTH_INPUT,
 ]
 
 AUDIO_BUS_ENDPOINTS = AUDIO_BUS_SOURCES + AUDIO_BUS_SINKS
 
 
 def IsSource(endpoint):
-  """Checks if an endpoint is a signal source.
+    """Checks if an endpoint is a signal source.
 
-  Args:
-    endpoint: An endpoint defined in AudioBusEndpoint.
+    Args:
+      endpoint: An endpoint defined in AudioBusEndpoint.
 
-  Returns:
-    True if the endpoint is a source. False if it is a sink.
+    Returns:
+      True if the endpoint is a source. False if it is a sink.
 
-  Raises:
-    AudioBusEndpointException if endpoint is not valid.
-  """
-  if endpoint in AUDIO_BUS_SOURCES:
-    return True
-  elif endpoint in AUDIO_BUS_SINKS:
-    return False
-  else:
-    raise AudioBusEndpointException('%s is not a valid endpoint' % endpoint)
+    Raises:
+      AudioBusEndpointException if endpoint is not valid.
+    """
+    if endpoint in AUDIO_BUS_SOURCES:
+        return True
+    elif endpoint in AUDIO_BUS_SINKS:
+        return False
+    else:
+        raise AudioBusEndpointException("%s is not a valid endpoint" % endpoint)
 
 
 class _AudioBusException(Exception):
-  """Exception in _AudioBus."""
-  pass
+    """Exception in _AudioBus."""
+
+    pass
 
 
 class _AudioBus(object):
-  """Abstracts an audio bus.
+    """Abstracts an audio bus.
 
-  An audio bus adds or removes endpoints by toggling the switches which connects
-  the corresponding endpoints to audio bus.
-  The following table contains 16 switches of different endpoints of two buses.
+    An audio bus adds or removes endpoints by toggling the switches which connects
+    the corresponding endpoints to audio bus.
+    The following table contains 16 switches of different endpoints of two buses.
 
-  endpoint                        bus1    bus2
-  ---------------------------------------------
-  CROS_HEADPHONE                  sw1     sw2
-  PERIPHERAL_MICROPHONE           sw9     sw10
-  FPGA_LINEOUT                    sw11    sw12
-  BLUETOOTH_OUTPUT                sw15    sw16
+    endpoint                        bus1    bus2
+    ---------------------------------------------
+    CROS_HEADPHONE                  sw1     sw2
+    PERIPHERAL_MICROPHONE           sw9     sw10
+    FPGA_LINEOUT                    sw11    sw12
+    BLUETOOTH_OUTPUT                sw15    sw16
 
-  CROS_EXTERNAL_MICROPHONE        sw3     sw4
-  PERIPHERAL_SPEAKER              sw7     sw8
-  FPGA_LINEIN                     sw13    sw14
-  BLUETOOTH_INPUT                 sw17    sw18
-  """
-  # Contains the mapping from bus and endpoint to switch number.
-  # E.g. The switch number of Cros device headphone on bus 1 is looked up
-  # by
-  # _SWITCH_MAP[1][AudioBusEndpoint.CROS_HEADPHONE] = 1
-  _SWITCH_MAP = {
-      1: {
-          AudioBusEndpoint.CROS_HEADPHONE: 1,
-          AudioBusEndpoint.PERIPHERAL_MICROPHONE: 9,
-          AudioBusEndpoint.FPGA_LINEOUT: 11,
-          AudioBusEndpoint.BLUETOOTH_OUTPUT: 15,
-          AudioBusEndpoint.CROS_EXTERNAL_MICROPHONE: 3,
-          AudioBusEndpoint.PERIPHERAL_SPEAKER: 7,
-          AudioBusEndpoint.FPGA_LINEIN: 13,
-          AudioBusEndpoint.BLUETOOTH_INPUT: 17,
-      },
-      2: {
-          AudioBusEndpoint.CROS_HEADPHONE: 2,
-          AudioBusEndpoint.PERIPHERAL_MICROPHONE: 10,
-          AudioBusEndpoint.FPGA_LINEOUT: 12,
-          AudioBusEndpoint.BLUETOOTH_OUTPUT: 16,
-          AudioBusEndpoint.CROS_EXTERNAL_MICROPHONE: 4,
-          AudioBusEndpoint.PERIPHERAL_SPEAKER: 8,
-          AudioBusEndpoint.FPGA_LINEIN: 14,
-          AudioBusEndpoint.BLUETOOTH_INPUT: 18,
-      }
-  }
-
-  def __init__(self, switch_controller, bus_number):
-    """Constructs an audio bus.
-
-    Args:
-      switch_controller: An _AudioBoardSwitchController object.
-      bus_number: 1 or 2 for bus number.
-    """
-    self._switch_controller = switch_controller
-    self._bus_number = bus_number
-    self._sources = set()
-    self._sinks = set()
-    self.Reset()
-    logging.info('Audio bus %d initialized', self._bus_number)
-
-  def Reset(self):
-    """Disconnects all endpoints from audio bus."""
-    for endpoint in AUDIO_BUS_ENDPOINTS:
-      self.Disconnect(endpoint)
-
-  def Connect(self, endpoint):
-    """Connects an endpoint to audio bus.
-
-    Args:
-      endpoint: An endpoint defined in AudioBusEndpoint.
+    CROS_EXTERNAL_MICROPHONE        sw3     sw4
+    PERIPHERAL_SPEAKER              sw7     sw8
+    FPGA_LINEIN                     sw13    sw14
+    BLUETOOTH_INPUT                 sw17    sw18
     """
 
-    is_source = IsSource(endpoint)
-    logging.info('Connect %s as signal %s to audio bus %d', endpoint,
-                 'source' if is_source else 'sink', self._bus_number)
+    # Contains the mapping from bus and endpoint to switch number.
+    # E.g. The switch number of Cros device headphone on bus 1 is looked up
+    # by
+    # _SWITCH_MAP[1][AudioBusEndpoint.CROS_HEADPHONE] = 1
+    _SWITCH_MAP = {
+        1: {
+            AudioBusEndpoint.CROS_HEADPHONE: 1,
+            AudioBusEndpoint.PERIPHERAL_MICROPHONE: 9,
+            AudioBusEndpoint.FPGA_LINEOUT: 11,
+            AudioBusEndpoint.BLUETOOTH_OUTPUT: 15,
+            AudioBusEndpoint.CROS_EXTERNAL_MICROPHONE: 3,
+            AudioBusEndpoint.PERIPHERAL_SPEAKER: 7,
+            AudioBusEndpoint.FPGA_LINEIN: 13,
+            AudioBusEndpoint.BLUETOOTH_INPUT: 17,
+        },
+        2: {
+            AudioBusEndpoint.CROS_HEADPHONE: 2,
+            AudioBusEndpoint.PERIPHERAL_MICROPHONE: 10,
+            AudioBusEndpoint.FPGA_LINEOUT: 12,
+            AudioBusEndpoint.BLUETOOTH_OUTPUT: 16,
+            AudioBusEndpoint.CROS_EXTERNAL_MICROPHONE: 4,
+            AudioBusEndpoint.PERIPHERAL_SPEAKER: 8,
+            AudioBusEndpoint.FPGA_LINEIN: 14,
+            AudioBusEndpoint.BLUETOOTH_INPUT: 18,
+        },
+    }
 
-    if is_source:
-      self._sources.add(endpoint)
-    else:
-      self._sinks.add(endpoint)
+    def __init__(self, switch_controller, bus_number):
+        """Constructs an audio bus.
 
-    switch_number = self._SWITCH_MAP[self._bus_number][endpoint]
-    self._switch_controller.EnableSwitch(switch_number, True)
+        Args:
+          switch_controller: An _AudioBoardSwitchController object.
+          bus_number: 1 or 2 for bus number.
+        """
+        self._switch_controller = switch_controller
+        self._bus_number = bus_number
+        self._sources = set()
+        self._sinks = set()
+        self.Reset()
+        logging.info("Audio bus %d initialized", self._bus_number)
 
-  def Disconnect(self, endpoint):
-    """Disconnects an endpoint from audio bus.
+    def Reset(self):
+        """Disconnects all endpoints from audio bus."""
+        for endpoint in AUDIO_BUS_ENDPOINTS:
+            self.Disconnect(endpoint)
 
-    Args:
-      endpoint: An endpoint defined in AudioBusEndpoint.
+    def Connect(self, endpoint):
+        """Connects an endpoint to audio bus.
 
-    Raises:
-      _AudioBusException: If endpoint is not valid.
-    """
-    is_source = IsSource(endpoint)
-    logging.info('Disconnect %s as signal %s from audio bus %d', endpoint,
-                 'source' if is_source else 'sink', self._bus_number)
+        Args:
+          endpoint: An endpoint defined in AudioBusEndpoint.
+        """
 
-    if is_source:
-      self._sources.discard(endpoint)
-    else:
-      self._sinks.discard(endpoint)
+        is_source = IsSource(endpoint)
+        logging.info(
+            "Connect %s as signal %s to audio bus %d",
+            endpoint,
+            "source" if is_source else "sink",
+            self._bus_number,
+        )
 
-    switch_number = self._SWITCH_MAP[self._bus_number][endpoint]
-    self._switch_controller.EnableSwitch(switch_number, False)
+        if is_source:
+            self._sources.add(endpoint)
+        else:
+            self._sinks.add(endpoint)
 
-  def GetSources(self):
-    """Gets the current source endpoints.
+        switch_number = self._SWITCH_MAP[self._bus_number][endpoint]
+        self._switch_controller.EnableSwitch(switch_number, True)
 
-    Returns:
-      A list of current source endpoints connected to audio bus.
-    """
-    return list(self._sources)
+    def Disconnect(self, endpoint):
+        """Disconnects an endpoint from audio bus.
 
-  def GetSinks(self):
-    """Gets the current source sinks.
+        Args:
+          endpoint: An endpoint defined in AudioBusEndpoint.
 
-    Returns:
-      A list of current sink endpoints connected to audio bus.
-    """
-    return list(self._sinks)
+        Raises:
+          _AudioBusException: If endpoint is not valid.
+        """
+        is_source = IsSource(endpoint)
+        logging.info(
+            "Disconnect %s as signal %s from audio bus %d",
+            endpoint,
+            "source" if is_source else "sink",
+            self._bus_number,
+        )
+
+        if is_source:
+            self._sources.discard(endpoint)
+        else:
+            self._sinks.discard(endpoint)
+
+        switch_number = self._SWITCH_MAP[self._bus_number][endpoint]
+        self._switch_controller.EnableSwitch(switch_number, False)
+
+    def GetSources(self):
+        """Gets the current source endpoints.
+
+        Returns:
+          A list of current source endpoints connected to audio bus.
+        """
+        return list(self._sources)
+
+    def GetSinks(self):
+        """Gets the current source sinks.
+
+        Returns:
+          A list of current sink endpoints connected to audio bus.
+        """
+        return list(self._sinks)
 
 
 class AudioBoardException(Exception):
-  """Errors in AudioBoard."""
+    """Errors in AudioBoard."""
 
 
 class AudioBoard(chameleon_device.ChameleonDevice):
-  """A class to control audio board.
+    """A class to control audio board.
 
-  The audio functions includes:
-  1. Audio source/sink routing on audio bus 1 and 2.
-  2. TODO (cychiang) Audio jack mode switching between LRGM and LRMG.
-  3. Audio jack plug/unplug control if audio board is connected to motor
-     in audio box.
-  4. TODO (cychiang) Audio button function switching.
-  5. TODO (cychiang) Audio button press control.
-  """
-
-  def __init__(self, i2c_bus):
-    """Runs the initialization sequence for the audio board.
-
-    Args:
-      i2c_bus: The I2cBus object.
-
-    Raises:
-      AudioBoardException: If audio board can not be initialized.
+    The audio functions includes:
+    1. Audio source/sink routing on audio bus 1 and 2.
+    2. TODO (cychiang) Audio jack mode switching between LRGM and LRMG.
+    3. Audio jack plug/unplug control if audio board is connected to motor
+       in audio box.
+    4. TODO (cychiang) Audio button function switching.
+    5. TODO (cychiang) Audio button press control.
     """
-    self._i2c_bus = i2c_bus
-    self._jack_plugger = None
-    self._bluetooth_ctrl = None
-    self._audio_buses = None
-    self._switch_controller = None
-    self._io_controller = _AudioBoardIOController(self._i2c_bus)
-    super(AudioBoard, self).__init__()
 
-  def IsDetected(self):
-    """Returns if the device can be detected."""
-    if self._io_controller.IsDetected():
-      return True
-    else:
-      logging.warning('Can not detect audio board. Assume it is not connected')
-      return False
+    def __init__(self, i2c_bus):
+        """Runs the initialization sequence for the audio board.
 
-  def InitDevice(self):
-    """Runs the initialization sequence for the audio board.
+        Args:
+          i2c_bus: The I2cBus object.
 
-    Raises:
-      AudioBoardException: If audio board can not be initialized.
-    """
-    self._io_controller.Reset()
-    try:
-      self._switch_controller = _AudioBoardSwitchController(self._io_controller)
-      self._audio_buses = {
-          1: _AudioBus(self._switch_controller, 1),
-          2: _AudioBus(self._switch_controller, 2)
-      }
-    except i2c.I2cBusError:
-      logging.error('Can not access I2c bus at %#x on audio board.',
-                    self._i2c_bus.base_addr)
-      raise AudioBoardException('Can not initialize audio board')
-    try:
-      self._jack_plugger = _JackPlugger(self._io_controller)
-    except _JackPluggerException as err:
-      logging.error('Can not access jack plugger: %s', err)
-      self._jack_plugger = None
+        Raises:
+          AudioBoardException: If audio board can not be initialized.
+        """
+        self._i2c_bus = i2c_bus
+        self._jack_plugger = None
+        self._bluetooth_ctrl = None
+        self._audio_buses = None
+        self._switch_controller = None
+        self._io_controller = _AudioBoardIOController(self._i2c_bus)
+        super(AudioBoard, self).__init__()
 
-    self._bluetooth_ctrl = _BluetoothController(self._io_controller)
+    def IsDetected(self):
+        """Returns if the device can be detected."""
+        if self._io_controller.IsDetected():
+            return True
+        else:
+            logging.warning(
+                "Can not detect audio board. Assume it is not connected"
+            )
+            return False
 
-    logging.info('Audio board initialized')
+    def InitDevice(self):
+        """Runs the initialization sequence for the audio board.
 
-  def Reset(self):
-    """Resets audio buses."""
-    for bus in list(self._audio_buses.values()):
-      bus.Reset()
-    self.ResetJackPlugger()
+        Raises:
+          AudioBoardException: If audio board can not be initialized.
+        """
+        self._io_controller.Reset()
+        try:
+            self._switch_controller = _AudioBoardSwitchController(
+                self._io_controller
+            )
+            self._audio_buses = {
+                1: _AudioBus(self._switch_controller, 1),
+                2: _AudioBus(self._switch_controller, 2),
+            }
+        except i2c.I2cBusError:
+            logging.error(
+                "Can not access I2c bus at %#x on audio board.",
+                self._i2c_bus.base_addr,
+            )
+            raise AudioBoardException("Can not initialize audio board")
+        try:
+            self._jack_plugger = _JackPlugger(self._io_controller)
+        except _JackPluggerException as err:
+            logging.error("Can not access jack plugger: %s", err)
+            self._jack_plugger = None
 
-  def SetConnection(self, bus_number, endpoint, enabled):
-    """Connects or disconnects an endpoint on an audio bus.
+        self._bluetooth_ctrl = _BluetoothController(self._io_controller)
 
-    Args:
-      bus_number: 1 or 2 for audio bus 1 or bus 2.
-      endpoint: An endpoint defined in AudioBusEndpoint.
-      enabled: True to connect, False to disconnect.
-    """
-    is_source = IsSource(endpoint)
-    logging.info('%s connection of %s as signal %s to audio bus %s',
-                 'Enable' if enabled else 'Disable', endpoint,
-                 'source' if is_source else 'sink', bus_number)
-    if enabled:
-      self._audio_buses[bus_number].Connect(endpoint)
-    else:
-      self._audio_buses[bus_number].Disconnect(endpoint)
+        logging.info("Audio board initialized")
 
-  def IsConnected(self, bus_number, endpoint):
-    """Checks if an endpoint is connected to an audio bus.
+    def Reset(self):
+        """Resets audio buses."""
+        for bus in list(self._audio_buses.values()):
+            bus.Reset()
+        self.ResetJackPlugger()
 
-    Args:
-      bus_number: 1 or 2 for audio bus 1 or bus 2.
-      endpoint: An endpoint defined in AudioBusEndpoint.
+    def SetConnection(self, bus_number, endpoint, enabled):
+        """Connects or disconnects an endpoint on an audio bus.
 
-    Returns:
-      True if the endpoint is connected to the audio bus. False otherwise.
-    """
-    audio_bus = self._audio_buses[bus_number]
-    if IsSource(endpoint):
-      return endpoint in audio_bus.GetSources()
-    else:
-      return endpoint in audio_bus.GetSinks()
+        Args:
+          bus_number: 1 or 2 for audio bus 1 or bus 2.
+          endpoint: An endpoint defined in AudioBusEndpoint.
+          enabled: True to connect, False to disconnect.
+        """
+        is_source = IsSource(endpoint)
+        logging.info(
+            "%s connection of %s as signal %s to audio bus %s",
+            "Enable" if enabled else "Disable",
+            endpoint,
+            "source" if is_source else "sink",
+            bus_number,
+        )
+        if enabled:
+            self._audio_buses[bus_number].Connect(endpoint)
+        else:
+            self._audio_buses[bus_number].Disconnect(endpoint)
 
-  def GetConnections(self, bus_number):
-    """Gets current sources and sinks on an audio bus.
+    def IsConnected(self, bus_number, endpoint):
+        """Checks if an endpoint is connected to an audio bus.
 
-    Args:
-      bus_number: 1 or 2 for audio bus 1 or bus 2.
+        Args:
+          bus_number: 1 or 2 for audio bus 1 or bus 2.
+          endpoint: An endpoint defined in AudioBusEndpoint.
 
-    Returns:
-      A tuple (sources, sinks) where sources is a list of current source
-      endpoints connected to audio bus, and sinks is a list of current
-      endpoints connected to audio bus.
-    """
-    audio_bus = self._audio_buses[bus_number]
-    return audio_bus.GetSources(), audio_bus.GetSinks()
+        Returns:
+          True if the endpoint is connected to the audio bus. False otherwise.
+        """
+        audio_bus = self._audio_buses[bus_number]
+        if IsSource(endpoint):
+            return endpoint in audio_bus.GetSources()
+        else:
+            return endpoint in audio_bus.GetSinks()
 
-  def ResetConnections(self, bus_number):
-    """Resets connections on audio bus.
+    def GetConnections(self, bus_number):
+        """Gets current sources and sinks on an audio bus.
 
-    Args:
-      bus_number: 1 or 2 for audio bus 1 or bus 2.
-    """
-    self._audio_buses[bus_number].Reset()
+        Args:
+          bus_number: 1 or 2 for audio bus 1 or bus 2.
 
-  def ResetJackPlugger(self):
-    """Resets jack plugger status.
+        Returns:
+          A tuple (sources, sinks) where sources is a list of current source
+          endpoints connected to audio bus, and sinks is a list of current
+          endpoints connected to audio bus.
+        """
+        audio_bus = self._audio_buses[bus_number]
+        return audio_bus.GetSources(), audio_bus.GetSinks()
 
-    Raises:
-      AudioBoardException if there is no jack plugger on this audio board.
-    """
-    if self.HasJackPlugger():
-      self._jack_plugger.Reset();
+    def ResetConnections(self, bus_number):
+        """Resets connections on audio bus.
 
-  def HasJackPlugger(self):
-    """If this audio board has jack plugger.
+        Args:
+          bus_number: 1 or 2 for audio bus 1 or bus 2.
+        """
+        self._audio_buses[bus_number].Reset()
 
-    Returns:
-      True if this audio board has jack plugger. False otherwise.
-    """
-    return self._jack_plugger is not None
+    def ResetJackPlugger(self):
+        """Resets jack plugger status.
 
-  def SetJackPlugger(self, enabled):
-    """Sets jack plugger status.
+        Raises:
+          AudioBoardException if there is no jack plugger on this audio board.
+        """
+        if self.HasJackPlugger():
+            self._jack_plugger.Reset()
 
-    Args:
-      enabled: True to plug, False otherwise.
+    def HasJackPlugger(self):
+        """If this audio board has jack plugger.
 
-    Raises:
-      AudioBoardException if there is no jack plugger on this audio board.
-    """
-    if not self.HasJackPlugger():
-      raise AudioBoardException('There is no jack plugger on this audio board.')
-    self._jack_plugger.SetPlugStateAndCheck(enabled)
+        Returns:
+          True if this audio board has jack plugger. False otherwise.
+        """
+        return self._jack_plugger is not None
 
-  def ResetBluetooth(self):
-    """Resets bluetooth module."""
-    self._bluetooth_ctrl.Reset()
+    def SetJackPlugger(self, enabled):
+        """Sets jack plugger status.
 
-  def DisableBluetooth(self):
-    """Disables bluetooth module."""
-    self._bluetooth_ctrl.Disable()
+        Args:
+          enabled: True to plug, False otherwise.
 
-  def IsBluetoothEnabled(self):
-    """Checks if bluetooth is enabled.
+        Raises:
+          AudioBoardException if there is no jack plugger on this audio board.
+        """
+        if not self.HasJackPlugger():
+            raise AudioBoardException(
+                "There is no jack plugger on this audio board."
+            )
+        self._jack_plugger.SetPlugStateAndCheck(enabled)
 
-    Returns:
-      True if bluetooth module is enabled. False otherwise.
-    """
-    return self._bluetooth_ctrl.IsEnabled()
+    def ResetBluetooth(self):
+        """Resets bluetooth module."""
+        self._bluetooth_ctrl.Reset()
+
+    def DisableBluetooth(self):
+        """Disables bluetooth module."""
+        self._bluetooth_ctrl.Disable()
+
+    def IsBluetoothEnabled(self):
+        """Checks if bluetooth is enabled.
+
+        Returns:
+          True if bluetooth module is enabled. False otherwise.
+        """
+        return self._bluetooth_ctrl.IsEnabled()

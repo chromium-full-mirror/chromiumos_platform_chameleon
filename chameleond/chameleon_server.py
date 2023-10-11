@@ -2,109 +2,117 @@
 # Copyright 2014 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Chameleon Server."""
 
 import logging
 import signal
 import sys
 
+
 try:
-  from xmlrpc.server import SimpleXMLRPCServer  # Python 3.x
-  from xmlrpc.server import SimpleXMLRPCRequestHandler
+    from xmlrpc.server import SimpleXMLRPCRequestHandler
+    from xmlrpc.server import SimpleXMLRPCServer  # Python 3.x
 except ImportError:
-  from six.moves.xmlrpc_server import SimpleXMLRPCServer  # Python 2.x
-  from six.moves.xmlrpc_server import SimpleXMLRPCRequestHandler
+    from six.moves.xmlrpc_server import SimpleXMLRPCServer  # Python 2.x
+    from six.moves.xmlrpc_server import SimpleXMLRPCRequestHandler
+
+from chameleond.utils.caching_server import CachingServer
 
 from . import chameleon_common  # pylint: disable=W0611, C0411
-from chameleond.utils.caching_server import CachingServer
 
 
 class ChameleonXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
-  """XMLRPC request handler for Chameleon server."""
+    """XMLRPC request handler for Chameleon server."""
 
-  def address_string(self):
-    """Returns the client address formatted for logging.
+    def address_string(self):
+        """Returns the client address formatted for logging.
 
-    During the response of SimpleXMLRPCRequestHandler, it will try to obtain
-    client's domain name for logging. When there is no DNS server in the
-    network, this step will take a long time and delay the returning of calls
-    from server proxy. We override address_string method to bypass requesting
-    domain name.
+        During the response of SimpleXMLRPCRequestHandler, it will try to obtain
+        client's domain name for logging. When there is no DNS server in the
+        network, this step will take a long time and delay the returning of calls
+        from server proxy. We override address_string method to bypass requesting
+        domain name.
 
-    Returns:
-      The formatted string for client address.
-    """
-    host = self.client_address[0]
-    # original: return socket.getfqdn(host)
-    return '%s (no getfqdn)' % host
+        Returns:
+          The formatted string for client address.
+        """
+        host = self.client_address[0]
+        # original: return socket.getfqdn(host)
+        return "%s (no getfqdn)" % host
 
-  def do_OPTIONS(self):
-      self.send_response(200)
-      self.end_headers()
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.end_headers()
 
-  def end_headers(self):
-      self.send_header("Access-Control-Allow-Headers",
-                        "Origin, X-Requested-With, Content-Type, Accept")
-      self.send_header("Access-Control-Allow-Origin", "*")
-      SimpleXMLRPCRequestHandler.end_headers(self)
+    def end_headers(self):
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "Origin, X-Requested-With, Content-Type, Accept",
+        )
+        self.send_header("Access-Control-Allow-Origin", "*")
+        SimpleXMLRPCRequestHandler.end_headers(self)
 
 
 class ChameleonServer(object):
-  """Chameleon Server, which starts a RPC service."""
+    """Chameleon Server, which starts a RPC service."""
 
-  def __init__(self, driver, *args, **kwargs):
-    """Initializes ChameleonServer object.
+    def __init__(self, driver, *args, **kwargs):
+        """Initializes ChameleonServer object.
 
-    Args:
-      driver: String of the driver to serve the RPC server.
-    """
-    # TODO(waihong): Probe all drivers and find a suitable one.
-    self._driver = self._LoadDriver(driver)(*args, **kwargs)
+        Args:
+          driver: String of the driver to serve the RPC server.
+        """
+        # TODO(waihong): Probe all drivers and find a suitable one.
+        self._driver = self._LoadDriver(driver)(*args, **kwargs)
 
-  def _LoadDriver(self, name):
-    """Load the driver from the driver directory.
+    def _LoadDriver(self, name):
+        """Load the driver from the driver directory.
 
-    Args:
-      name: String of the driver name.
+        Args:
+          name: String of the driver name.
 
-    Returns:
-      The class of the driver.
-    """
-    module_name = name
-    logging.info('Load module %s...', module_name)
-    package = __import__('chameleond.drivers', fromlist=[module_name])
-    module = getattr(package, module_name)
-    return getattr(module, 'ChameleondDriver')
+        Returns:
+          The class of the driver.
+        """
+        module_name = name
+        logging.info("Load module %s...", module_name)
+        package = __import__("chameleond.drivers", fromlist=[module_name])
+        module = getattr(package, module_name)
+        return getattr(module, "ChameleondDriver")
 
-  def RunServer(self, host='0.0.0.0', port=9992):
-    """Runs Chameleon RPC server.
+    def RunServer(self, host="0.0.0.0", port=9992):
+        """Runs Chameleon RPC server.
 
-    Args:
-      host: host address to serve the service.
-      port: port number of RPC server.
-    """
-    caching = CachingServer(port + 1)
-    server = SimpleXMLRPCServer((host, port), allow_none=True,
-                                requestHandler=ChameleonXMLRPCRequestHandler,
-                                logRequests=True)
-    server.register_introspection_functions()
-    # Setting allow_dotted_names=True allows a client to access the object
-    # members of self._driver. This is useful to group methods into
-    # different objects, e.g., audio, video, bluetooth hid, etc., in addition
-    # to some generic methods.
-    server.register_instance(self._driver, allow_dotted_names=True)
+        Args:
+          host: host address to serve the service.
+          port: port number of RPC server.
+        """
+        caching = CachingServer(port + 1)
+        server = SimpleXMLRPCServer(
+            (host, port),
+            allow_none=True,
+            requestHandler=ChameleonXMLRPCRequestHandler,
+            logRequests=True,
+        )
+        server.register_introspection_functions()
+        # Setting allow_dotted_names=True allows a client to access the object
+        # members of self._driver. This is useful to group methods into
+        # different objects, e.g., audio, video, bluetooth hid, etc., in addition
+        # to some generic methods.
+        server.register_instance(self._driver, allow_dotted_names=True)
 
-    signal_handler = lambda signum, frame: sys.exit(0)
-    signal.signal(signal.SIGTERM, signal_handler)
+        signal_handler = lambda signum, frame: sys.exit(0)
+        signal.signal(signal.SIGTERM, signal_handler)
 
-    try:
-      # Launch the caching server on the next port, serving cached files.
-      logging.info('Start the caching server process.')
-      caching.start()
+        try:
+            # Launch the caching server on the next port, serving cached files.
+            logging.info("Start the caching server process.")
+            caching.start()
 
-      # Launch the XMLRPC server to serve Chameleond APIs.
-      logging.info('Listening on %s port %d...', host, port)
-      server.serve_forever()
-    finally:
-      logging.info('Terminate the caching server process.')
-      caching.terminate()
+            # Launch the XMLRPC server to serve Chameleond APIs.
+            logging.info("Listening on %s port %d...", host, port)
+            server.serve_forever()
+        finally:
+            logging.info("Terminate the caching server process.")
+            caching.terminate()

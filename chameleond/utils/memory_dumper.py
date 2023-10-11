@@ -1,6 +1,7 @@
 # Copyright 2016 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """The module provides utils to dump memory from a ring buffer periodically."""
 
 import logging
@@ -10,229 +11,259 @@ from chameleond.utils import system_tools
 
 
 class MemoryDumperError(Exception):
-  """Exception in MemoryDumper."""
+    """Exception in MemoryDumper."""
 
 
 class MemoryDumper(multiprocessing.Process):
-  """Dumping memory from a ring buffer to a file in a subprocess."""
-  _DUMP_PERIOD_SECS = 1.0
+    """Dumping memory from a ring buffer to a file in a subprocess."""
 
-  def __init__(self, file_path, adump, dump_callback):
-    """Initializes a MemoryDumper.
+    _DUMP_PERIOD_SECS = 1.0
 
-    Args:
-      file_path: The file path to dump data to. Note that the data will be
-                 appended to the end of the file.
-      adump: an AudioDump object for dumper control on FPGA.
-      dump_callback: The dumper will call this callback immediately after
-                     dumping samples.
-    """
-    super(MemoryDumper, self).__init__()
+    def __init__(self, file_path, adump, dump_callback):
+        """Initializes a MemoryDumper.
 
-    # These page count variables all refer to logical page count.
-    self._last_page_count = None
-    self._last_last_page_count = None
-    self._current_page_count = None
+        Args:
+          file_path: The file path to dump data to. Note that the data will be
+                     appended to the end of the file.
+          adump: an AudioDump object for dumper control on FPGA.
+          dump_callback: The dumper will call this callback immediately after
+                         dumping samples.
+        """
+        super(MemoryDumper, self).__init__()
 
-    self._page_count_in_this_period = None
-    self._file_path = file_path
-    self._adump = adump
-    self._stop_event = multiprocessing.Event()
-    self._dump_callback = dump_callback
-    self.daemon = True
+        # These page count variables all refer to logical page count.
+        self._last_page_count = None
+        self._last_last_page_count = None
+        self._current_page_count = None
 
-  def Stop(self):
-    """Stops the periodic dumping process."""
-    self._stop_event.set()
+        self._page_count_in_this_period = None
+        self._file_path = file_path
+        self._adump = adump
+        self._stop_event = multiprocessing.Event()
+        self._dump_callback = dump_callback
+        self.daemon = True
 
-  def run(self):
-    """Runs the periodic dumping process.
+    def Stop(self):
+        """Stops the periodic dumping process."""
+        self._stop_event.set()
 
-    Note that the audio page count should really start from 0, and this
-    should not be called too lately, or the page count in the first period
-    may be greater than MAX_DUMP_PAGES.
-    """
-    self._last_page_count = 0
-    while True:
-      self._stop_event.wait(self._DUMP_PERIOD_SECS)
-      if self._stop_event.is_set():
-        return
-      self._HandleOnePeriod()
+    def run(self):
+        """Runs the periodic dumping process.
 
-  def _GetPageCountInThisPeriod(self, current_physical_page_count):
-    """Handles page count wrapping to get page count in this period.
+        Note that the audio page count should really start from 0, and this
+        should not be called too lately, or the page count in the first period
+        may be greater than MAX_DUMP_PAGES.
+        """
+        self._last_page_count = 0
+        while True:
+            self._stop_event.wait(self._DUMP_PERIOD_SECS)
+            if self._stop_event.is_set():
+                return
+            self._HandleOnePeriod()
 
-    The physical page count read from adump register wraps around
-    adump.PAGE_COUNT_WRAP_SIZE. This function uses
-    self._last_page_count (logical count) and current_physical_page_count
-    (physical count) to get the logical difference of them.
+    def _GetPageCountInThisPeriod(self, current_physical_page_count):
+        """Handles page count wrapping to get page count in this period.
 
-    For example, if last logical page count is 0x1f000, current physical
-    page count read from register is 0x0010, wrap size is 0x10000, then
-    logical difference of page count is
-    (0x0010 + 0x10000) - (0x1f000 % 0x10000) = 0x10010 - 0xf000 = 0x1010.
+        The physical page count read from adump register wraps around
+        adump.PAGE_COUNT_WRAP_SIZE. This function uses
+        self._last_page_count (logical count) and current_physical_page_count
+        (physical count) to get the logical difference of them.
 
-    Raises:
-      MemoryDumperError: If this function fails to handle wrapping.
-    """
-    difference = (current_physical_page_count -
-                  (self._last_page_count % self._adump.PAGE_COUNT_WRAP_SIZE))
-    if difference < 0:
-      logging.info(
-          'Handle page count wrapping for physical current page '
-          'count 0x%x, logical last page count 0x%x',
-          current_physical_page_count, self._last_page_count)
+        For example, if last logical page count is 0x1f000, current physical
+        page count read from register is 0x0010, wrap size is 0x10000, then
+        logical difference of page count is
+        (0x0010 + 0x10000) - (0x1f000 % 0x10000) = 0x10010 - 0xf000 = 0x1010.
 
-      difference += self._adump.PAGE_COUNT_WRAP_SIZE
+        Raises:
+          MemoryDumperError: If this function fails to handle wrapping.
+        """
+        difference = current_physical_page_count - (
+            self._last_page_count % self._adump.PAGE_COUNT_WRAP_SIZE
+        )
+        if difference < 0:
+            logging.info(
+                "Handle page count wrapping for physical current page "
+                "count 0x%x, logical last page count 0x%x",
+                current_physical_page_count,
+                self._last_page_count,
+            )
 
-    if difference < 0:
-      raise MemoryDumperError('Failed to handle wrapping. Difference = 0x%x' %
-                              difference)
+            difference += self._adump.PAGE_COUNT_WRAP_SIZE
 
-    self._page_count_in_this_period = difference
+        if difference < 0:
+            raise MemoryDumperError(
+                "Failed to handle wrapping. Difference = 0x%x" % difference
+            )
 
-  def _HandleOnePeriod(self):
-    """Handles the work to be done in a period.
+        self._page_count_in_this_period = difference
 
-    The work includes:
-    1. Gets the physical page count from dumper.
-    2. Handles page count wrapping to get page count in this period.
-    3. Updates current page count to be logical current page count.
-    4. Checks if there is overflow, that is, too many pages to be dumped.
-    5. Appends the data from memory dump area to the end of the target file.
-    6. Updates the variables for last and last last page count.
-    """
-    # Gets current physical page count from dumper.
-    current_physical_page_count = self._adump.GetCurrentPageCount()
+    def _HandleOnePeriod(self):
+        """Handles the work to be done in a period.
 
-    # Gets the page count difference in this period. Possibly handles wrapping.
-    self._GetPageCountInThisPeriod(current_physical_page_count)
+        The work includes:
+        1. Gets the physical page count from dumper.
+        2. Handles page count wrapping to get page count in this period.
+        3. Updates current page count to be logical current page count.
+        4. Checks if there is overflow, that is, too many pages to be dumped.
+        5. Appends the data from memory dump area to the end of the target file.
+        6. Updates the variables for last and last last page count.
+        """
+        # Gets current physical page count from dumper.
+        current_physical_page_count = self._adump.GetCurrentPageCount()
 
-    # Gets current logical page count.
-    self._current_page_count = (self._last_page_count +
-                                self._page_count_in_this_period)
+        # Gets the page count difference in this period. Possibly handles wrapping.
+        self._GetPageCountInThisPeriod(current_physical_page_count)
 
-    logging.info(
-        'Current page count: 0x%x. Last page count: 0x%x. '
-        'Page count in this period: 0x%x',
-        self._current_page_count, self._last_page_count,
-        self._page_count_in_this_period)
+        # Gets current logical page count.
+        self._current_page_count = (
+            self._last_page_count + self._page_count_in_this_period
+        )
 
-    # No data received in this period.
-    if self._page_count_in_this_period == 0:
-      return
+        logging.info(
+            "Current page count: 0x%x. Last page count: 0x%x. "
+            "Page count in this period: 0x%x",
+            self._current_page_count,
+            self._last_page_count,
+            self._page_count_in_this_period,
+        )
 
-    self._CheckOverlap()
-    self._DumpPages()
-    self._UpdateOnePeriod()
-    self._dump_callback()
+        # No data received in this period.
+        if self._page_count_in_this_period == 0:
+            return
 
-  def _CheckOverlap(self):
-    """Checks the buffered data is not overlapped.
+        self._CheckOverlap()
+        self._DumpPages()
+        self._UpdateOnePeriod()
+        self._dump_callback()
 
-    Checks the data written by hardware in this period does not overlap with
-    data to be dumped in the last period.
+    def _CheckOverlap(self):
+        """Checks the buffered data is not overlapped.
 
-    Period                 0        1        2       3       4
-    Write by FPGA:         A        B        C       D       E
-    Read by MemoryDumper:           A        B       C       D
+        Checks the data written by hardware in this period does not overlap with
+        data to be dumped in the last period.
 
-    In each period, the sum of data range (e.g. A+B, B+C, C+D, D+E) should be
-    less than page limit, that is, the maximum number of pages in ring buffer.
-    However, we can only check the data of each period in the next period after
-    the data is written by FPGA.
-    E.g., in period 2, we can check B+A is less than page limit in ring buffer,
-    and makes sure the data written in period 1 (B) did not overlap with data
-    read in period 1 (A).
+        Period                 0        1        2       3       4
+        Write by FPGA:         A        B        C       D       E
+        Read by MemoryDumper:           A        B       C       D
 
-    Raises:
-      MemoryDumperError if buffered page count is larger than page limit.
-    """
-    if self._last_last_page_count is not None:
-      # buffered pages is the sum of pages to be read in this period by
-      # MemoryDumper and pages to be written in this cycle
-      buffered_pages = self._current_page_count - self._last_last_page_count
-      logging.info('buffered_pages: 0x%x, max: 0x%x', buffered_pages,
-                   self._adump.MAX_DUMP_PAGES)
-      if buffered_pages > self._adump.MAX_DUMP_PAGES:
-        raise MemoryDumperError(
-            'Bufferred pages %s more than page limit %s' % (
-                buffered_pages, self._adump.MAX_DUMP_PAGES))
+        In each period, the sum of data range (e.g. A+B, B+C, C+D, D+E) should be
+        less than page limit, that is, the maximum number of pages in ring buffer.
+        However, we can only check the data of each period in the next period after
+        the data is written by FPGA.
+        E.g., in period 2, we can check B+A is less than page limit in ring buffer,
+        and makes sure the data written in period 1 (B) did not overlap with data
+        read in period 1 (A).
 
-  def _GetProjectedPageIndex(self, page_count):
-    """Gets the projected page index from page_count.
+        Raises:
+          MemoryDumperError if buffered page count is larger than page limit.
+        """
+        if self._last_last_page_count is not None:
+            # buffered pages is the sum of pages to be read in this period by
+            # MemoryDumper and pages to be written in this cycle
+            buffered_pages = (
+                self._current_page_count - self._last_last_page_count
+            )
+            logging.info(
+                "buffered_pages: 0x%x, max: 0x%x",
+                buffered_pages,
+                self._adump.MAX_DUMP_PAGES,
+            )
+            if buffered_pages > self._adump.MAX_DUMP_PAGES:
+                raise MemoryDumperError(
+                    "Bufferred pages %s more than page limit %s"
+                    % (buffered_pages, self._adump.MAX_DUMP_PAGES)
+                )
 
-    Args:
-      page_count: The page count. It will keep increasing and become larger
-                  than page limit. We need to wrap it around the
-                  end to get the page index to be used to access the memory.
+    def _GetProjectedPageIndex(self, page_count):
+        """Gets the projected page index from page_count.
 
-    Returns:
-      The projected page index in [0, self._adump.MAX_DUMP_PAGES - 1].
-    """
-    return page_count % self._adump.MAX_DUMP_PAGES
+        Args:
+          page_count: The page count. It will keep increasing and become larger
+                      than page limit. We need to wrap it around the
+                      end to get the page index to be used to access the memory.
 
-  def _DumpPages(self):
-    """Dumps a logical range of pages for this period.
+        Returns:
+          The projected page index in [0, self._adump.MAX_DUMP_PAGES - 1].
+        """
+        return page_count % self._adump.MAX_DUMP_PAGES
 
-    Note that if this range wraps around the end of ring buffer, we need to
-    dump it in two steps.
+    def _DumpPages(self):
+        """Dumps a logical range of pages for this period.
 
-    Raises:
-      MemoryDumperError if page count in this period is larger than page limit.
-    """
-    if self._page_count_in_this_period > self._adump.MAX_DUMP_PAGES:
-      raise MemoryDumperError(
-          'Too many pages %s in this period' % self._page_count_in_this_period)
+        Note that if this range wraps around the end of ring buffer, we need to
+        dump it in two steps.
 
-    start_page_index = self._GetProjectedPageIndex(self._last_page_count)
-    end_page_index = self._GetProjectedPageIndex(self._current_page_count)
-    if end_page_index < start_page_index:
-      self._DumpPagesFromMemoryAppendToFile(
-          start_page_index, self._adump.MAX_DUMP_PAGES - start_page_index)
-      self._DumpPagesFromMemoryAppendToFile(
-          0, end_page_index)
-    else:
-      self._DumpPagesFromMemoryAppendToFile(
-          start_page_index, self._page_count_in_this_period)
+        Raises:
+          MemoryDumperError if page count in this period is larger than page limit.
+        """
+        if self._page_count_in_this_period > self._adump.MAX_DUMP_PAGES:
+            raise MemoryDumperError(
+                "Too many pages %s in this period"
+                % self._page_count_in_this_period
+            )
 
-  def _DumpPagesFromMemoryAppendToFile(self, start_page_index, page_count):
-    """Dumps a physical range of pages and appends the data to a file.
+        start_page_index = self._GetProjectedPageIndex(self._last_page_count)
+        end_page_index = self._GetProjectedPageIndex(self._current_page_count)
+        if end_page_index < start_page_index:
+            self._DumpPagesFromMemoryAppendToFile(
+                start_page_index, self._adump.MAX_DUMP_PAGES - start_page_index
+            )
+            self._DumpPagesFromMemoryAppendToFile(0, end_page_index)
+        else:
+            self._DumpPagesFromMemoryAppendToFile(
+                start_page_index, self._page_count_in_this_period
+            )
 
-    Args:
-      start_page_index: The start page index. The page index is between 0 and
-                        page limit - 1.
-      page_count: The number of pages.
+    def _DumpPagesFromMemoryAppendToFile(self, start_page_index, page_count):
+        """Dumps a physical range of pages and appends the data to a file.
 
-    Raises:
-      MemoryDumperError if the range to dump is invalid.
-      MemoryDumperError if pixeldump returns error.
-    """
-    logging.info('Dump from page index 0x%x with count 0x%x',
-                 start_page_index, page_count)
-    if start_page_index + page_count > self._adump.MAX_DUMP_PAGES:
-      raise MemoryDumperError(
-          'Wrong page range, start: 0x%x, count: 0x%x' % (
-              start_page_index, page_count))
+        Args:
+          start_page_index: The start page index. The page index is between 0 and
+                            page limit - 1.
+          page_count: The number of pages.
 
-    start_address = (self._adump.start_address +
-                     start_page_index * self._adump.PAGE_SIZE)
+        Raises:
+          MemoryDumperError if the range to dump is invalid.
+          MemoryDumperError if pixeldump returns error.
+        """
+        logging.info(
+            "Dump from page index 0x%x with count 0x%x",
+            start_page_index,
+            page_count,
+        )
+        if start_page_index + page_count > self._adump.MAX_DUMP_PAGES:
+            raise MemoryDumperError(
+                "Wrong page range, start: 0x%x, count: 0x%x"
+                % (start_page_index, page_count)
+            )
 
-    command = ['pixeldump', '-a', start_address, '-', self._adump.PAGE_SIZE,
-               page_count, 1]
-    logging.info('Dump: %s', command)
-    p = system_tools.SystemTools.RunInSubprocess(*command)
+        start_address = (
+            self._adump.start_address + start_page_index * self._adump.PAGE_SIZE
+        )
 
-    (return_code, out, err) = system_tools.SystemTools.GetSubprocessOutput(
-        p, decode=False)
-    if return_code:
-      logging.error('Dump return %d, error: %s', return_code, err)
-      raise MemoryDumperError(err)
+        command = [
+            "pixeldump",
+            "-a",
+            start_address,
+            "-",
+            self._adump.PAGE_SIZE,
+            page_count,
+            1,
+        ]
+        logging.info("Dump: %s", command)
+        p = system_tools.SystemTools.RunInSubprocess(*command)
 
-    with open(self._file_path, 'ab') as f:
-      f.write(out)
+        (return_code, out, err) = system_tools.SystemTools.GetSubprocessOutput(
+            p, decode=False
+        )
+        if return_code:
+            logging.error("Dump return %d, error: %s", return_code, err)
+            raise MemoryDumperError(err)
 
-  def _UpdateOnePeriod(self):
-    """Updates the variables for page count."""
-    self._last_last_page_count = self._last_page_count
-    self._last_page_count = self._current_page_count
+        with open(self._file_path, "ab") as f:
+            f.write(out)
+
+    def _UpdateOnePeriod(self):
+        """Updates the variables for page count."""
+        self._last_last_page_count = self._last_page_count
+        self._last_page_count = self._current_page_count

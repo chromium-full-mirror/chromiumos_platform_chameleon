@@ -59,124 +59,130 @@ described in a key-value format instead of regular linux file system structure.
 from enum import Enum
 import logging
 
-from chameleond.utils.usb import USBController, USBControllerError
 from chameleond.utils import gadget_configfs
+from chameleond.utils.usb import USBController
+from chameleond.utils.usb import USBControllerError
 
 
 class USBMaxSpeedEnum(str, Enum):
-  """Maximum speed depending on USB speed class"""
+    """Maximum speed depending on USB speed class"""
 
-  super_speed_plus = "super-speed-plus"
-  super_speed = "super-speed"
-  high_speed = "high-speed"
-  full_speed = "full-speed"
-  low_speed = "low-speed"
+    super_speed_plus = "super-speed-plus"
+    super_speed = "super-speed"
+    high_speed = "high-speed"
+    full_speed = "full-speed"
+    low_speed = "low-speed"
 
-  def __str__(self) -> str:
-    """converts python string formatting to value of enum formatting"""
-    return self.value
+    def __str__(self) -> str:
+        """converts python string formatting to value of enum formatting"""
+        return self.value
 
 
 class USBMultiFunctionalGadget(USBController):
-  """Simulate a USB device that has multiple functionalites.
+    """Simulate a USB device that has multiple functionalites.
 
-  USBMultiFunctionalGadget class uses linux's configfs feature to interact with
-  the linux gadget libcomposite module to simulate a USB device that has one or
-  more usb capabilities.
+    USBMultiFunctionalGadget class uses linux's configfs feature to interact with
+    the linux gadget libcomposite module to simulate a USB device that has one or
+    more usb capabilities.
 
-  The complete list of USB features can be found here:
-    https://github.com/torvalds/linux/tree/master/Documentation/ABI/testing
-  """
-
-  KERNEL_NAME = "libcomposite"
-  KERNEL_DEPENDENCIES = ["usb_f_hid", "usb_f_uac2", "u_audio"]
-  INSTANCE = None
-
-  @classmethod
-  def CleanConnectedGadgets(cls):
-    # make sure no device are connected to UDC
-    gadget_configfs.RemoveAllGadgets()
-
-  @classmethod
-  def CleanKernelDependencies(cls):
-    for kernel_dep in cls.KERNEL_DEPENDENCIES:
-      try:
-        driver = USBController(kernel_dep)
-        if driver.DriverIsEnabled():
-          driver.DisableDriver()
-      except USBControllerError as e:
-        logging.error("Failed to clean kernel for %s", cls.KERNEL_NAME)
-        logging.error("Failed to disable driver. (driver: %s)", kernel_dep)
-        logging.error("Got Error: %s", str(e))
-        raise USBControllerError(f"Failed to clean kernel for {cls.KERNEL_NAME}")
-
-  def __init__(self, gadget_name: str, gadget_config: dict):
-    """Instantiate the USBMultiFunctionalGadget object
-
-    Args:
-      gadget_name: the name of the gadget
-      gadget_config: a dict that describes the file and directories
-        needed to create the gadget. For examples check the header of
-        this file.
+    The complete list of USB features can be found here:
+      https://github.com/torvalds/linux/tree/master/Documentation/ABI/testing
     """
-    super().__init__(self.KERNEL_NAME)
 
-    self.gadget_name = gadget_name
-    self.gadget_config = gadget_config
-    logging.info("Completed initialization of USBMultiFunctionalGadget")
+    KERNEL_NAME = "libcomposite"
+    KERNEL_DEPENDENCIES = ["usb_f_hid", "usb_f_uac2", "u_audio"]
+    INSTANCE = None
 
-  def __new__(cls, *args, **kwargs):
+    @classmethod
+    def CleanConnectedGadgets(cls):
+        # make sure no device are connected to UDC
+        gadget_configfs.RemoveAllGadgets()
 
-    if cls.INSTANCE is not None:
-      logging.info("Disabling driver for gadget %s", cls.INSTANCE.gadget_name)
-      cls.INSTANCE.DisableDriver()
+    @classmethod
+    def CleanKernelDependencies(cls):
+        for kernel_dep in cls.KERNEL_DEPENDENCIES:
+            try:
+                driver = USBController(kernel_dep)
+                if driver.DriverIsEnabled():
+                    driver.DisableDriver()
+            except USBControllerError as e:
+                logging.error("Failed to clean kernel for %s", cls.KERNEL_NAME)
+                logging.error(
+                    "Failed to disable driver. (driver: %s)", kernel_dep
+                )
+                logging.error("Got Error: %s", str(e))
+                raise USBControllerError(
+                    f"Failed to clean kernel for {cls.KERNEL_NAME}"
+                )
 
-    logging.info("Cleaning up older gadgets")
-    cls.CleanConnectedGadgets()
+    def __init__(self, gadget_name: str, gadget_config: dict):
+        """Instantiate the USBMultiFunctionalGadget object
 
-    logging.info("Removing %s dependencies", cls.KERNEL_NAME)
-    cls.CleanKernelDependencies()
+        Args:
+          gadget_name: the name of the gadget
+          gadget_config: a dict that describes the file and directories
+            needed to create the gadget. For examples check the header of
+            this file.
+        """
+        super().__init__(self.KERNEL_NAME)
 
-    if cls.INSTANCE is None:
-      cls.INSTANCE = super().__new__(cls)
+        self.gadget_name = gadget_name
+        self.gadget_config = gadget_config
+        logging.info("Completed initialization of USBMultiFunctionalGadget")
 
-    return cls.INSTANCE
+    def __new__(cls, *args, **kwargs):
+        if cls.INSTANCE is not None:
+            logging.info(
+                "Disabling driver for gadget %s", cls.INSTANCE.gadget_name
+            )
+            cls.INSTANCE.DisableDriver()
 
-  def EnableDriver(self):
-    """Modprobes USB driver module.
+        logging.info("Cleaning up older gadgets")
+        cls.CleanConnectedGadgets()
 
-    Overwrites the default EnableDriver in superclass.
-    """
-    enable_driver_ret_code = super().EnableDriver()
-    self._SetupGadget()
-    self._PlugGadget()
-    return enable_driver_ret_code
+        logging.info("Removing %s dependencies", cls.KERNEL_NAME)
+        cls.CleanKernelDependencies()
 
-  def DisableDriver(self):
-    """Removes USB driver module from kernel.
+        if cls.INSTANCE is None:
+            cls.INSTANCE = super().__new__(cls)
 
-    Overwrites the default DisableDriver in superclass.
-    """
-    self._UnplugGadget()
-    self._TeardownGadget()
+        return cls.INSTANCE
 
-    self.CleanKernelDependencies()
+    def EnableDriver(self):
+        """Modprobes USB driver module.
 
-    disable_driver_ret_code = super().DisableDriver()
-    return disable_driver_ret_code
+        Overwrites the default EnableDriver in superclass.
+        """
+        enable_driver_ret_code = super().EnableDriver()
+        self._SetupGadget()
+        self._PlugGadget()
+        return enable_driver_ret_code
 
-  def _SetupGadget(self):
-    """Create gadget in chameleon"""
-    gadget_configfs.CreateGadget(self.gadget_name, self.gadget_config)
+    def DisableDriver(self):
+        """Removes USB driver module from kernel.
 
-  def _TeardownGadget(self):
-    """Remove gadget from chameleon"""
-    gadget_configfs.RemoveGadget(self.gadget_name)
+        Overwrites the default DisableDriver in superclass.
+        """
+        self._UnplugGadget()
+        self._TeardownGadget()
 
-  def _PlugGadget(self):
-    """Plug gadget from DUT"""
-    gadget_configfs.SetUDC(self.gadget_name)
+        self.CleanKernelDependencies()
 
-  def _UnplugGadget(self):
-    """Unplug gadget from DUT"""
-    gadget_configfs.ResetUDC(self.gadget_name)
+        disable_driver_ret_code = super().DisableDriver()
+        return disable_driver_ret_code
+
+    def _SetupGadget(self):
+        """Create gadget in chameleon"""
+        gadget_configfs.CreateGadget(self.gadget_name, self.gadget_config)
+
+    def _TeardownGadget(self):
+        """Remove gadget from chameleon"""
+        gadget_configfs.RemoveGadget(self.gadget_name)
+
+    def _PlugGadget(self):
+        """Plug gadget from DUT"""
+        gadget_configfs.SetUDC(self.gadget_name)
+
+    def _UnplugGadget(self):
+        """Unplug gadget from DUT"""
+        gadget_configfs.ResetUDC(self.gadget_name)
