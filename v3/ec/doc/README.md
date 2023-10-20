@@ -11,7 +11,35 @@ the Chameleon v3 hardware.
 This section describes how to build the Chameleon application for the
 embedded controller.
 
+## Installing Pigweed
+
+If `ls ~/chromiumos/src/third_party/pigweed` comes up empty, sync your repo
+to get the latest manifest and bring in the Pigweed repository.
+
+After updating Pigweed, use the `bootstrap.sh` script:
+```
+source ~/chromiumos/src/third_party/pigweed/bootstrap.sh
+```
+If you haven't pulled in any new commits in Pigweed and you did the
+`bootstrap.sh` earlier, just use `activate.sh`:
+```
+source ~/chromiumos/src/third_party/pigweed/activate.sh
+```
+
+This script prepares the virtual environment at the path of
+`~/chromiumos/src/third_party/pigweed/environment`.
+You **MUST** use this virtual environment (activated by `bootstrap.sh` and
+`activate.sh` scripts, despite not having a `(venv)` in your shell prompt)
+instead of creating a new one from Zephyr `Getting Started Guide`.
+
+Make sure that the path to the pigweed doesn't contain any symlink. If it is the
+case, you should use the real path, otherwise some errors might occur.
+
 ## Installing Zephyr toolchain and source
+
+At first you have to follow the instructions from the previous paragraph because
+instead of creating a new virtual environment from the Zephyr's guide, we are
+using one from the Pigweed instructions.
 
 Follow the instructions in the Zephyr [Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html).
 
@@ -28,31 +56,19 @@ git pull upstream main
 popd
 ```
 
-## Installing Pigweed
-
-If `ls ~/chromiumos/src/third_party/pigweed` comes up empty, sync your repo
-to get the latest manifest and bring in the Pigweed repository.
-
-You also need to `pip install pigweed` so that the Pigweed RPC tools are
-installed. If you have an older version of Pigweed installed,
-`pip3 install --upgrade pigweed`
-
 ## Building the application
 
-After updating Pigweed, use the `bootstrap.sh` script:
-```
-source ~/chromiumos/src/third_party/pigweed/bootstrap.sh
-```
-If you haven't pulled in any new commits in Pigweed, just use `activate.sh`:
-```
-source ~/chromiumos/src/third_party/pigweed/activate.sh
-```
-
-After sourcing either `bootstrap.sh` or `activate.sh`, stay in the same shell,
-change to the Zephyr directory and build the application:
+After sourcing either `bootstrap.sh` or `activate.sh` from Pigweed, stay in the
+same shell, change to the Zephyr directory and build the application:
 ```
 cd ~/zephyrproject
 west build -b chameleon -s ~/chromiumos/src/platform/chameleon/v3/ec
+```
+
+In case of compilation errors related to the protobuf version, you may try
+exporting value that changes the implementation used:
+```
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 ```
 
 Output files are in `~/zephyrproject/build/zephyr`
