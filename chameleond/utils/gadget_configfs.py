@@ -7,6 +7,7 @@
 Details of gadget config is at chameleond/utils/usb_multifunctional_gadget.py
 """
 
+import base64
 import logging
 from pathlib import Path
 from typing import List
@@ -17,7 +18,7 @@ UDC_DIR_DEFAULT_PATH = Path("/sys/class/udc/")
 
 
 class GadgetConfigFSException(Exception):
-    pass
+    """Exception class for Gadget Configfs"""
 
 
 def CreateGadget(gadget_name: str, gadget_config: dict):
@@ -46,8 +47,13 @@ def CreateGadget(gadget_name: str, gadget_config: dict):
                 setupKeyVal(parent_path=parent_path / key, kv_pair=val)
             elif isinstance(val, str) and val.startswith("ln:"):
                 # setup link
-                to_file = val[3:]  # remove "ln:"
+                to_file = val[len("ln:") :]  # remove "ln:"
                 _Link(from_file=parent_path / key, to_file=gadget_dir / to_file)
+            elif isinstance(val, str) and val.startswith("base64:"):
+                # turn base64 string into bytes
+                val = val[len("base64:") :]  # remove "base64:"
+                val = base64.b64decode(val)
+                _SetBytes(file=parent_path / key, value=val)
             else:
                 _SetValue(file=parent_path / key, value=str(val))
 
@@ -64,16 +70,25 @@ def _MakeDir(directory: Path):
         raise GadgetConfigFSException(f"Failed to make directory({directory})")
 
 
-def _SetValue(file: Path, value: bytes):
-    """Given a path set the value in the file.
-
-    Args:
-      file: a path to set
-      value: bytes value to write into the file.
-    """
+def _SetValue(file: Path, value: str):
+    """Given a path set the value in the file."""
     try:
         file.parent.mkdir(parents=True, exist_ok=True)
         with open(file, "w", encoding="utf-8") as f:
+            f.write(value)
+    except OSError as e:
+        logging.error("Failed to set value:%s in %s", value, file)
+        logging.error("Got Error: %s", str(e))
+        raise GadgetConfigFSException(
+            f"Failed to set value({value}) in" f"file({file})"
+        )
+
+
+def _SetBytes(file: Path, value: bytes):
+    """Given a path set the byte value in the file."""
+    try:
+        file.parent.mkdir(parents=True, exist_ok=True)
+        with open(file, "wb") as f:
             f.write(value)
     except OSError as e:
         logging.error("Failed to set value:%s in %s", value, file)

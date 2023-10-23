@@ -9,6 +9,7 @@ from __future__ import print_function
 
 import functools
 import glob
+import json
 import logging
 import os
 import time
@@ -36,6 +37,7 @@ from chameleond.utils import i2c
 from chameleond.utils import ids
 from chameleond.utils import system_tools
 from chameleond.utils import usb
+from chameleond.utils import usb_multifunctional_gadget
 from chameleond.utils import usb_printer_control
 from chameleond.utils.common import lazy
 
@@ -76,6 +78,47 @@ def _DeviceMethod(device_id):
     return _ActualDecorator
 
 
+def AudioHIDMultiFunctionalUSBGadget(
+    gadget_name: str = "chameleon_audio_hid",
+    gadget_config_file: str = (
+        "/etc/usb_multifunctional_gadget_config/audio_hid_default.json"
+    ),
+):
+    gadget_config = None
+    if not os.path.exists(gadget_config_file):
+        logging.warning(
+            "Configuration file(%s) is not found. Using default config",
+            gadget_config_file,
+        )
+        gadget_config = {
+            "idVendor": "0x1d6b",
+            "idProduct": "0x0104",
+            "bcdDevice": "0x0100",
+            "bcdUSB": "0x0110",
+            "max_speed": "full-speed",
+            "functions": {
+                "uac2.usb0": {"c_hs_bint": 1, "p_hs_bint": 1},
+                "hid.usb0": {
+                    "protocol": 1,
+                    "subclass": 1,
+                    "report_length": 8,
+                    "report_desc": "base64:BQEJBqEBBQcZ4CnnFQAlAXUBlQiBApUBdQiBA5UFdQEFCBkBKQWRApUBdQORA5UGdQgVACVlBQcZACllgQDA",
+                },
+            },
+            "configs/c.1": {
+                "strings/0x409": None,
+                "uac2.usb0": "ln:functions/uac2.usb0",
+                "hid.usb0": "ln:functions/hid.usb0",
+            },
+        }
+    else:
+        with open(gadget_config_file, "r", encoding="utf-8") as f:
+            gadget_config = json.load(f)
+    return usb_multifunctional_gadget.USBMultiFunctionalGadget(
+        gadget_name, gadget_config
+    )
+
+
 class ChameleondDriver(ChameleondInterface):
     """Chameleond Driver for FPGA customized platform."""
 
@@ -110,6 +153,9 @@ class ChameleondDriver(ChameleondInterface):
         self._ext_board_bus = lazy(i2c.I2cBus)(self._I2C_BUS_EXT_BOARD)
         self._audio_codec_bus = lazy(i2c.I2cBus)(self._I2C_BUS_AUDIO_CODEC)
         self._fpga_ctrl = lazy(fpga.FpgaController)()
+        self._usb_multifunctional_gadget = lazy(
+            AudioHIDMultiFunctionalUSBGadget
+        )()
         self._usb_audio_ctrl = lazy(usb.USBAudioController)()
         self._usb_hid_ctrl = lazy(usb.USBController)("g_hid")
         self._usb_printer_ctrl = lazy(
@@ -283,6 +329,12 @@ class ChameleondDriver(ChameleondInterface):
             ),
             ids.USB_AUDIO_OUT: usb_audio_flow.OutputUSBAudioFlow(
                 ids.USB_AUDIO_OUT, self._usb_audio_ctrl
+            ),
+            ids.USB_MFG_AUDIO_IN: usb_audio_flow.InputUSBAudioFlow(
+                ids.USB_MFG_AUDIO_IN, self._usb_multifunctional_gadget
+            ),
+            ids.USB_MFG_AUDIO_OUT: usb_audio_flow.OutputUSBAudioFlow(
+                ids.USB_MFG_AUDIO_OUT, self._usb_multifunctional_gadget
             ),
         }
         return devices
