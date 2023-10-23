@@ -895,6 +895,10 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
         """Updates the corresponding capture configurations."""
         raise NotImplementedError("SetUSBDriverCaptureConfigs")
 
+    def GetBluetoothMacAddress(self):
+        """Gets the Bluetooth MAC address of this Chameleon."""
+        raise NotImplementedError("GetBluetoothMacAddress")
+
     def GetMacAddress(self):
         """Gets the MAC address of this Chameleon."""
         raise NotImplementedError("GetMacAddress")

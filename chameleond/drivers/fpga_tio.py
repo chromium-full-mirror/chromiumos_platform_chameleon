@@ -1674,6 +1674,17 @@ class ChameleondDriver(ChameleondInterface):
         """
         self._flow_manager.SetUSBDriverCaptureConfigs(capture_data_format)
 
+    def GetBluetoothMacAddress(self):
+        """Gets the Bluetooth MAC address of this Chameleon.
+
+        @return: A string for Bluetooth MAC address.
+        """
+        data = open("/sys/kernel/debug/bluetooth/hci0/identity").read().strip()
+        lines = data.split(" ")
+        if lines:
+            return lines[0].upper()
+        return ""
+
     def GetMacAddress(self):
         """Gets the MAC address of this Chameleon.
 
