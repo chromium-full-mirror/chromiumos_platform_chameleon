@@ -18,6 +18,7 @@ import tempfile
 from chameleond.devices import analog_audio_testbed
 from chameleond.devices import chameleon_device
 from chameleond.utils import audio
+from chameleond.utils import ids
 from chameleond.utils import serial_utils
 from chameleond.utils import system_tools
 from six.moves import range
@@ -361,7 +362,10 @@ class InputUSBAudioFlow(USBAudioFlow):
 
     def GetConnectorType(self):
         """Returns the human readable string for the connector type."""
-        return "USBIn"
+        if self._port_id == ids.USB_AUDIO_IN:
+            return "USBIn"
+        elif self._port_id == ids.USB_MFG_AUDIO_IN:
+            return "USBMFGAudioIn"
 
     def GetAudioChannelMapping(self):
         """Obtains the channel mapping."""
@@ -507,4 +511,7 @@ class OutputUSBAudioFlow(USBAudioFlow):
 
     def GetConnectorType(self):
         """Returns the human readable string for the connector type."""
-        return "USBOut"
+        if self._port_id == ids.USB_AUDIO_OUT:
+            return "USBOut"
+        elif self._port_id == ids.USB_MFG_AUDIO_OUT:
+            return "USBMFGAudioOut"

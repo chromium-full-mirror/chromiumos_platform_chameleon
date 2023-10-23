@@ -975,6 +975,8 @@ class FlowManager(object):
         if (
             self.flows[ids.USB_AUDIO_IN].is_capturing_audio
             or self.flows[ids.USB_AUDIO_OUT].is_playing_audio
+            or self.flows[ids.USB_MFG_AUDIO_IN].is_capturing_audio
+            or self.flows[ids.USB_MFG_AUDIO_OUT].is_playing_audio
         ):
             error_message = (
                 "Configuration changes not allowed when USB audio "
@@ -1005,6 +1007,8 @@ class FlowManager(object):
         if (
             self.flows[ids.USB_AUDIO_IN].is_capturing_audio
             or self.flows[ids.USB_AUDIO_OUT].is_playing_audio
+            or self.flows[ids.USB_MFG_AUDIO_IN].is_capturing_audio
+            or self.flows[ids.USB_MFG_AUDIO_OUT].is_playing_audio
         ):
             error_message = (
                 "Configuration changes not allowed when USB audio "

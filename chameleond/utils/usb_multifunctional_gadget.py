@@ -56,29 +56,15 @@ described in a key-value format instead of regular linux file system structure.
 
 """
 
-from enum import Enum
+import copy
 import logging
 
 from chameleond.utils import gadget_configfs
-from chameleond.utils.usb import USBController
-from chameleond.utils.usb import USBControllerError
+from chameleond.utils import usb
+from chameleond.utils import usb_multifunctional_gadget_ext as umfg_extensions
 
 
-class USBMaxSpeedEnum(str, Enum):
-    """Maximum speed depending on USB speed class"""
-
-    super_speed_plus = "super-speed-plus"
-    super_speed = "super-speed"
-    high_speed = "high-speed"
-    full_speed = "full-speed"
-    low_speed = "low-speed"
-
-    def __str__(self) -> str:
-        """converts python string formatting to value of enum formatting"""
-        return self.value
-
-
-class USBMultiFunctionalGadget(USBController):
+class USBMultiFunctionalGadget(usb.USBController):
     """Simulate a USB device that has multiple functionalites.
 
     USBMultiFunctionalGadget class uses linux's configfs feature to interact with
@@ -90,7 +76,7 @@ class USBMultiFunctionalGadget(USBController):
     """
 
     KERNEL_NAME = "libcomposite"
-    KERNEL_DEPENDENCIES = ["usb_f_hid", "usb_f_uac2", "u_audio"]
+    KERNEL_DEPENDENCIES = ["g_audio", "usb_f_hid", "usb_f_uac2", "u_audio"]
     INSTANCE = None
 
     @classmethod
@@ -102,16 +88,16 @@ class USBMultiFunctionalGadget(USBController):
     def CleanKernelDependencies(cls):
         for kernel_dep in cls.KERNEL_DEPENDENCIES:
             try:
-                driver = USBController(kernel_dep)
+                driver = usb.USBController(kernel_dep)
                 if driver.DriverIsEnabled():
                     driver.DisableDriver()
-            except USBControllerError as e:
+            except usb.USBControllerError as e:
                 logging.error("Failed to clean kernel for %s", cls.KERNEL_NAME)
                 logging.error(
                     "Failed to disable driver. (driver: %s)", kernel_dep
                 )
                 logging.error("Got Error: %s", str(e))
-                raise USBControllerError(
+                raise usb.USBControllerError(
                     f"Failed to clean kernel for {cls.KERNEL_NAME}"
                 )
 
@@ -119,15 +105,20 @@ class USBMultiFunctionalGadget(USBController):
         """Instantiate the USBMultiFunctionalGadget object
 
         Args:
-          gadget_name: the name of the gadget
-          gadget_config: a dict that describes the file and directories
-            needed to create the gadget. For examples check the header of
-            this file.
+            gadget_name: the name of the gadget
+            gadget_config: a dict that describes the file and directories
+                needed to create the gadget. For examples check the header of
+                this file.
         """
         super().__init__(self.KERNEL_NAME)
 
         self.gadget_name = gadget_name
         self.gadget_config = gadget_config
+
+        self.audio_extension = (
+            umfg_extensions.USBMultiFunctionalGadgetAudioExtension()
+        )
+
         logging.info("Completed initialization of USBMultiFunctionalGadget")
 
     def __new__(cls, *args, **kwargs):
@@ -171,9 +162,24 @@ class USBMultiFunctionalGadget(USBController):
         disable_driver_ret_code = super().DisableDriver()
         return disable_driver_ret_code
 
+    def _UpdateConfigForExtensions(self):
+        gadget_config = copy.copy(self.gadget_config)
+        if self.audio_extension.ExtensionEnabled(self.gadget_config):
+            gadget_config = self.audio_extension.UpdateConfig(gadget_config)
+        return gadget_config
+
+    def _CompleteSetupForExtensions(self):
+        if self.audio_extension.ExtensionEnabled(self.gadget_config):
+            self.audio_extension.CompleteSetup()
+
+    def _ResetSetupForExtensions(self):
+        if self.audio_extension.ExtensionEnabled(self.gadget_config):
+            self.audio_extension.ResetSetup()
+
     def _SetupGadget(self):
         """Create gadget in chameleon"""
-        gadget_configfs.CreateGadget(self.gadget_name, self.gadget_config)
+        gadget_config = self._UpdateConfigForExtensions()
+        gadget_configfs.CreateGadget(self.gadget_name, gadget_config)
 
     def _TeardownGadget(self):
         """Remove gadget from chameleon"""
@@ -181,8 +187,45 @@ class USBMultiFunctionalGadget(USBController):
 
     def _PlugGadget(self):
         """Plug gadget from DUT"""
-        gadget_configfs.SetUDC(self.gadget_name)
+        try:
+            gadget_configfs.SetUDC(self.gadget_name)
+        except Exception as e:
+            logging.error("Failed to plug gadget(%s)", self.gadget_name)
+            logging.error(e)
+            self._ResetSetupForExtensions()
+            raise
+        else:
+            self._CompleteSetupForExtensions()
 
     def _UnplugGadget(self):
         """Unplug gadget from DUT"""
         gadget_configfs.ResetUDC(self.gadget_name)
+        self._ResetSetupForExtensions()
+
+    def GetSupportedPlaybackDataFormat(self):
+        if self.audio_extension.ExtensionEnabled(self.gadget_config):
+            return self.audio_extension.GetSupportedPlaybackDataFormat(
+                driver=self
+            )
+        raise ValueError("Audio extension is not enabled.")
+
+    def GetSupportedCaptureDataFormat(self):
+        if self.audio_extension.ExtensionEnabled(self.gadget_config):
+            return self.audio_extension.GetSupportedCaptureDataFormat(
+                driver=self
+            )
+        raise ValueError("Audio extension is not enabled.")
+
+    def SetDriverPlaybackConfigs(self, playback_configs):
+        if self.audio_extension.ExtensionEnabled(self.gadget_config):
+            return self.audio_extension.SetDriverPlaybackConfigs(
+                playback_configs, driver=self
+            )
+        raise ValueError("Audio extension is not enabled.")
+
+    def SetDriverCaptureConfigs(self, capture_configs):
+        if self.audio_extension.ExtensionEnabled(self.gadget_config):
+            return self.audio_extension.SetDriverCaptureConfigs(
+                capture_configs, driver=self
+            )
+        raise ValueError("Audio extension is not enabled.")
