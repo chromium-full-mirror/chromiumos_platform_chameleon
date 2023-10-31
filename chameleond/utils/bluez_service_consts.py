@@ -26,6 +26,7 @@ BTD_CONF_FILE = "/lib/systemd/system/bluetooth.service"
 PERIPHERAL_DEVICE_CLASS = {
     PeripheralKit.KEYBOARD: 0x002540,
     PeripheralKit.MOUSE: 0x002580,
+    PeripheralKit.GAMEPAD: 0x002508,
     PeripheralKit.PHONE: 0x7A020C,
     # Service Class: Limited Discoverable Mode,
     #                Audio (Speaker, Microphone, Headset service)
@@ -38,6 +39,7 @@ PERIPHERAL_DEVICE_CLASS = {
 PERIPHERAL_DEVICE_NAME = {
     PeripheralKit.KEYBOARD: "KEYBD_REF",
     PeripheralKit.MOUSE: "MOUSE_REF",
+    PeripheralKit.GAMEPAD: "GAMEPAD_REF",
     PeripheralKit.PHONE: "PHONE_REF",
     PeripheralKit.BLUETOOTH_AUDIO: "RASPI_AUDIO",
     PeripheralKit.FAST_PAIR: "FAST_PAIR_REF",
@@ -47,6 +49,7 @@ PERIPHERAL_DEVICE_NAME = {
 PERIPHERAL_DEVICE_APPEARANCE = {
     PeripheralKit.KEYBOARD: [0xC1, 0x03],
     PeripheralKit.MOUSE: [0xC2, 0x03],
+    PeripheralKit.GAMEPAD: [0xc4, 0x03],
     PeripheralKit.PHONE: [0x40, 0x00],
     PeripheralKit.BLUETOOTH_AUDIO: [0x80, 0x02],  # Generic Media Player
     PeripheralKit.FAST_PAIR: [0x00, 0x00],  # Unknown
@@ -58,6 +61,9 @@ SERVICE_PROFILE_SDP_PATH = {
     ),
     PeripheralKit.MOUSE: (
         os.path.dirname(os.path.abspath(__file__)) + "/mouse_sdp_record.xml"
+    ),
+    PeripheralKit.GAMEPAD: (
+        os.path.dirname(os.path.abspath(__file__)) + "/gamepad_sdp_record.xml"
     ),
     # TODO: find a suitable xml for Bluetooth audio device.
     PeripheralKit.BLUETOOTH_AUDIO: (
@@ -79,6 +85,7 @@ NON_AUDIO_BTD_FLAGS = "-d -P input,avrcp,a2dp"
 PERIPHERAL_BTD_FLAGS = {
     PeripheralKit.KEYBOARD: NON_AUDIO_BTD_FLAGS,
     PeripheralKit.MOUSE: NON_AUDIO_BTD_FLAGS,
+    PeripheralKit.GAMEPAD: NON_AUDIO_BTD_FLAGS,
     PeripheralKit.PHONE: NON_AUDIO_BTD_FLAGS,
     PeripheralKit.BLUETOOTH_AUDIO: AUDIO_BTD_FLAGS,
     PeripheralKit.FAST_PAIR: NON_AUDIO_BTD_FLAGS,
@@ -89,6 +96,7 @@ HID_SERVICE_UUID = "00001124-0000-1000-8000-00805f9b34fb"
 PERIPHERAL_PROFILE_UUID = {
     PeripheralKit.KEYBOARD: HID_SERVICE_UUID,
     PeripheralKit.MOUSE: HID_SERVICE_UUID,
+    PeripheralKit.GAMEPAD: HID_SERVICE_UUID,
 }
 
 

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<record>
+	<attribute id="0x0001">
+		<sequence>
+			<uuid value="0x1124" />
+		</sequence>
+	</attribute>
+	<attribute id="0x0004">
+		<sequence>
+			<sequence>
+				<uuid value="0x0100" />
+				<uint16 value="0x0011" />
+			</sequence>
+			<sequence>
+				<uuid value="0x0011" />
+			</sequence>
+		</sequence>
+	</attribute>
+	<attribute id="0x0005">
+		<sequence>
+			<uuid value="0x1002" />
+		</sequence>
+	</attribute>
+	<attribute id="0x0006">
+		<sequence>
+			<uint16 value="0x656e" />
+			<uint16 value="0x006a" />
+			<uint16 value="0x0100" />
+		</sequence>
+	</attribute>
+	<attribute id="0x0009">
+		<sequence>
+			<sequence>
+				<uuid value="0x1124" />
+				<uint16 value="0x0100" />
+			</sequence>
+		</sequence>
+	</attribute>
+	<attribute id="0x000d">
+		<sequence>
+			<sequence>
+				<sequence>
+					<uuid value="0x0100" />
+					<uint16 value="0x0013" />
+				</sequence>
+				<sequence>
+					<uuid value="0x0011" />
+				</sequence>
+			</sequence>
+		</sequence>
+	</attribute>
+	<attribute id="0x0100">
+		<text value="Xbox Bluetooth Gamepad" />
+	</attribute>
+	<attribute id="0x0101">
+		<text value="Gamepad" />
+	</attribute>
+	<attribute id="0x0102">
+		<text value="Microsoft Corporation" />
+	</attribute>
+	<attribute id="0x0200">
+		<uint16 value="0x0100" />
+	</attribute>
+	<attribute id="0x0201">
+		<uint16 value="0x0111" />
+	</attribute>
+	<attribute id="0x0202">
+		<uint8 value="0x40" />
+	</attribute>
+	<attribute id="0x0203">
+		<uint8 value="0x21" />
+	</attribute>
+	<attribute id="0x0204">
+		<boolean value="true" />
+	</attribute>
+	<attribute id="0x0205">
+		<boolean value="true" />
+	</attribute>
+	<attribute id="0x0206">
+		<sequence>
+			<sequence>
+				<uint8 value="0x22" />
+				<text encoding="hex" value="05010905A10185010901A10009300931150027FFFF0000950275108102C00901A10009320935150027FFFF0000950275108102C0050209C5150026FF039501750A810215002500750695018103050209C4150026FF039501750A81021500250075069501810305010939150125083500463B016614007504950181427504950115002500350045006500810305091901290F150025017501950F810215002500750195018103050C0A24021500250195017501810215002500750795018103050C09018502A101050C0A23021500250195017501810215002500750795018103C0050F09218503A102099715002501750495019102150025007504950191030970150025647508950491020950660110550E150026FF0075089501910209A7150026FF0075089501910265005500097C150026FF00750895019102C0850405060920150026FF00750895018102C0" />
+			</sequence>
+		</sequence>
+	</attribute>
+	<attribute id="0x0207">
+		<sequence>
+			<sequence>
+				<uint16 value="0x0409" />
+				<uint16 value="0x0100" />
+			</sequence>
+		</sequence>
+	</attribute>
+	<attribute id="0x0208">
+		<boolean value="false" />
+	</attribute>
+</record>

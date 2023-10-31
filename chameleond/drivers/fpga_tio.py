@@ -205,6 +205,9 @@ class ChameleondDriver(ChameleondInterface):
         self.bluetooth_keyboard = self._device_manager.GetChameleonDevice(
             ids.BLUETOOTH_HID_KEYBOARD
         )
+        self.bluetooth_gamepad = self._device_manager.GetChameleonDevice(
+            ids.BLUETOOTH_HID_GAMEPAD
+        )
         self.bluetooth_tester = self._device_manager.GetChameleonDevice(
             ids.BLUETOOTH_TESTER
         )
@@ -315,6 +318,7 @@ class ChameleondDriver(ChameleondInterface):
         devices = {
             ids.BLUETOOTH_HID_KEYBOARD: raspi_bluetooth_flow.RaspiHIDKeyboard(),
             ids.BLUETOOTH_HID_MOUSE: raspi_bluetooth_flow.RaspiHIDMouse(),
+            ids.BLUETOOTH_HID_GAMEPAD: raspi_bluetooth_flow.RaspiHIDGamepad(),
             ids.BLE_KEYBOARD: raspi_bluetooth_flow.RaspiHIDKeyboard(),
             ids.BLE_MOUSE: raspi_bluetooth_flow.RaspiHIDMouse(),
             ids.BLUETOOTH_BASE: bluetooth_base_flow.BluetoothBaseFlow(
