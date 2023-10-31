@@ -883,6 +883,7 @@ class BluetoothAudio(BluezPeripheral):
         """
         sources = self.ListSources(audio_profile)
         for line in sources.splitlines():
+            logging.info("sources: %s", line)
             if "bluez_source" in line:
                 return line.split()[0]
         return None
