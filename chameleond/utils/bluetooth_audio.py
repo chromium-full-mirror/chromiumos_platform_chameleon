@@ -756,7 +756,7 @@ class BluetoothAudio(BluezPeripheral):
             return False
         return True
 
-    def StartPlayingAudioSubprocess(
+    def StartPlayingAudioSubprocessPulseaudio(
         self, audio_profile, test_data, wait_secs=1
     ):
         """Start playing the audio file in a subprocess.
@@ -809,6 +809,81 @@ class BluetoothAudio(BluezPeripheral):
         # The process needs some time to start.
         time.sleep(wait_secs)
         return True
+
+    def StartPlayingAudioSubprocessPipewire(
+        self, audio_profile, test_data, wait_secs=1
+    ):
+        """Start playing the audio file in a subprocess.
+
+        Args:
+          audio_profile: the audio profile, either a2dp, hfp_swb, hfp_wbs, or hfp_nbs.
+          test_data: a dictionary about the audio test data transmitted by the test
+                     server.
+          wait_secs: the time interval to wait for ofono to complete starting.
+
+        Returns:
+          True if successful.
+        """
+        if self._play:
+            logging.error(
+                "Trying to start audio playing process when it is still running."
+            )
+            return False
+
+        self._profile = test_data
+        file_path = test_data["device_file"]
+
+        bluez_id = self.GetPipewireBluezId()
+        if bluez_id is None:
+            return False
+
+        channels = test_data["channels"]
+
+        if channels < 1 or channels > 2:
+            logging.error("Unsupported channel size %d", channels)
+            return False
+
+        channel_map = [None, "mono", "stereo"][channels]
+
+        args = (
+            f"--target {bluez_id} "
+            f"--rate {test_data['rate']} "
+            f"--channels {channels} "
+            f"--channel-map {channel_map} {file_path}"
+        )
+
+        self._play = SystemTools.RunInSubprocessAsPi(
+            "pw-play", args, self._UsingLocalVersion(audio_profile)
+        )
+
+        self._PollForCondition(
+            lambda: os.path.isfile(file_path), desc=f"{file_path} created"
+        )
+        self._recorded_file = open(file_path, "rb")
+        return True
+
+    def StartPlayingAudioSubprocess(
+        self, audio_profile, test_data, wait_secs=1
+    ):
+        """Start playing the audio file in a subprocess.
+
+        Args:
+          audio_profile: the audio profile, either a2dp, hfp_swb, hfp_wbs, or hfp_nbs.
+          test_data: a dictionary about the audio test data transmitted by the test
+                     server.
+          wait_secs: the time interval to wait for ofono to complete starting.
+
+        Returns:
+          True if successful.
+        """
+        if self.GetAudioServerName() == self.PULSEAUDIO:
+            return self.StartPlayingAudioSubprocessPulseaudio(
+                audio_profile, test_data, wait_secs=1
+            )
+        else:
+            return self.StartPlayingAudioSubprocessPipewire(
+                audio_profile, test_data, wait_secs=1
+            )
 
     def StopPlayingAudioSubprocess(self):
         """Stop playing the audio file in the subprocess.
@@ -1054,6 +1129,12 @@ class BluetoothAudio(BluezPeripheral):
         Returns:
           True if successful
         """
+        if self._record:
+            logging.error(
+                "Trying to start audio recording process when it is still running."
+            )
+            return False
+
         self._profile = test_data
         file_path = test_data[recording_entity]
 
@@ -1068,11 +1149,18 @@ class BluetoothAudio(BluezPeripheral):
         if bluez_id is None:
             return False
 
+        channels = test_data["channels"]
+        if channels < 1 or channels > 2:
+            logging.error("Unsupported channel size %d", channels)
+            return False
+
+        channel_map = [None, "mono", "stereo"][channels]
+
         args = (
             f"--target {bluez_id} "
             f"--rate {test_data['rate']} "
-            f"--channels {test_data['channels']} "
-            f"--channel-map stereo {file_path}"
+            f"--channels {channels} "
+            f"--channel-map {channel_map} {file_path}"
         )
 
         self._record = SystemTools.RunInSubprocessAsPi(

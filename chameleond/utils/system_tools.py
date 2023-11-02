@@ -58,6 +58,7 @@ class _SystemTools(object):
         "printer": "/usr/bin/printer",
         "pulseaudio.local": "/usr/local/bin/pulseaudio",
         "pulseaudio": "/usr/bin/pulseaudio",
+        "pw-play": "/usr/bin/pw-play",
         "pw-record": "/usr/bin/pw-record",
         "reboot": "/sbin/reboot",
         "scp": "/usr/bin/scp",
