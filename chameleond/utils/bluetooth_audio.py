@@ -990,6 +990,11 @@ class BluetoothAudio(BluezPeripheral):
         sample_format = test_data["format"].lower().replace("_", "")
         file_path = test_data[recording_entity]
 
+        try:
+            os.remove(file_path)
+        except FileNotFoundError:
+            pass
+
         self._MakeAudioRecordDirectory(os.path.split(file_path)[0])
 
         if audio_profile.startswith("a2dp"):
@@ -1051,6 +1056,12 @@ class BluetoothAudio(BluezPeripheral):
         """
         self._profile = test_data
         file_path = test_data[recording_entity]
+
+        try:
+            os.remove(file_path)
+        except FileNotFoundError:
+            pass
+
         self._MakeAudioRecordDirectory(os.path.split(file_path)[0])
 
         bluez_id = self.GetPipewireBluezId()
