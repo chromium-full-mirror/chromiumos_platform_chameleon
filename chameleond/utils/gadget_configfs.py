@@ -190,6 +190,9 @@ def SetUDC(gadget_name: str):
     try:
         udc_name = GetUDCName()
         logging.info("Found UDC %s", udc_name)
+        with (gadget_dir / "UDC").open("r") as f:
+            if f.read().strip() == udc_name:
+                return
         with (gadget_dir / "UDC").open("w") as f:
             f.write(udc_name + "\n")
     except OSError as e:
@@ -204,6 +207,9 @@ def ResetUDC(gadget_name: str):
     gadget_dir = CONFIGFS_DEFAULT_PATH / gadget_name
     if not gadget_dir.exists():
         return
+    with (gadget_dir / "UDC").open("r") as f:
+        if f.read().strip() == "":
+            return
     with (gadget_dir / "UDC").open("w") as f:
         f.write("\n")
 

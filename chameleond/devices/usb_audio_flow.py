@@ -18,6 +18,7 @@ import tempfile
 from chameleond.devices import analog_audio_testbed
 from chameleond.devices import chameleon_device
 from chameleond.utils import audio
+from chameleond.utils import gadget_configfs
 from chameleond.utils import ids
 from chameleond.utils import serial_utils
 from chameleond.utils import system_tools
@@ -229,9 +230,16 @@ class USBAudioFlow(chameleon_device.Flow):
         if self._init_for_device_mode_done:
             return
         logging.info("Initialize USB audio driver for device mode.")
-        self.Plug()
-        self.Unplug()
-        self._init_for_device_mode_done = True
+        try:
+            self.Plug()
+            self.Unplug()
+            self._init_for_device_mode_done = True
+        except gadget_configfs.GadgetConfigFSException as e:
+            logging.warning("Got error when InitForDeviceMode: %s", str(e))
+            logging.warning(
+                "Failed to initialize USB audio driver for device "
+                "mode. Skipping..."
+            )
 
 
 class InputUSBAudioFlow(USBAudioFlow):
