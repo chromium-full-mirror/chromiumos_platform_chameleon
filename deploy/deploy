@@ -191,7 +191,7 @@ validate_audio_test_data_packages_installation() {
     local data_tarball="${TEST_DATA_DIR}/${data_name}"
 
     # Download the audio-test-data tarball.
-    download_cloud_file "${data_name}" "${TEST_DATA_DIR}"
+    download_cloud_file "test-data/v1/${data_name}" "${TEST_DATA_DIR}"
     echo "The latest ${data_tarball} is downloaded."
 
     if tar xf "${data_tarball}" -C "${TEST_DATA_DIR}"; then
