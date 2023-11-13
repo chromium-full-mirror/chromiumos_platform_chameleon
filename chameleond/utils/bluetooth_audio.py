@@ -142,6 +142,8 @@ class BluetoothAudio(BluezPeripheral):
     A2DP_CODEC = "a2dp_codec"
     SBC = "sbc"
     AAC = "aac"
+    HFP_CODEC = "hfp_codec"
+    LC3 = "lc3"
 
     # pipewire related processes
     # Note: pipewire-pulse is not needed in tests
@@ -152,6 +154,9 @@ class BluetoothAudio(BluezPeripheral):
     START_PIPEWIRE_TIMES = 2
     PIPEWIRE_READY_TIMEOUT_SECS = 5
     INTERVAL_BETWEEN_START_PIPEWIRE_SECS = 1
+    WP_BLUETOOTH_LUA_D_DIR = "/home/pi/.config/wireplumber/bluetooth.lua.d"
+    WP_BLUEZ_AAC_CONFIG = "51-bluez-aac-config.lua"
+    WP_BLUEZ_SWB_CONFIG = "51-bluez-swb-config.lua"
 
     # The pipewire related processes:
     # - pipewire: the audio server process
@@ -579,13 +584,92 @@ class BluetoothAudio(BluezPeripheral):
             self.StopPulseaudio()
             return self.StartPipewire()
 
+    def SystemctlReload(self):
+        """Perform daemon reload on the systemd user instance.
+
+        Whenever there's a runtime change in daemon configuration,
+        a daemon reload is necessary for these changes to take effect.
+
+        Returns: True if systemctl can do daemon reload successfully.
+        """
+        args_str = "--user daemon-reload"
+        rc = SystemTools.OrigCall(self.SYSTEMCTL, *args_str.split())
+        logging.info(f"systemctl {args_str}: {rc}")
+        return rc == 0
+
+    def ChangeWpSettings(self, audio_config):
+        """Change the Wireplumber settings dynamically.
+
+        This changes the settings of the file in a Raspberry Pi:
+          /home/pi/.config/wireplumber/bluetooth.lua.d
+
+        If A2DP_CODEC is AAC, the bluez5.codecs should contain only aac and
+        sbc so that no other higher-priority codecs would be selected by
+        the central.
+          ["bluez5.codecs"] = "[ aac sbc ]",
+
+        If HFP_CODEC is LC3, place only hfp_hf for a stability reason.
+          ["bluez5.roles"] = "[ hfp_hf ]",
+
+        For codecs other than aac and lc3, just use the original settings.
+
+        Args:
+          audio_config: an audio configuration dict.
+        """
+
+        def _RemoveOldConfigs():
+            # "51-*.lua" config files are created by our tests to dynamically
+            # manipuate the settings. Remove them first to have clean default
+            # settings.
+            config_fpath = os.path.join(self.WP_BLUETOOTH_LUA_D_DIR, "51-*.lua")
+            rc = SystemTools.OrigCallAsPi("rm", config_fpath)
+            # It is fine if the "51-*.lua" files do not exist. Just return True.
+            return True
+
+        def _CopyConfig(config_fname):
+            config_fpath = os.path.join(
+                self.WP_BLUETOOTH_LUA_D_DIR, config_fname
+            )
+            config_orig_fpath = os.path.join(
+                self.WP_BLUETOOTH_LUA_D_DIR, config_fname + ".orig"
+            )
+            args_str = config_orig_fpath + " " + config_fpath
+            rc = SystemTools.OrigCallAsPi("cp", args_str)
+            if rc != 0:
+                logging.error(f"Faild to cp {config_fname}")
+                return False
+            return True
+
+        a2dp_codec = self._audio_config.get(self.A2DP_CODEC)
+        hfp_codec = self._audio_config.get(self.HFP_CODEC)
+        if a2dp_codec != self.AAC and hfp_codec != self.LC3:
+            # Just return and use the original WirePlumber settings.
+            return True
+
+        if not _RemoveOldConfigs():
+            return False
+
+        # Change WirePlumber settings specifically for the AAC codec.
+        if a2dp_codec == self.AAC:
+            return _CopyConfig(self.WP_BLUEZ_AAC_CONFIG)
+
+        # Change WirePlumber settings specifically for the LC3 codec.
+        elif hfp_codec == self.LC3:
+            return _CopyConfig(self.WP_BLUEZ_SWB_CONFIG)
+
     def SetAudioConfig(self, audio_config):
         """Set the audio configuration.
 
         Args:
-          audio_config: an audio configuration dict
+          audio_config: an audio configuration dict.
         """
         self._audio_config.update(audio_config)
+
+        if not self.ChangeWpSettings(audio_config):
+            logging.error("Faild to change wireplumber settings")
+            return False
+
+        return self.SystemctlReload()
 
     def _PrintProcessStderr(self, proc):
         """Print the stderr of the proc if any."""
