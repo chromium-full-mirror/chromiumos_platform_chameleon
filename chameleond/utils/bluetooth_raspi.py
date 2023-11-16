@@ -790,7 +790,8 @@ class BluezPeripheral(PeripheralKit):
         return True
 
     def SetAdvertising(self, enable):
-        """Set the whether advertising via LE.
+        """Set LE advertising to OFF/ON and configure advertisement
+        parameters if LE advertising is enabled.
 
         @param enable: Whether controller should advertise via LE.
 
@@ -800,6 +801,8 @@ class BluezPeripheral(PeripheralKit):
         if not _control.set_advertising(0, enable):
             logging.error("Unable to set LE advertising {}".format(enable))
             return False
+        if enable and self._gatt_server:
+            self._gatt_server._ConfigureAdvertisements()
         return True
 
     def SetRPATimeout(self, timeout):
