@@ -280,16 +280,8 @@ class BluezService(dbus.service.Object):
         "org.chromium.autotest.btkbservice", in_signature="yay"
     )
     def SendKeys(self, modifier, keys):
-        report = ""
-        report += chr(0xA1)
-        report += chr(0x01)
-        report += chr(modifier)
-        report += chr(0x00)
-        count = 0
-        for key_code in keys:
-            if count < 6:
-                report += chr(key_code)
-                count += 1
+        report = bytes([0xA1, 0x01, modifier, 0x00])
+        report += bytes(keys[:6])
         self._cinterrupt.send(report)
 
     @dbus.service.method("org.chromium.autotest.btkbservice", in_signature="ay")
