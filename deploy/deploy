@@ -205,6 +205,14 @@ validate_audio_test_data_packages_installation() {
     fi
 }
 
+initiate_session_for_pi() {
+    if loginctl enable-linger pi; then
+        echo "Session for pi is initiated"
+    else
+        die "Error in initiating the session for pi"
+    fi
+}
+
 check_daemon_path(){
     SCRIPT_NAME="run_$1"
     UNWANTED_DAEMON_DIR='/usr/local/bin'
@@ -431,6 +439,8 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     validate_python_package_installation "pybluez"
 
     validate_socket_installation
+
+    initiate_session_for_pi
 
     # Install customized packages in wbs.tbz2 to enable wideband speech.
     # These are arm binaries, so we don't install for x86-generic.
