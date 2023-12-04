@@ -242,6 +242,11 @@ disable_piepwire_pulse() {
     fi
 }
 
+unblock_bluetooth_wlan() {
+    # Unblock bluetooth and wifi if they are blocked.
+    rfkill unblock bluetooth wlan
+}
+
 check_daemon_path(){
     SCRIPT_NAME="run_$1"
     UNWANTED_DAEMON_DIR='/usr/local/bin'
@@ -479,6 +484,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         validate_audio_test_data_packages_installation
     fi
 
+    unblock_bluetooth_wlan
     install_wireplumber_config
     disable_piepwire_pulse
 
