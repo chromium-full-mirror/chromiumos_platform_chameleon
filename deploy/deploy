@@ -224,6 +224,24 @@ install_wireplumber_config() {
     fi
 }
 
+disable_piepwire_pulse() {
+    PULSE_SERVICE="systemd/user/default.target.wants/pipewire-pulse.service"
+    if [ ! -e "${PI_CONFIG_DIR}/${PULSE_SERVICE}" ]; then
+        echo "pipewire-pulse.service has already been disabled"
+        return
+    fi
+
+    pi_id="$(id -u pi)"
+    cmd="export XDG_RUNTIME_DIR=/run/user/${pi_id};
+         export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${pi_id}/bus;
+         systemctl --user --now disable pipewire-pulse"
+    if su - pi -c "${cmd}"; then
+        echo "pipewire-pulse is disabled"
+    else
+        die "Error in disabling pipewire-pulse"
+    fi
+}
+
 check_daemon_path(){
     SCRIPT_NAME="run_$1"
     UNWANTED_DAEMON_DIR='/usr/local/bin'
@@ -462,6 +480,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     fi
 
     install_wireplumber_config
+    disable_piepwire_pulse
 
     # Update bluetooth rules in service config files
     BT_ADMIN_CONF="/etc/systemd/system/bluetooth.target.wants/bluetooth.service"
