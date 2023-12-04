@@ -33,6 +33,13 @@ class it68051_service : public pw_rpc::nanopb::it68051_service::Service<it68051_
   ::pw::Status read_edid( const ::Empty& request, ::it68051_raw_edid_request& response);
 
   ::pw::Status get_video_params( const ::Empty& request, ::it68051_vid_aud_info& response);
+
+ private:
+  void lock();
+
+  ::pw::Status unlock();
+
+  uint32_t errors_count;
 };
 
 #endif

@@ -11,6 +11,7 @@
 #include "it68051_service.h"
 #include "it68051.h"
 #include "it68051_edid.h"
+#include "it68051_i2c.h"
 
 // Method definitions for it68051_service.
 ::pw::Status
@@ -29,11 +30,10 @@ it68051_service::select_port(const ::it68051_port_num_request &request,
 		return ::pw::Status::InvalidArgument();
 	}
 
-	it68051_lock();
+	lock();
 	it68051_port_select(port);
-	it68051_unlock();
 
-	return ::pw::OkStatus();
+	return unlock();
 }
 
 ::pw::Status
@@ -42,18 +42,19 @@ it68051_service::get_selected_port(const ::Empty &request,
 {
 	static_cast<void>(request);
 
-	it68051_lock();
-	enum it68051_port port = it68051_get_selected_port();
-	it68051_unlock();
+	lock();
+	auto port = it68051_get_selected_port();
+	auto result = unlock();
+
 	if (port == PORT2) {
 		response.port = it68051_port_num_PORT2;
 	} else if (port == PORT1) {
 		response.port = it68051_port_num_PORT1;
-	} else {
+	} else if (result.ok()) {
 		return ::pw::Status::InvalidArgument();
 	}
 
-	return ::pw::OkStatus();
+	return result;
 }
 
 ::pw::Status it68051_service::set_hpd(const ::it68051_hpd_request &request,
@@ -71,11 +72,10 @@ it68051_service::get_selected_port(const ::Empty &request,
 		return ::pw::Status::InvalidArgument();
 	}
 
-	it68051_lock();
+	lock();
 	it68051_set_hpd(port, (request.on_off != 0));
-	it68051_unlock();
 
-	return ::pw::OkStatus();
+	return unlock();
 }
 
 ::pw::Status it68051_service::get_hpd(const ::it68051_port_num_request &request,
@@ -91,11 +91,10 @@ it68051_service::get_selected_port(const ::Empty &request,
 		return ::pw::Status::InvalidArgument();
 	}
 
-	it68051_lock();
+	lock();
 	response.on_off = it68051_get_hpd(port) ? 1 : 0;
-	it68051_unlock();
 
-	return ::pw::OkStatus();
+	return unlock();
 }
 
 ::pw::Status
@@ -104,12 +103,11 @@ it68051_service::set_edid_idx(const ::it68051_edid_idx_request &request,
 {
 	static_cast<void>(response);
 
-	it68051_lock();
+	lock();
 	it68051_edid_select(request.edid_idx);
 	it68051_edid_init();
-	it68051_unlock();
 
-	return ::pw::OkStatus();
+	return unlock();
 }
 
 ::pw::Status
@@ -118,11 +116,10 @@ it68051_service::write_edid(const ::it68051_raw_edid_request &request,
 {
 	static_cast<void>(response);
 
-	it68051_lock();
+	lock();
 	it68051_edid_write_block(request.raw_edid);
-	it68051_unlock();
 
-	return ::pw::OkStatus();
+	return unlock();
 }
 
 ::pw::Status
@@ -130,10 +127,11 @@ it68051_service::get_link_status(const ::Empty &request,
 				 ::it68051_link_status_response &response)
 {
 	static_cast<void>(request);
-	it68051_lock();
+
+	lock();
 	response.active = it68051_get_link_active();
-	it68051_unlock();
-	return ::pw::OkStatus();
+
+	return unlock();
 }
 
 ::pw::Status it68051_service::read_edid(const ::Empty &request,
@@ -141,11 +139,10 @@ it68051_service::get_link_status(const ::Empty &request,
 {
 	static_cast<void>(request);
 
-	it68051_lock();
+	lock();
 	it68051_edid_read_block(response.raw_edid);
-	it68051_unlock();
 
-	return ::pw::OkStatus();
+	return unlock();
 }
 
 ::pw::Status it68051_service::get_video_params(const ::Empty &request,
@@ -157,11 +154,11 @@ it68051_service::get_link_status(const ::Empty &request,
 	struct atiming at;
 	struct aviif info;
 
-	it68051_lock();
+	lock();
 	it68051_get_vid_info(&vt);
 	it68051_get_aud_info(&at);
 	it68051_get_aviif(&info);
-	it68051_unlock();
+	auto result = unlock();
 
 	response.tmdsclk = vt.tmdsclk;
 	response.pclk = vt.pclk;
@@ -285,5 +282,23 @@ it68051_service::get_link_status(const ::Empty &request,
 
 	response.audio_fs = at.aud_fs;
 
-	return ::pw::OkStatus();
+	return result;
+}
+
+void it68051_service::lock()
+{
+	it68051_lock();
+	errors_count = it68051_get_i2c_error_count();
+}
+
+::pw::Status it68051_service::unlock()
+{
+	auto status = ::pw::OkStatus();
+
+	if (errors_count != it68051_get_i2c_error_count()) {
+		status = ::pw::Status::Internal();
+	}
+	it68051_unlock();
+
+	return status;
 }
