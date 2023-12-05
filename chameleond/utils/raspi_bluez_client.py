@@ -111,7 +111,7 @@ class BluezKeyboardClient(object):
         )
         threadid.start()
 
-    def send_string(self, string_to_send):
+    def send_string(self, string_to_send, delay=0):
         # Delay to prevent loss of first characters
         # due to keyboard activity starting too quickly
         # after connection.
@@ -132,4 +132,4 @@ class BluezKeyboardClient(object):
             self.send_key_down(scancode)
             time.sleep(self.KEY_DOWN_TIME)
             self.send_key_up()
-            time.sleep(self.KEY_DELAY)
+            time.sleep(delay if delay != 0 else self.KEY_DELAY)

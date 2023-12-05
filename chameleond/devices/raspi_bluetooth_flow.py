@@ -137,17 +137,18 @@ class RaspiHIDKeyboard(RaspiFlow, BluezPeripheral):
 
             self.SendHIDReport(bytearray(scan_code))
 
-    def KeyboardSendString(self, string_to_send):
-        """Sends characters one-by-one over the BT link
+    def KeyboardSendString(self, string_to_send, delay):
+        """Sends characters one-by-one over the BT link.
 
         Args:
-          string_to_send: String object that will be sent over the link
+          string_to_send: String object that will be sent over the link.
+          delay: Time in seconds between sending each character.
         """
 
         if self._client is None:
             self._client = BluezKeyboardClient()
 
-        self._client.send_string(string_to_send)
+        self._client.send_string(string_to_send, delay)
 
 
 class RaspiHIDMouse(RaspiFlow, BluezPeripheral):
@@ -319,6 +320,43 @@ class RaspiHIDMouse(RaspiFlow, BluezPeripheral):
         self._EnsureHIDValueInRange(steps)
         self.MouseScroll(steps)
         time.sleep(self.send_delay)
+
+    def _ProcessAction(self, action_type, action_args):
+        """Processes a mouse action based on the action type.
+
+        Args:
+          action_type: Type of mouse action.
+          action_args: Arguments for the mouse action.
+
+        Raises:
+          BluetoothHIDException if a given delta is not in [-127,127].
+        """
+        if action_type == 'MouseMove':
+            delta_x, delta_y = action_args
+            self._EnsureHIDValueInRange(delta_x)
+            self._EnsureHIDValueInRange(delta_y)
+            self.MouseMove(delta_x, delta_y)
+        elif action_type == 'PressLeftButton':
+            self.MousePressButtons({PeripheralKit.MOUSE_BUTTON_LEFT})
+        elif action_type == 'PressRightButton':
+            self.MousePressButtons({PeripheralKit.MOUSE_BUTTON_RIGHT})
+        elif action_type == 'ReleaseAllButtons':
+            self.MouseReleaseAllButtons()
+
+    def BulkActions(self, action_list, interval=0.2):
+        """Executes a sequence of mouse actions with specified delays.
+
+        Args:
+          action_list: List of tuples (action_type, action_aargs) representing
+                       mouse actions.
+          interval: Time in seconds between actions.
+
+        Raises:
+          BluetoothHIDException if a given delta is not in [-127,127].
+        """
+        for action_type, action_args in action_list:
+            self._ProcessAction(action_type, action_args)
+            time.sleep(interval)
 
 
 class RaspiHIDGamepad(RaspiFlow, BluezPeripheral):
