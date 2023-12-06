@@ -11,6 +11,14 @@ recognizes the EDID and applies the correct resolution.
 Based on pawel.py (b/238634042#comment2), thanks, panikiel@!
 """
 
+from __future__ import annotations
+
+# Allow additional EDID check on UCD, only if TSI library is present
+try:
+    import tsi
+except ImportError as e:
+    tsi = None
+
 import argparse
 import codecs
 import itertools
@@ -87,7 +95,7 @@ port_id_map = {
     'hdmi2' : 3,
 }
 
-def run_edid_test(port_id, pause_flag, path):
+def run_edid_test(port_id, pause_flag, path, ucd):
     """Apply each EDID and check that the video resolution matches expected
 
     Args:
@@ -110,6 +118,12 @@ def run_edid_test(port_id, pause_flag, path):
         if not chameleon.WaitVideoInputStable(port_id, 10):
             print(edid_name, 'TIMEOUT: delay =', delay)
             continue
+
+        if ucd is not None:
+            edid_ucd = ucd.edid.read_i2c()
+            if edid_ucd != edid:
+                print('WRONG: expected:', codecs.encode(edid, 'hex'), 'got',
+                      codecs.encode(edid_ucd, 'hex'))
 
         res = chameleon.DetectResolution(port_id)
         if res == exp_res:
@@ -147,6 +161,10 @@ def main():
     parser.add_argument('--autotest', action='store_const', dest='path',
         const='~/chromiumos/src/third_party/autotest/files/server/site_tests/display_EdidStress/test_data/',
         help='Use the default autotest path for EDIDs that most ChromeOS developers have. Do not use --path with this option')
+    parser.add_argument("--ucdsn", type=str, default=None,
+        help='Unigraf UCD serial number. When set, EDID is verified on UCD.')
+    parser.add_argument("--ucdport", type=str, default="DP",
+        help='Unigraf UCD source port')
 
     args = parser.parse_args()
 
@@ -155,7 +173,24 @@ def main():
     else:
         port_id = int(args.port)
 
-    run_edid_test(port_id, args.pause_flag, args.path)
+    ucd = None
+    if args.ucdsn is not None:
+        if tsi is None:
+            print('UCD can be used only if TSI library is available.')
+            return False
+
+        ltsi = tsi.TsiLib()
+        dev = ltsi.open(args.ucdsn)
+
+        if args.ucdport == "DP":
+            ucd = dev.select_role(tsi.dev.UCD323.DPSource).dptx
+        elif args.ucdport == "HDMI":
+            ucd = dev.select_role(tsi.dev.UCD323.HDMISource).hdtx
+        else:
+            print('Available UCD ports are "DP" and "HDMI"')
+            return False
+
+    run_edid_test(port_id, args.pause_flag, args.path, ucd)
 
     return True
 
