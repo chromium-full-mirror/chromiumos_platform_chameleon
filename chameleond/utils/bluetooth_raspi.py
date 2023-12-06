@@ -70,6 +70,21 @@ RAW_HID_BUTTONS_RELEASED = 0x0
 RAW_HID_LEFT_BUTTON = 0x01
 RAW_HID_RIGHT_BUTTON = 0x02
 
+# Definitions of gamepad button HID encodings
+RAW_HID_GAMEPAD_BTN_START = 0x08
+RAW_HID_GAMEPAD_BTN_A = 0x01
+RAW_HID_GAMEPAD_BTN_B = 0x02
+RAW_HID_GAMEPAD_BTN_X = 0x08
+RAW_HID_GAMEPAD_BTN_Y = 0x10
+RAW_HID_GAMEPAD_BTN_LEFT = 0x07
+RAW_HID_GAMEPAD_BTN_RIGHT = 0x03
+RAW_HID_GAMEPAD_BTN_UP = 0x01
+RAW_HID_GAMEPAD_BTN_DOWN = 0x05
+RAW_HID_GAMEPAD_LB = 0x40
+RAW_HID_GAMEPAD_RB = 0x80
+RAW_HID_GAMEPAD_LS = 0x20
+RAW_HID_GAMEPAD_RS = 0x40
+
 # UART input modes
 # raw mode
 UART_INPUT_RAW_MODE = 0xFD
@@ -86,8 +101,48 @@ SHORTHAND_REPORT_FORMAT_KEYBOARD_MAX_LEN_SCAN_CODES = 6
 RAW_REPORT_FORMAT_MOUSE_LENGTH = 5
 RAW_REPORT_FORMAT_MOUSE_DESCRIPTOR = 2
 
+# Length of report format for gamepad
+RAW_REPORT_FORMAT_GAMEPAD_LENGTH = 1
+RAW_REPORT_FORMAT_GAMEPAD_DESCRIPTOR = 4
+
 # Time to wait about the pairing agent to exit.
 AGENT_EXIT_TIMEOUT_SECS = 5
+
+GAMEPAD_BUTTONS_MAP = {
+    PeripheralKit.GAMEPAD_BUTTON_START: RAW_HID_GAMEPAD_BTN_START,
+    PeripheralKit.GAMEPAD_BUTTON_A: RAW_HID_GAMEPAD_BTN_A,
+    PeripheralKit.GAMEPAD_BUTTON_B: RAW_HID_GAMEPAD_BTN_B,
+    PeripheralKit.GAMEPAD_BUTTON_X: RAW_HID_GAMEPAD_BTN_X,
+    PeripheralKit.GAMEPAD_BUTTON_Y: RAW_HID_GAMEPAD_BTN_Y,
+    PeripheralKit.GAMEPAD_BUTTON_LEFT: RAW_HID_GAMEPAD_BTN_LEFT,
+    PeripheralKit.GAMEPAD_BUTTON_RIGHT: RAW_HID_GAMEPAD_BTN_RIGHT,
+    PeripheralKit.GAMEPAD_BUTTON_UP: RAW_HID_GAMEPAD_BTN_UP,
+    PeripheralKit.GAMEPAD_BUTTON_DOWN: RAW_HID_GAMEPAD_BTN_DOWN,
+    PeripheralKit.GAMEPAD_BUTTON_LEFT_BUMPER: RAW_HID_GAMEPAD_LB,
+    PeripheralKit.GAMEPAD_BUTTON_RIGHT_BUMPER: RAW_HID_GAMEPAD_RB,
+    PeripheralKit.GAMEPAD_LEFT_THUMBSTICK: RAW_HID_GAMEPAD_LS,
+    PeripheralKit.GAMEPAD_RIGHT_THUMBSTICK: RAW_HID_GAMEPAD_RS,
+}
+
+GAMEPAD_BUTTONS_REPORT_INDEX = {
+    "LEFT_STICK": 0,
+    "RIGHT_STICK": 4,
+    "LEFT_TRIGGER": 8,
+    "RIGHT_TRIGGER": 10,
+    "GAMEPAD_BUTTON_LEFT": 12,
+    "GAMEPAD_BUTTON_RIGHT": 12,
+    "GAMEPAD_BUTTON_UP": 12,
+    "GAMEPAD_BUTTON_DOWN": 12,
+    "GAMEPAD_BUTTON_A": 13,
+    "GAMEPAD_BUTTON_B": 13,
+    "GAMEPAD_BUTTON_X": 13,
+    "GAMEPAD_BUTTON_Y": 13,
+    "GAMEPAD_BUTTON_LEFT_BUMPER": 13,
+    "GAMEPAD_BUTTON_RIGHT_BUMPER": 13,
+    "GAMEPAD_LEFT_THUMBSTICK": 14,
+    "GAMEPAD_RIGHT_THUMBSTICK": 14,
+    "GAMEPAD_BUTTON_START": 14,
+}
 
 
 class BluezPeripheralException(PeripheralKitException):
@@ -123,6 +178,9 @@ class BluezPeripheral(PeripheralKit):
         self._set_hci_prop("org.bluez.Adapter1", "Powered", dbus.Boolean(1))
 
         self._agent = None
+        # 16 is the length of gamepad report bytes that changed according to
+        # pressed buttons.
+        self.gamepad_report = [0x00] * 16
 
         logging.debug(
             "Bluetooth peripheral powered and waiting for bind to device"
@@ -1464,6 +1522,83 @@ class BluezPeripheral(PeripheralKit):
                 SignedChar(x_stop),
                 SignedChar(y_stop),
                 SignedChar(wheel),
+            )
+        )
+
+    def SendGamepadHIDReport(self):
+        """Sends gamepad HID report."""
+        gamepad_codes = self._RawGamepadCodes(self.gamepad_report)
+        self.SendHIDReport(gamepad_codes)
+
+    def GamepadTriggerButtonsPress(self, trigger, value):
+        """Presses gamepad trigger buttons (LT, RT).
+
+        Args:
+          trigger: A trigger button, as GAMEPAD_BUTTON_LEFT_TRIGGER or
+                   GAMEPAD_BUTTON_RIGHT_TRIGGER value, that will be pressed.
+          value: A value between 0-1023 to press the trigger.
+        """
+        if value:
+            hex_value = value.to_bytes(2, byteorder="little")
+            if trigger == PeripheralKit.GAMEPAD_BUTTON_LEFT_TRIGGER:
+                index = GAMEPAD_BUTTONS_REPORT_INDEX["LEFT_TRIGGER"]
+                self.gamepad_report[index : index + 1] = bytearray(hex_value)
+            elif trigger == PeripheralKit.GAMEPAD_BUTTON_RIGHT_TRIGGER:
+                index = GAMEPAD_BUTTONS_REPORT_INDEX["RIGHT_TRIGGER"]
+                self.gamepad_report[index : index + 1] = bytearray(hex_value)
+        self.SendGamepadHIDReport()
+
+    def GamepadThumbstickMove(self, stick, delta_x=4095, delta_y=4095):
+        """Moves the gamepad thumbstick.
+
+        Args:
+          stick: The thumbstick type, left or right as PeripheralKit
+                 GAMEPAD_LEFT_STICK or GAMEPAD_RIGHT_STICK value.
+          delta_x: A value between 4095-65535 to move the thumbstick horizontally.
+          delta_y: A value between 4095-65535 to move the thumbstick vertically.
+        """
+        x_hex_value = delta_x.to_bytes(2, byteorder="little")
+        y_hex_value = delta_y.to_bytes(2, byteorder="little")
+        if stick == PeripheralKit.GAMEPAD_LEFT_THUMBSTICK:
+            index = GAMEPAD_BUTTONS_REPORT_INDEX["LEFT_STICK"]
+            self.gamepad_report[index : index + 2] = bytearray(x_hex_value)
+            self.gamepad_report[index + 2 : index + 4] = bytearray(y_hex_value)
+        elif stick == PeripheralKit.GAMEPAD_RIGHT_THUMBSTICK:
+            index = GAMEPAD_BUTTONS_REPORT_INDEX["RIGHT_STICK"]
+            self.gamepad_report[index : index + 2] = bytearray(x_hex_value)
+            self.gamepad_report[index + 2 : index + 4] = bytearray(y_hex_value)
+        self.SendGamepadHIDReport()
+
+    def GamepadPressButtons(self, button):
+        """Presses the provided gamepad button.
+
+        Args:
+          button: A gamepad button, as GAMEPAD_BUTTON_* value, that will be
+                  pressed.
+        """
+        button_index = GAMEPAD_BUTTONS_REPORT_INDEX[button]
+        self.gamepad_report[button_index] = GAMEPAD_BUTTONS_MAP.get(button)
+        self.SendGamepadHIDReport()
+
+    def GamepadReleaseAllButtons(self):
+        """Releases all gamepad buttons."""
+        self.gamepad_report[:] = [0x00] * len(self.gamepad_report)
+        self.SendGamepadHIDReport()
+
+    def _RawGamepadCodes(self, gamepad_report):
+        """Generates the codes in gamepad raw report format.
+
+        Args:
+          gamepad_report: Gamepad report to send with HID report.
+
+        Returns:
+          a raw code string.
+        """
+        return bytearray(
+            (
+                RAW_REPORT_START,
+                RAW_REPORT_FORMAT_GAMEPAD_LENGTH,
+                *gamepad_report,
             )
         )
 

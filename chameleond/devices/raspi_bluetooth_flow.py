@@ -320,6 +320,7 @@ class RaspiHIDMouse(RaspiFlow, BluezPeripheral):
         self.MouseScroll(steps)
         time.sleep(self.send_delay)
 
+
 class RaspiHIDGamepad(RaspiFlow, BluezPeripheral):
     """This is the class loaded from fpga_tio.
 
@@ -327,12 +328,20 @@ class RaspiHIDGamepad(RaspiFlow, BluezPeripheral):
     access to methods in both of them.
     """
 
-    def __init__(self):
+    SEND_DELAY_SECS = 0.2
+
+    HID_MIN_REPORT_VALUE = 0
+    HID_MIN_STICK_REPORT_VALUE = 4095
+    HID_MAX_STICK_REPORT_VALUE = 65535
+    HID_MAX_TRIGGER_REPORT_VALUE = 1023
+
+    def __init__(self, send_delay=SEND_DELAY_SECS):
         # Instantiate bluez and raspi flow.
         BluezPeripheral.__init__(self)
         RaspiFlow.__init__(self, self.GetLocalBluetoothAddress())
 
         self._client = None
+        self.send_delay = send_delay
 
     def GetDeviceType(self):
         """Gets the peer device type.
@@ -353,16 +362,201 @@ class RaspiHIDGamepad(RaspiFlow, BluezPeripheral):
 
         @return: Class of device that is emulated by this peripheral.
         """
-        return (PERIPHERAL_DEVICE_CLASS[PeripheralKit.GAMEPAD] &
-                CLASS_OF_DEVICE_MASK)
+        return (
+            PERIPHERAL_DEVICE_CLASS[PeripheralKit.GAMEPAD]
+            & CLASS_OF_DEVICE_MASK
+        )
 
     def GetClassOfService(self):
         """Gets the class of service.
 
         @return: Class of service that is emulated by this peripheral.
         """
-        return (PERIPHERAL_DEVICE_CLASS[PeripheralKit.GAMEPAD] &
-                CLASS_OF_SERVICE_MASK)
+        return (
+            PERIPHERAL_DEVICE_CLASS[PeripheralKit.GAMEPAD]
+            & CLASS_OF_SERVICE_MASK
+        )
+
+    def _ReleaseAllButtons(self):
+        """Releases all pressed buttons."""
+
+        self.GamepadReleaseAllButtons()
+        time.sleep(self.send_delay)
+
+    def _EnsureTiggerHIDValueInRange(self, value):
+        """Ensures given value is in the range [0, 1023] (inclusive).
+
+        Args:
+          value: The value that should be checked.
+
+        Raises:
+          BluetoothHIDException if value is outside the acceptable range.
+        """
+
+        if (
+            value < self.HID_MIN_REPORT_VALUE
+            or value > self.HID_MAX_TRIGGER_REPORT_VALUE
+        ):
+            error = "Value %s is outside of acceptable range [0,1023]." % value
+            logging.error(error)
+            raise BluetoothHIDException(error)
+
+    def _EnsureStickHIDValueInRange(self, value):
+        """Ensures given value is in the range [4095,65535] (inclusive).
+        Flat 4095 defines a dead zone around the center of the axis where any
+        movement less than 4095 will be considered zero and then no event will be
+        triggered.
+
+        Args:
+          value: The value that should be checked.
+
+        Raises:
+          BluetoothHIDException if value is outside the acceptable range.
+        """
+
+        if (
+            value < self.HID_MIN_STICK_REPORT_VALUE
+            or value > self.HID_MAX_STICK_REPORT_VALUE
+        ):
+            error = (
+                "Value %s is outside of acceptable range [4095,65535]." % value
+            )
+            logging.error(error)
+            raise BluetoothHIDException(error)
+
+    def MoveLeftThumbstick(self, delta_x=4095, delta_y=4095):
+        """Moves the left gamepad thumbstick.
+
+        Valid step values must be in the range [4095,65535].
+
+        Args:
+          delta_x: A value between 4095-65535 to move the thumbstick horizontally.
+          delta_y: A value between 4095-65535 to move the thumbstick vertically.
+
+        Raises:
+          BluetoothHIDException if a given delta is not in [4095,65535].
+        """
+
+        self._EnsureStickHIDValueInRange(delta_x)
+        self._EnsureStickHIDValueInRange(delta_y)
+        self.GamepadThumbstickMove(
+            PeripheralKit.GAMEPAD_LEFT_THUMBSTICK, delta_x, delta_y
+        )
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def MoveRightThumbstick(self, delta_x=4095, delta_y=4095):
+        """Moves the right gamepad thumbstick.
+
+        Valid step values must be in the range [4095,65535].
+
+        Args:
+         delta_x: A value between 4095-65535 to move the thumbstick horizontally.
+         delta_y: A value between 4095-65535 to move the thumbstick vertically.
+
+        Raises:
+          BluetoothHIDException if a given delta is not in [0,65535].
+        """
+
+        self._EnsureStickHIDValueInRange(delta_x)
+        self._EnsureStickHIDValueInRange(delta_y)
+        self.GamepadThumbstickMove(
+            PeripheralKit.GAMEPAD_RIGHT_THUMBSTICK, delta_x, delta_y
+        )
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def PressLeftBumper(self):
+        """Presses the left gamepad bumper (LB)."""
+
+        self.GamepadPressButtons(PeripheralKit.GAMEPAD_BUTTON_LEFT_BUMPER)
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def PressRightBumper(self):
+        """Presses the right gamepad bumper (RB)."""
+
+        self.GamepadPressButtons(PeripheralKit.GAMEPAD_BUTTON_RIGHT_BUMPER)
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def PressLeftTrigger(self, value):
+        """Presses the left gamepad trigger (LT) by the provided value.
+
+        Args:
+          value: The value to press the trigger with.
+
+        Raises:
+          BluetoothHIDException if a given delta is not in [0,1023].
+        """
+
+        self._EnsureTiggerHIDValueInRange(value)
+        self.GamepadTriggerButtonsPress(
+            PeripheralKit.GAMEPAD_BUTTON_LEFT_TRIGGER, value
+        )
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def PressRightTrigger(self, value):
+        """Presses the right gamepad trigger (RT) by the provided value.
+
+        Args:
+          value: The value to press the trigger with.
+
+        Raises:
+          BluetoothHIDException if a given delta is not in [0,1023].
+        """
+
+        self._EnsureTiggerHIDValueInRange(value)
+        self.GamepadTriggerButtonsPress(
+            PeripheralKit.GAMEPAD_BUTTON_RIGHT_TRIGGER, value
+        )
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def PressLeftThumbstick(self):
+        """Presses the left thumbstick."""
+
+        self.GamepadPressButtons(PeripheralKit.GAMEPAD_LEFT_THUMBSTICK)
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def PressRightThumbstick(self):
+        """Presses the right thumbstick."""
+
+        self.GamepadPressButtons(PeripheralKit.GAMEPAD_RIGHT_THUMBSTICK)
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def PressDPadButton(self, button):
+        """Presses one of the D-Pad buttons (up, down, left, right).
+
+        Args:
+          button: A D-Pad button, as GAMEPAD_BUTTON_* value, that will be pressed.
+        """
+
+        self.GamepadPressButtons(button)
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def PressActionButton(self, button):
+        """Presses one of the action buttons (A, B, X and Y).
+
+        Args:
+          button: Action button, as GAMEPAD_BUTTON_* value, that will be pressed.
+        """
+
+        self.GamepadPressButtons(button)
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
+    def PressStartButton(self):
+        """Presses the start button."""
+
+        self.GamepadPressButtons(PeripheralKit.GAMEPAD_BUTTON_START)
+        time.sleep(self.send_delay)
+        self._ReleaseAllButtons()
+
 
 class RaspiBLEPhone(RaspiFlow, BluezPeripheral):
     """This is the class loaded from fpga_tio.
