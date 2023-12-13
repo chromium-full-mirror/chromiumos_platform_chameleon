@@ -48,6 +48,11 @@ static uint8_t rx_buf[RX_BUFSIZE];
 static uint8_t tx_buf[TX_BUFSIZE];
 
 /**
+ * Subsys initialization flag
+ */
+bool initialized = false;
+
+/**
  * @brief Initialize the UART device that sys_io needs
  *
  * @retval 0
@@ -82,6 +87,8 @@ static int sys_io_init(void)
         tty_set_tx_buf(&tty, tx_buf, TX_BUFSIZE);
         tty_set_rx_buf(&tty, rx_buf, RX_BUFSIZE);
 
+	initialized = true;
+
 	return 0;
 }
 SYS_INIT(sys_io_init, APPLICATION, 70);
@@ -90,6 +97,10 @@ namespace pw::sys_io
 {
 Status ReadByte(std::byte *b)
 {
+	if (!initialized) {
+		return Status::Unavailable();
+	}
+
         uint8_t buf;
 
         int ret = tty_read(&tty, &buf, 1);
@@ -108,6 +119,10 @@ Status ReadByte(std::byte *b)
 
 Status WriteByte(std::byte b)
 {
+	if (!initialized) {
+		return Status::Unavailable();
+	}
+
 	int ret;
 	uint8_t buf = (uint8_t)b;
 
