@@ -19,6 +19,8 @@
 #include "videomux_service.h"
 #include "it68051_service.h"
 
+#include "hdlc.h"
+
 LOG_MODULE_REGISTER(rpc);
 
 /**
@@ -41,14 +43,12 @@ K_THREAD_STACK_DEFINE(rpc_stack_area, RPC_STACK_SIZE);
  */
 static struct k_thread rpc_thread_data;
 
-pw::stream::SysIoWriter writer;
-
 constexpr size_t kMaxTransmissionUnit = 2560;
 
 /* Declare a buffer for decoding incoming HDLC frames. */
 std::array<std::byte, kMaxTransmissionUnit> input_buffer;
 
-pw::hdlc::RpcChannelOutput hdlc_channel_output(writer,
+pw::hdlc::RpcChannelOutput hdlc_channel_output(hdlc_writer,
 					       pw::hdlc::kDefaultRpcAddress,
 					       "HDLC output");
 
@@ -96,10 +96,22 @@ static void rpc_task(void *unused1, void *unused2, void *unused3)
 	 * the loop so that we can get some indication if the packet
 	 * processor is restarting.
 	 */
+	pw::hdlc::Decoder decoder(input_buffer);
+	LOG_INF("Starting pw_rpc server");
 	for (;;) {
-		LOG_INF("Starting pw_rpc server");
-		pw::hdlc::ReadAndProcessPackets(server, input_buffer,
-						pw::hdlc::kDefaultRpcAddress);
+		std::byte data;
+		if (!pw::sys_io::ReadByte(&data).ok()) {
+			continue;
+		}
+
+		if (auto result = decoder.Process(data); result.ok()) {
+			pw::hdlc::Frame& frame = result.value();
+			if (frame.address() == pw::hdlc::kDefaultRpcAddress) {
+				k_mutex_lock(&hdlc_uart_mutex, K_FOREVER);
+				server.ProcessPacket(frame.data()).IgnoreError();
+				k_mutex_unlock(&hdlc_uart_mutex);
+			}
+		}
 	}
 }
 
