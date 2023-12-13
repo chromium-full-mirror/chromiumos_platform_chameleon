@@ -91,7 +91,7 @@ static int sys_io_init(void)
 
 	return 0;
 }
-SYS_INIT(sys_io_init, APPLICATION, 70);
+SYS_INIT(sys_io_init, POST_KERNEL, 70);
 
 namespace pw::sys_io
 {
