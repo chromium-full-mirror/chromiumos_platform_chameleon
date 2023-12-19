@@ -61,31 +61,31 @@ bool initialized = false;
 static int sys_io_init(void)
 {
 	/*
-         * Make sure the UART device is ready. No need to configure it
-         * beyond that, because the values in the DTS are all good.
-         */
+	 * Make sure the UART device is ready. No need to configure it
+	 * beyond that, because the values in the DTS are all good.
+	 */
 	if (!device_is_ready(uart_dev)) {
 		LOG_ERR("%s is not ready", uart_dev->name);
 		return -EINVAL;
 	}
 
-        int ret = tty_init(&tty, uart_dev);
+	int ret = tty_init(&tty, uart_dev);
 
-        if (ret != 0) {
-                LOG_ERR("tty_init failed, %d", ret);
-                return ret;
-        }
+	if (ret != 0) {
+		LOG_ERR("tty_init failed, %d", ret);
+		return ret;
+	}
 
-        /* Ensure device driver supports interrupt-driven data transfers. */
-        const struct uart_driver_api *api =
-                (const struct uart_driver_api *)uart_dev->api;
-        if (!api->irq_callback_set) {
-                LOG_ERR("%s does not support IRQ", uart_dev->name);
-                return -ENOTSUP;
-        }
+	/* Ensure device driver supports interrupt-driven data transfers. */
+	const struct uart_driver_api *api =
+		(const struct uart_driver_api *)uart_dev->api;
+	if (!api->irq_callback_set) {
+		LOG_ERR("%s does not support IRQ", uart_dev->name);
+		return -ENOTSUP;
+	}
 
-        tty_set_tx_buf(&tty, tx_buf, TX_BUFSIZE);
-        tty_set_rx_buf(&tty, rx_buf, RX_BUFSIZE);
+	tty_set_tx_buf(&tty, tx_buf, TX_BUFSIZE);
+	tty_set_rx_buf(&tty, rx_buf, RX_BUFSIZE);
 
 	initialized = true;
 
@@ -101,19 +101,19 @@ Status ReadByte(std::byte *b)
 		return Status::Unavailable();
 	}
 
-        uint8_t buf;
+	uint8_t buf;
 
-        int ret = tty_read(&tty, &buf, 1);
+	int ret = tty_read(&tty, &buf, 1);
 
-        /* 0 means no input */
-        if (ret == 0) {
-                return Status::Unavailable();
-        }
-        /* Negative means an error */
-        if (ret < 0) {
-                return Status::DataLoss();
-        }
-        *b = (std::byte)buf;
+	/* 0 means no input */
+	if (ret == 0) {
+		return Status::Unavailable();
+	}
+	/* Negative means an error */
+	if (ret < 0) {
+		return Status::DataLoss();
+	}
+	*b = (std::byte)buf;
 	return OkStatus();
 }
 
@@ -126,7 +126,7 @@ Status WriteByte(std::byte b)
 	int ret;
 	uint8_t buf = (uint8_t)b;
 
-        ret = tty_write(&tty, &buf, 1);
+	ret = tty_write(&tty, &buf, 1);
 	if (ret < 0) {
 		return Status::Unavailable();
 	}

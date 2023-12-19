@@ -88,19 +88,17 @@ static void rpc_task(void *unused1, void *unused2, void *unused3)
 	server.RegisterService(videomux_service_inst);
 	server.RegisterService(it68051_service_inst);
 
-	/*
-	 * We're using the tty interface, which will suspend until it
-	 * receives data. However, because ReadAndProcessPackets can
-	 * return if there is an error, use an infinite loop to make
-	 * sure that the thread doesn't exit. Put the log call inside
-	 * the loop so that we can get some indication if the packet
-	 * processor is restarting.
-	 */
 	pw::hdlc::Decoder decoder(input_buffer);
 	LOG_INF("Starting pw_rpc server");
 	for (;;) {
 		std::byte data;
-		if (!pw::sys_io::ReadByte(&data).ok()) {
+		pw::Status status = pw::sys_io::ReadByte(&data);
+
+		if (!status.ok()) {
+			if (!status.IsUnavailable()) {
+				LOG_ERR("Error getting UART byte");
+			}
+
 			continue;
 		}
 
