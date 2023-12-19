@@ -54,3 +54,6 @@ static const struct log_backend_api hdlc_log_api = {
 };
 
 LOG_BACKEND_DEFINE(HDLC_LOG, hdlc_log_api, 1);
+
+static_assert(kStdoutAddress != pw::hdlc::kDefaultRpcAddress,
+	      "Stdout address must be different than RPC");
