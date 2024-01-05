@@ -950,8 +950,18 @@ class BluezPeripheral(PeripheralKit):
             logging.error("Connect called with no remote address supplied")
             return False
 
-        logging.info("Attempting to connect to %s", self.remote_address)
         device = self.GetDeviceWithAddress(self.remote_address)
+        device_iface = dbus.Interface(device, DBUS_PROP_IFACE)
+        is_connected = bool(
+            device_iface.Get(DBUS_BLUEZ_DEVICE_IFACE, "Connected")
+        )
+
+        if is_connected:
+            logging.warn("Device %s has already connected. Skip to connect",
+                         self.remote_address)
+            return True
+
+        logging.info("Attempting to connect to %s", self.remote_address)
 
         if "BLE" in self.device_type:
             # Call connect directly through bluez device object
@@ -981,10 +991,6 @@ class BluezPeripheral(PeripheralKit):
                 error_handler=self.ConnectErrorHandler,
             )
 
-        device_iface = dbus.Interface(device, DBUS_PROP_IFACE)
-        is_connected = bool(
-            device_iface.Get(DBUS_BLUEZ_DEVICE_IFACE, "Connected")
-        )
         start_time = time.time()
 
         while not is_connected:
