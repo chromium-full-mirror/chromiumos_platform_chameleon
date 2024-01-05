@@ -95,6 +95,8 @@ class BluezService(dbus.service.Object):
     def __init__(self, device_type, adapter_address):
         self._cinterrupt = None
         self._ccontrol = None
+        self._scch_watch_id = None
+        self._sich_watch_id = None
 
         self._bus = dbus.SystemBus()
         self._bus_name = dbus.service.BusName(BLUEZ_SERVICE_NAME, bus=self._bus)
@@ -173,7 +175,15 @@ class BluezService(dbus.service.Object):
     def OnDisconnect(self):
         """Called when disconnection occurs"""
 
-        logging.debug("Bluez service disconnected")
+        logging.info("Bluez service disconnected")
+
+        if self._ccontrol is not None and self._ccontrol.fileno() > 0:
+            self._ccontrol.close()
+
+        if self._cinterrupt is not None and self._cinterrupt.fileno() > 0:
+            self._cinterrupt.close()
+
+        self._Listen(self._address)
 
     def _InitBluezProfile(
         self, profile_sdp_path, profile_dbus_path, profile_uuid
@@ -228,6 +238,13 @@ class BluezService(dbus.service.Object):
                     time.sleep(0.1)
 
     def _Listen(self, dev_addr):
+        logging.info("start listening HID socket")
+
+        if self._scch_watch_id:
+            GLib.source_remove(self._scch_watch_id)
+        if self._sich_watch_id:
+            GLib.source_remove(self._sich_watch_id)
+
         self._scontrol = BluetoothSocket(L2CAP)
         self._sinterrupt = BluetoothSocket(L2CAP)
         self._scch = GLib.IOChannel(self._scontrol.fileno())
@@ -240,8 +257,8 @@ class BluezService(dbus.service.Object):
         # asynchronously.
         self._scontrol.listen(1)
         self._sinterrupt.listen(1)
-        GLib.io_add_watch(self._scch, GLib.IO_IN, self.OnConnect)
-        GLib.io_add_watch(self._sich, GLib.IO_IN, self.OnConnect)
+        self._scch_watch_id = GLib.io_add_watch(self._scch, GLib.IO_IN, self.OnConnect)
+        self._sich_watch_id = GLib.io_add_watch(self._sich, GLib.IO_IN, self.OnConnect)
 
     @dbus.service.method("org.chromium.autotest.btkbservice", in_signature="s")
     def Connect(self, addr):
@@ -292,15 +309,6 @@ class BluezService(dbus.service.Object):
         native_report = bytes(report)
         try:
             self._cinterrupt.send(native_report)
-        except IOError as e:
-            if str(e) == "(104, 'Connection reset by peer')":
-                logging.info("Recreating BluetoothSocket")
-                self._cinterrupt.close()
-                self._cinterrupt, _ = self._sinterrupt.accept()
-                self._cinterrupt.send(native_report)
-            else:
-                logging.info("Unknown Error %s", e)
-                raise
         except Exception as e:
             logging.info("Unknown Error %s", e)
             raise
