@@ -1559,7 +1559,7 @@ class BluezPeripheral(PeripheralKit):
 
         Args:
           stick: The thumbstick type, left or right as PeripheralKit
-                 GAMEPAD_LEFT_STICK or GAMEPAD_RIGHT_STICK value.
+                 GAMEPAD_LEFT_THUMBSTICK or GAMEPAD_RIGHT_THUMBSTICK value.
           delta_x: A value between 4095-65535 to move the thumbstick horizontally.
           delta_y: A value between 4095-65535 to move the thumbstick vertically.
         """

@@ -595,6 +595,44 @@ class RaspiHIDGamepad(RaspiFlow, BluezPeripheral):
         time.sleep(self.send_delay)
         self._ReleaseAllButtons()
 
+    def _ProcessAction(self, action_type, action_args):
+        """Processes a gamepad action based on the action type.
+
+        Args:
+          action_type: Type of gamepad action.
+          action_args: Arguments for the gamepad action.
+
+        Raises:
+          BluetoothHIDException if a given delta is not in [4095,65535].
+        """
+        if action_type in ("MoveLeftThumbstick", "MoveRightThumbstick"):
+            stick, delta_x, delta_y = action_args
+            self._EnsureStickHIDValueInRange(delta_x)
+            self._EnsureStickHIDValueInRange(delta_y)
+            self.GamepadThumbstickMove(stick, delta_x, delta_y)
+        elif action_type == "GamepadPressButtons":
+            button = action_args
+            self.GamepadPressButtons(button)
+        elif action_type == "ReleaseAllButtons":
+            self.GamepadReleaseAllButtons()
+        else:
+            logging.error("Invalid action type: %s", action_type)
+
+    def BulkActions(self, action_list, interval=0.2):
+        """Executes a sequence of gamepad actions with specified delays.
+
+        Args:
+          action_list: List of tuples (action_type, action_args) representing
+                       gamepad actions.
+          interval: Time in seconds between actions.
+
+        Raises:
+          BluetoothHIDException if a given delta is not in [4095,65535].
+        """
+        for action_type, action_args in action_list:
+            self._ProcessAction(action_type, action_args)
+            time.sleep(interval)
+
 
 class RaspiBLEPhone(RaspiFlow, BluezPeripheral):
     """This is the class loaded from fpga_tio.
