@@ -157,7 +157,7 @@ class BluezService(dbus.service.Object):
 
                 # Handle disconnection
                 if not connection_status:
-                    self.OnDisconnect()
+                    self.OnDisconnect(remote_addr)
 
         elif "Adapter1" in caller:
             if dbus.String("Discoverable") in prop_dict:
@@ -172,16 +172,28 @@ class BluezService(dbus.service.Object):
         else:
             logging.debug("Unknown d-bus signal caller: %s", caller)
 
-    def OnDisconnect(self):
+    def OnDisconnect(self, remote_addr):
         """Called when disconnection occurs"""
 
         logging.info("Bluez service disconnected")
 
         if self._ccontrol is not None and self._ccontrol.fileno() > 0:
-            self._ccontrol.close()
+            try:
+                peer_addr, _ = self._ccontrol.getpeername()[0]
+                if peer_addr == remote_addr:
+                    self._ccontrol.close()
+            except:
+                # getpeername throw an exception when it is not connected.
+                logging.info("Control socket is already disconnected")
 
         if self._cinterrupt is not None and self._cinterrupt.fileno() > 0:
-            self._cinterrupt.close()
+            try:
+                peer_addr, _ = self._cinterrupt.getpeername()[0]
+                if peer_addr == remote_addr:
+                    self._cinterrupt.close()
+            except:
+                # getpeername throw an exception when it is not connected.
+                logging.info("Interrupt socket is already disconnected")
 
         self._Listen(self._address)
 
