@@ -102,6 +102,16 @@ class ReportListener(dbus.service.Object):
         # device type), as with gatt these are provided by report map characteristic
         self._handle(report[2:])
 
+    @dbus.service.method(BLUEZ_SERVICE_NAME, in_signature="yay")
+    def SendKeys(self, modifier, keys):
+        """Sends keys across socket."""
+
+        report = [0xA1, 0x01, modifier, 0x00] + keys[:6]
+
+        # We chop the first two elements of the hid report (Report start, and hid
+        # device type), as with gatt these are provided by report map characteristic
+        self._handle(report[2:])
+
 
 class HIDReportChrc(Characteristic):
     """Characteristic that transports HID data"""
