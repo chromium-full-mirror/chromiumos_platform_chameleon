@@ -616,6 +616,8 @@
 		     &adc1_inp6_pf12>;
 	pinctrl-names = "default";
 	status = "okay";
+	st,adc-clock-source = <SYNC>;
+	st,adc-prescaler = <4>; /* 96MHz AHB / 4 = 24MHz */
 };
 
 &adc3 {
@@ -625,6 +627,8 @@
 		     &adc3_inp2_pf9 &adc3_inp6_pf10>;
 	pinctrl-names = "default";
 	status = "okay";
+	st,adc-clock-source = <SYNC>;
+	st,adc-prescaler = <4>; /* 96MHz AHB / 4 = 24MHz */
 };
 
 &timers1 {
