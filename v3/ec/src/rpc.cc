@@ -10,7 +10,8 @@
 #include <zephyr/logging/log.h>
 
 #include "pw_hdlc/rpc_channel.h"
-#include "pw_hdlc/rpc_packets.h"
+#include "pw_hdlc/decoder.h"
+#include "pw_hdlc/default_addresses.h"
 #include "pw_rpc/server.h"
 #include "pw_status/status.h"
 #include "pw_stream/sys_io_stream.h"

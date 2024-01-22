@@ -12,6 +12,7 @@
 #include <zephyr/logging/log_backend_std.h>
 
 #include "pw_hdlc/rpc_channel.h"
+#include "pw_hdlc/default_addresses.h"
 #include "pw_stream/sys_io_stream.h"
 
 #include "hdlc.h"
