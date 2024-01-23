@@ -331,16 +331,16 @@ class RaspiHIDMouse(RaspiFlow, BluezPeripheral):
         Raises:
           BluetoothHIDException if a given delta is not in [-127,127].
         """
-        if action_type == 'MouseMove':
+        if action_type == "MouseMove":
             delta_x, delta_y = action_args
             self._EnsureHIDValueInRange(delta_x)
             self._EnsureHIDValueInRange(delta_y)
             self.MouseMove(delta_x, delta_y)
-        elif action_type == 'PressLeftButton':
+        elif action_type == "PressLeftButton":
             self.MousePressButtons({PeripheralKit.MOUSE_BUTTON_LEFT})
-        elif action_type == 'PressRightButton':
+        elif action_type == "PressRightButton":
             self.MousePressButtons({PeripheralKit.MOUSE_BUTTON_RIGHT})
-        elif action_type == 'ReleaseAllButtons':
+        elif action_type == "ReleaseAllButtons":
             self.MouseReleaseAllButtons()
 
     def BulkActions(self, action_list, interval=0.2):
@@ -778,3 +778,11 @@ class RaspiBLEFastPair(RaspiFlow, BluezPeripheral):
             return
 
         self._gatt_server.app.AddAccountKey(account_key)
+
+    def SetAdvertiseNameAndHID(self, enabled):
+        """Adds name and HID UUID to device advertisement"""
+        if self._gatt_server is None:
+            logging.warn("Failed to set advertising name and HID UUID.")
+            return
+
+        self._gatt_server.SetAdvertiseNameAndHID(enabled)

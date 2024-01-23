@@ -97,6 +97,7 @@ class GATTServer(object):
         self._adv_local_name = PERIPHERAL_DEVICE_NAME[self.peripheral_type]
         self._discoverable = True
         self._own_address_type = PUBLIC_DEVICE_ADDRESS
+        self._advertise_name_and_hid = False
         self._ConfigureAdvertisements()
 
         # Add a handler for changes in state, specifically requesting caller's
@@ -178,6 +179,11 @@ class GATTServer(object):
                     [0x2C, 0xFE] + self.app.GetServiceData(),
                 )
             )
+            if self._advertise_name_and_hid:
+                data.extend(
+                    self._FormatDataField(FULL_LOCAL_NAME_ID, local_name_data)
+                )
+                data.extend(self._FormatDataField(ADV_SERVICE_ID, [0x12, 0x18]))
         else:
             data.extend(
                 self._FormatDataField(FULL_LOCAL_NAME_ID, local_name_data)
@@ -259,6 +265,10 @@ class GATTServer(object):
             logging.error("Address type not supported: " + hex(addr_type))
             return
         self._own_address_type = addr_type
+
+    def SetAdvertiseNameAndHID(self, enabled):
+        self._advertise_name_and_hid = enabled
+        self._ConfigureAdvertisements()
 
     def GetAdvLocalName(self):
         return self._adv_local_name
