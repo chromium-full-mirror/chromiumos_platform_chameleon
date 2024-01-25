@@ -90,8 +90,6 @@
         package:
           - sudo
           - git
-          - base-devel
-          - fakeroot
           - vim
           - nano
           - networkmanager
@@ -102,6 +100,14 @@
           - python-setuptools
           - python-pip
         state: present
+      tags: install
+
+    - name: Install base-devel manually
+      # This is necessary because meta packages are rather broken in ansible
+      # See https://github.com/ansible-collections/community.general/issues/6290
+      # Upstream Arch worked around it, but Arch Linux ARM still triggers it.
+      ansible.builtin.shell: |
+        pacman -S base-devel --noconfirm
       tags: install
 
     - name: Install aux tool packages
