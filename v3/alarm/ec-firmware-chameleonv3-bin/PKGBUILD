@@ -19,7 +19,7 @@ optdepends=('libgpiod: access the EC bootloader pins'
 source=("https://storage.googleapis.com/chromeos-hardware-tools-chameleon-v3/intermediate/ec/${_version}.bin"
         'flash_ec')
 sha256sums=('f3a1511cdc8425779b3ada3aaf1017b3526b78a29bebbd0f14519962e85b13cb'
-            'ab3d0943145e667bbf0e184cb5b5dc3a36fe55269f168a379d74e5f804fe8ef2')
+            '2d25f5f12b8d387a26c6310d7ea697531228aeaa2f32c9f393d37975a7dba464')
 
 # build() {
   # For now we'll just pre-build the image and include it in the source= array

@@ -11,14 +11,14 @@ fi
 
 echo "Preparing to flash EC with ${filename}"
 
-if ! boot0=$(gpiofind STM32_BOOT0); then
+if [[ -z "$(gpioinfo STM32_BOOT0)" ]]; then
   echo "Can't find STM32_BOOT0. Not on a chameleon?"
   # still call it a "success" as we might be in a chroot
   # preparing the sd card image
   exit 0
 fi
 
-if ! rst_l=$(gpiofind STM32_RST_L); then
+if [[ -z "$(gpioinfo STM32_RST_L)" ]]; then
   echo "Can't find STM32_RST_L. Not on a chameleon?"
   exit 0
 fi
@@ -26,12 +26,12 @@ fi
 echo "Flashing!"
 ( set -o xtrace ; # let's be dramatic by printing the commands
   systemctl kill chameleond
-  gpioset -D open-source ${boot0}=1 # program
-  gpioset -D open-drain ${rst_l}=0
-  gpioset -D open-drain ${rst_l}=1
+  gpioset -t0 -d open-source --by-name STM32_BOOT0=1 # program
+  gpioset -t0 -d open-drain --by-name STM32_RST_L=0
+  gpioset -t0 -d open-drain --by-name STM32_RST_L=1
   stm32flash -f /dev/ttyS0 -w ${filename} -v -S 0x8000000 -b 1000000
-  gpioset -D open-source ${boot0}=0 # normal mode
-  gpioset -D open-drain ${rst_l}=0
-  gpioset -D open-drain ${rst_l}=1
+  gpioset -t0 -d open-source --by-name STM32_BOOT0=0 # normal mode
+  gpioset -t0 -d open-drain --by-name STM32_RST_L=0
+  gpioset -t0 -d open-drain --by-name STM32_RST_L=1
   systemctl start chameleond
 )
