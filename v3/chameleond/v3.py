@@ -31,6 +31,9 @@ EC_PROTO = pw_protobuf_compiler.python_protos.Library.from_paths([EC_PROTO_PATH]
 class ChameleondError(Exception):
   pass
 
+class V4LResolutionChangeError(Exception):
+  pass
+
 class PwExceptionWrap:
   """
   Pigweed RPC uses the go style error handling which is not very pythonic.
@@ -95,6 +98,9 @@ class V4L:
     for field in ("width", "height", "size"):
       frame_info_dict[field] = int(frame_info_dict[field])
 
+    if info.find("VIDIOC_DQBUF: failed: Input/output error") != -1:
+      raise V4LResolutionChangeError()
+
     return frame_info_dict
 
   def get_frame_size(self):
@@ -107,19 +113,31 @@ class V4L:
     return self.parse_frame_info(info)
 
   def get_frame(self, count=1, timeout=5):
-    buf = tempfile.NamedTemporaryFile(prefix="chameleond_", suffix=".fb")
-    info = _check_output([
-        "v4l2-ctl",
-        "--device", self.path,
-        "--set-fmt-video", self.fmt_video,
-        "--stream-mmap",
-        "--stream-count", str(count),
-        "--stream-to", buf.name,
-        "--all",
-      ],
-      timeout=timeout,
-    )
-    return buf, self.parse_frame_info(info)
+    buf = None
+    info = None
+    while info is None and (timeout is None or timeout > 0):
+      buf = tempfile.NamedTemporaryFile(prefix="chameleond_", suffix=".fb")
+      start = time.clock_gettime(time.CLOCK_MONOTONIC)
+      info = _check_output([
+          "v4l2-ctl",
+          "--device", self.path,
+          "--set-fmt-video", self.fmt_video,
+          "--stream-mmap",
+          "--stream-count", str(count),
+          "--stream-to", buf.name,
+          "--all",
+        ],
+        timeout=timeout,
+      )
+      if timeout is not None:
+        # Reduce timeout by elapsed time
+        timeout -= time.clock_gettime(time.CLOCK_MONOTONIC) - start
+      try:
+        info = self.parse_frame_info(info)
+      except V4LResolutionChangeError as err:
+        # Resolution changed during frame capturing, try again
+        info = None
+    return buf, info
 
   def __repr__(self):
     return f"{self.__class__.__name__}({self.path!r})"
