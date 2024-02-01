@@ -72,6 +72,19 @@ def screenshot(chameleon, options):
     # get the first one that's probable
     port_id = chameleon.ProbeInputs()[0]
     print("Port was not given, picked the first one that probed.")
+  parent_port = options.parent_port
+  if parent_port is None:
+    parent_port = port_id
+
+  children_ports = options.port_list
+  if children_ports is None:
+    children_ports = []
+  children_edids = options.edid_list
+  if children_edids is None:
+    children_edids = []
+  if len(children_ports) != len(children_edids):
+    print("Number of children ports doesn't match number of children edids.")
+    sys.exit(1)
 
   was_plugged = chameleon.IsPlugged(port_id)
 
@@ -83,23 +96,44 @@ def screenshot(chameleon, options):
   assert chameleon.HasVideoSupport(port_id)
 
   try:
-    if was_plugged and (options.replug or options.edid_file):
-      print('Unplugging...')
-      chameleon.Unplug(port_id)
+    if was_plugged and (options.replug or options.edid_file or len(children_edids) > 0 or
+                        options.parent_edid):
+      print(f'Unplugging port {parent_port}...')
+      chameleon.Unplug(parent_port)
 
     if options.edid_file:
       print('Reading EDID from %s...' % options.edid_file)
       edid = read_edid(options.edid_file)
-      print('Applying EDID...')
+      print(f'Applying EDID to {port_id}...')
       edid_id = chameleon.CreateEdid(xmlrpc.client.Binary(edid))
       chameleon.ApplyEdid(port_id, edid_id)
       chameleon.DestroyEdid(edid_id)
 
-    if not chameleon.IsPlugged(port_id):
-      print('Plugging... ', end="", flush=True)
-      chameleon.Plug(port_id)
+    if options.parent_edid:
+      print('Reading EDID from %s...' % options.parent_edid)
+      edid = read_edid(options.parent_edid)
+      print(f'Applying EDID to {parent_port}...')
+      edid_id = chameleon.CreateEdid(xmlrpc.client.Binary(edid))
+      chameleon.ApplyEdid(parent_port, edid_id)
+      chameleon.DestroyEdid(edid_id)
 
-      print('Wait for input stable', end="", flush=True)
+    for idx, port in enumerate(children_ports):
+      edid_file = children_edids[idx]
+      print('Reading EDID from %s...' % edid_file)
+      edid = read_edid(edid_file)
+      print(f'Applying EDID to {port}...')
+      edid_id = chameleon.CreateEdid(xmlrpc.client.Binary(edid))
+      chameleon.ApplyEdid(port, edid_id)
+      chameleon.DestroyEdid(edid_id)
+
+    if not chameleon.IsPlugged(port_id):
+      print(f'Plugging port {parent_port}... ', end="", flush=True)
+      if len(children_ports) > 0 or parent_port != port_id:
+        chameleon.PlugWithChildren(parent_port, children_ports + [port_id])
+      else:
+        chameleon.Plug(parent_port)
+
+      print(f'Wait for input stable on {port_id}', end="", flush=True)
       MAX_WAIT_TIMEOUT = 30
       WAIT_INTERVAL = 5
       for attempts in range(MAX_WAIT_TIMEOUT // WAIT_INTERVAL):
@@ -126,8 +160,8 @@ def screenshot(chameleon, options):
 
   finally:
     if not was_plugged:
-      print('Unplugging to the original state...')
-      chameleon.Unplug(port_id)
+      print(f'Unplugging {parent_port} to the original state...')
+      chameleon.Unplug(parent_port)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description=__doc__)
@@ -140,7 +174,15 @@ if __name__ == "__main__":
   parser.add_argument("--replug", action="store_true",
                       help="unplug and plug before capturing screen")
   parser.add_argument("--edid", type=str, dest="edid_file", default=None,
-                      help="filename of the edid to apply")
+                      help="filename of the edid to apply to port_id")
+  parser.add_argument("--parent_port", type=int, default=None,
+                      help="video port number on the chameleon to use for plugging")
+  parser.add_argument("--parent_edid", type=str, default=None,
+                      help="filename of the edid to apply to parent port")
+  parser.add_argument("--children_port", nargs='*', dest="port_list", type=int,
+                      help="children ports to which EDIDs should be applied")
+  parser.add_argument("--children_edid", nargs='*', dest="edid_list", type=str,
+                      help="filenames of edids to apply to ports from the children port list")
   parser.add_argument("--output", type=str, default="image.png",
                       help="output file name of screenshot")
   parser.add_argument("--open", action="store_true",
