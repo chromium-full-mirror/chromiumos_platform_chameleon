@@ -793,6 +793,23 @@ class BluezPeripheral(PeripheralKit):
 
         return False
 
+    def _GetAddressFromPath(self, device_path):
+        manager = dbus.Interface(
+            self._dbus_system_bus.get_object(DBUS_BLUEZ_SERVICE_IFACE, "/"),
+            DBUS_OBJECT_MANAGER_INTERFACE,
+        )
+
+        objects = manager.GetManagedObjects()
+
+        # Go through each object until we find the one that matches
+        # our device path
+        for path, ifaces in list(objects.items()):
+            if path == device_path:
+                device = ifaces.get(DBUS_BLUEZ_DEVICE_IFACE)
+                if device is not None:
+                    return device["Address"]
+        return None
+
     def GetDeviceWithAddress(self, addr):
         manager = dbus.Interface(
             self._dbus_system_bus.get_object(DBUS_BLUEZ_SERVICE_IFACE, "/"),
@@ -957,8 +974,10 @@ class BluezPeripheral(PeripheralKit):
         )
 
         if is_connected:
-            logging.warn("Device %s has already connected. Skip to connect",
-                         self.remote_address)
+            logging.warn(
+                "Device %s has already connected. Skip to connect",
+                self.remote_address,
+            )
             return True
 
         logging.info("Attempting to connect to %s", self.remote_address)
@@ -1282,6 +1301,16 @@ class BluezPeripheral(PeripheralKit):
             if device_address not in self.discovered_devices:
                 logging.info("New device %s found", device_address)
                 self.discovered_devices.append(device_address)
+                resolved_address = self._GetAddressFromPath(device_path)
+                if (
+                    resolved_address is not None
+                    and resolved_address not in self.discovered_devices
+                ):
+                    logging.info(
+                        "New device with resolved address %s found",
+                        resolved_address,
+                    )
+                    self.discovered_devices.append(resolved_address)
 
     def Discover(self, remote_address):
         """Try to discover the remote device
