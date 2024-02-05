@@ -7,11 +7,11 @@ buildarch=4
 pkgbase=linux-enclustra
 _kernelname=${pkgbase#linux}
 _desc="ARMv7 Enclustra"
-pkgver=5.14
-pkgrel=18 # This needs to be incremented with every change to this file
-_commit=5b302a664e52cef871c5e4b42a35d00821275680 # CHROMIUM: Apply framebuffer reset workaround
+pkgver=6.6
+pkgrel=1 # This needs to be incremented with every change to this file
+_commit=c69ce880b748b34feaf8745815bb9a5b03f739ca # CHROMIUM: media: Reduce max link rate to 5.4Gbps
 arch=('armv7h')
-url="https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chameleon-5.14"
+url="https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chameleon-6.6"
 license=('GPL2')
 makedepends=('xmlto' 'docbook-xsl' 'kmod' 'inetutils' 'bc' 'git' 'uboot-tools' 'dtc')
 options=('!strip')
@@ -19,7 +19,7 @@ source=("https://chromium.googlesource.com/chromiumos/third_party/kernel/+archiv
         'config'
         '60-linux.hook')
 sha256sums=('SKIP' # gerrit produces non reproducible archives
-            'bf59528325eedaa15e94a4fa632f42eefad885265c3db864b6b24cb8a8fad0bf'
+	    'fe81c8e86a974af8a497daa636cf76504194c8e9d9a40acacaebca37cd325302'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21')
 
 prepare() {
@@ -86,8 +86,8 @@ _package() {
   echo "${_kernver}" |
     install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modules/${_extramodules}/version"
 
-  # remove build and source links
-  rm "${pkgdir}"/usr/lib/modules/${_kernver}/{source,build}
+  # remove build links
+  rm "${pkgdir}"/usr/lib/modules/${_kernver}/build
 
   # now we call depmod...
   depmod -b "${pkgdir}/usr" -F System.map "${_kernver}"
@@ -123,14 +123,6 @@ _package-headers() {
   install -Dt "${_builddir}/arch/${KARCH}/kernel" -m644 arch/${KARCH}/kernel/asm-offsets.s
 
   cp -t "${_builddir}/arch/${KARCH}" -a arch/${KARCH}/include
-  for i in dove omap2; do
-    mkdir -p "${_builddir}/arch/${KARCH}/mach-${i}"
-    cp -t "${_builddir}/arch/${KARCH}/mach-${i}" -a arch/$KARCH/mach-${i}/include
-  done
-  for i in omap orion versatile; do
-    mkdir -p "${_builddir}/arch/${KARCH}/plat-${i}"
-    cp -t "${_builddir}/arch/${KARCH}/plat-${i}" -a arch/$KARCH/plat-${i}/include
-  done
 
   install -Dt "${_builddir}/drivers/md" -m644 drivers/md/*.h
   install -Dt "${_builddir}/net/mac80211" -m644 net/mac80211/*.h
@@ -190,7 +182,7 @@ _package-chameleonv3() {
           -C none \
           -c "${pkgname}-${pkgver}-${pkgrel}" \
           -d arch/$KARCH/boot/zImage \
-          -b arch/$KARCH/boot/dts/socfpga_arria10_chameleonv3.dtb \
+          -b arch/$KARCH/boot/dts/intel/socfpga/socfpga_arria10_chameleonv3.dtb \
           "${pkgdir}/boot/kernel.itb"
 }
 
