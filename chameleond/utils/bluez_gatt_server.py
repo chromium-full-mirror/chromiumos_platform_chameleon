@@ -252,6 +252,16 @@ class GATTServer(object):
         if discoverable != prev_discoverable:
             self._ConfigureAdvertisements()
 
+    def SetDiscoverableNoConfigAdv(self, discoverable):
+        """Change whether device is discoverable. Do not configure advertisements.
+        The caller is responsible to configure advertisements later.
+
+        Args:
+          discoverable: Whether the device should advertise.
+        """
+        prev_discoverable = self._discoverable
+        self._discoverable = discoverable
+
     def SetAdvLocalName(self, adv_local_name):
         self._adv_local_name = adv_local_name
         self._ConfigureAdvertisements()
