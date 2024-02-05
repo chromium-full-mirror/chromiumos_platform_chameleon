@@ -10,9 +10,18 @@
 #include<linux/v4l2-subdev.h>
 #include<sys/ioctl.h>
 #include<sys/file.h>
+#include<stdlib.h>
+#include<string.h>
 #include<stdio.h>
 #include<errno.h>
 
+/**
+ * Get EDID from a video device
+ * @param self
+ * @param args [0] String with path to device
+ * @return If there is no EDID set, the None is returned.
+ *         Otherwise, the byte array with EDID is returned.
+ */
 static PyObject *pv4l2_GetEdid(PyObject *self, PyObject *args)
 {
     const char *dev_name;
@@ -25,21 +34,24 @@ static PyObject *pv4l2_GetEdid(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    memset(&edid, 0, sizeof(edid));
-    edid.edid = malloc(256);
-    edid.blocks = 2;
-
-    if(!edid.edid) {
-        return PyErr_NoMemory();
-    }
-
     dev = open(dev_name, O_RDWR);
     if(dev < 0) {
         PyErr_SetFromErrno(PyExc_RuntimeError);
         return NULL;
     }
 
+    memset(&edid, 0, sizeof(edid));
     res = ioctl(dev, VIDIOC_SUBDEV_G_EDID, &edid);
+    if (res == 0 && edid.blocks > 0) {
+        edid.edid = malloc(128 * edid.blocks);
+        if (!edid.edid) {
+            close(dev);
+            return PyErr_NoMemory();
+        }
+
+        res = ioctl(dev, VIDIOC_SUBDEV_G_EDID, &edid);
+    }
+
     if (res == 0) {
         pEdid = Py_BuildValue("y#", edid.edid, edid.blocks * 128);
     } else {
@@ -47,11 +59,20 @@ static PyObject *pv4l2_GetEdid(PyObject *self, PyObject *args)
     }
 
     close(dev);
-    free(edid.edid);
+    if (edid.edid != NULL) {
+        free(edid.edid);
+    }
 
     return pEdid;
 }
 
+/**
+ * Set EDID for a video device
+ * @param self
+ * @param args [0] String with path to device,
+ *             [1] Empty byte array or bytes array with EDID to set
+ * @return None in case of success
+ */
 static PyObject *pv4l2_SetEdid(PyObject *self, PyObject *args)
 {
     const char *dev_name;
@@ -63,16 +84,16 @@ static PyObject *pv4l2_SetEdid(PyObject *self, PyObject *args)
     PyObject *ret = Py_None;
 
     if (!PyArg_ParseTuple(args, "sy#", &dev_name, &edidBuffer, &edidBufferSize)) {
-        if(!PyArg_ParseTuple(args, "s", &dev_name)) {
+        if (!PyArg_ParseTuple(args, "s", &dev_name)) {
             return NULL;
         }
 
+        PyErr_Clear();
         edidBuffer = NULL;
         edidBufferSize = 0;
     }
 
     if ((edidBufferSize % 128) != 0) {
-        printf("Invalid bytes len\n");
         PyErr_BadArgument();
         return NULL;
     }
@@ -99,6 +120,12 @@ static PyObject *pv4l2_SetEdid(PyObject *self, PyObject *args)
     return ret;
 }
 
+/**
+ * Clear EDID of a video device
+ * @param self
+ * @param args [0] String with path to device
+ * @return None in case of success
+ */
 static PyObject *pv4l2_ClearEdid(PyObject *self, PyObject *args)
 {
     return pv4l2_SetEdid(self, args);
@@ -111,7 +138,6 @@ static PyObject *pv4l2_GetFormats(PyObject *self, PyObject *args)
     int dev;
 
     if (!PyArg_ParseTuple(args, "s", &dev_name)) {
-        printf("Invalid arguments\n");
         return NULL;
     }
 
