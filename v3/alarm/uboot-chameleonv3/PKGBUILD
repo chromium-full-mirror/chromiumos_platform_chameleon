@@ -9,9 +9,9 @@ FPGA_TYPE_DEFAULT=270_2
 FPGA_TYPE=${FPGA_TYPE:=${FPGA_TYPE_DEFAULT}}
 
 pkgname=uboot-chameleonv3-${FPGA_TYPE}
-pkgver=v2022.01
-pkgrel=4 # This needs to be incremented with every change to this file
-_commit=3b837bb388a6258095be9dc20fc25880dca5b462 # CHROMIUM: dts: arm: chameleonv3: Update handoffs
+pkgver=v2023.10_next
+pkgrel=1 # This needs to be incremented with every change to this file
+_commit=923f25080339770806369e41767f8d0464f2b451 # FROMLIST: chameleonv3: set in defconfig for FPGA to reprogram every reboot
 provides=('uboot-chameleonv3')
 conflicts=('uboot-chameleonv3')
 pkgdesc="U-Boot for Chameleon v3"
@@ -33,7 +33,7 @@ build() {
 }
 
 package() {
-  backup=("boot/uboot.txt")
+  backup=("boot/u-boot.txt")
   install=u-boot.install
 
   install ../u-boot.txt -Dt "${pkgdir}"/boot/
