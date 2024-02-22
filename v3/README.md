@@ -77,7 +77,7 @@ which FPGA module you have ([see above](#how-to-tell-what-fpga-module-you-have))
 
 4. Write the image to the card
 
-    ```
+    ```bash
     sudo dd if=chameleon_480_2.img of=/dev/mmcblk0 bs=1M status=progress oflag=direct conv=fsync
     ```
 
@@ -112,7 +112,7 @@ into your `~/.ssh`
 3. Connect to the Chameleon by running (create one if the `cros` user is not existed yet)
 
     ```bash
-    sss -i ~/.ssh/testing_rsa cros@${CHAMELEON_IP}
+    ssh -i ~/.ssh/testing_rsa cros@${CHAMELEON_IP}
     ```
 
 Note: root account is not reachable directly via ssh for security reasons.
@@ -138,7 +138,10 @@ in `pyserial-miniterm`)
 
 7. SSH in with the instructions above.
 
-8. Follow steps 1-3 of the next [Update](#Update) section to complete the install.
+8. Follow steps 1-3 of the next [Update](#Update) section to complete the
+install. **This is important** as there are stateful components of chameleon
+that do not reside of the SD card (ex: EC firmware), only this step
+will handle those.
 
 9. In rare cases, one can login over serial into the device using username:
 `root` password: `root` if ssh/networking does not work.
@@ -163,7 +166,7 @@ in `pyserial-miniterm`)
 
     b) run:
 
-        ```bash
+        ```
         v3/alarm/ansible/update.py --payload new_update.btrfs.zst your_chameleon_ip
         ```
 
