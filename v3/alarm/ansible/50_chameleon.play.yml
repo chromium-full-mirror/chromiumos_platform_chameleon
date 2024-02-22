@@ -5,13 +5,19 @@
   tags: chameleon, chameleon_alarm
 
   tasks:
-    - name: Upload chameleon kernel packages
-      ansible.builtin.copy:
-        src: '{{ item.path }}'
-        dest: /var/cache/pacman/pkg
-      with_items: "{{ hostvars['localhost']['kernel_pkg_files']['files'] }}"
-      register: kernel_pkg_files
-      tags: install, kernel, update
+    - name: Add chameleon pacman repo
+      ansible.builtin.replace:
+        path: /etc/pacman.conf
+        regexp: '(mirrorlist)\s+(# An example .*)\n'
+        replace: |
+            \1
+
+            [chameleon]
+            SigLevel = Optional TrustedOnly
+            Server = https://storage.googleapis.com/chromeos-hardware-tools-chameleon-v3/pkg
+
+            \2
+      tags: install, chameleon_pkg_repo
 
     - name: Remove generic kernel
       community.general.pacman:
@@ -23,61 +29,17 @@
         extra_args: --cascade
       tags: install, kernel
 
-    - name: Install chameleon kernel package
+    - name: Install chameleon repo packages
       community.general.pacman:
+        update_cache: yes
         package:
-          - "{{ item.dest }}"
-        state: present
-      with_items: "{{ kernel_pkg_files['results']}}"
-      tags: install, kernel, update
-
-    - name: Upload chameleon uboot packages
-      ansible.builtin.copy:
-        src: '{{ item.path }}'
-        dest: /var/cache/pacman/pkg
-      with_items: "{{ hostvars['localhost']['uboot_pkg_files']['files'] }}"
-      register: uboot_pkg_files
-      tags: install, uboot, update
-
-    - name: Install chameleon uboot package
-      community.general.pacman:
-        package:
-          - "{{ item.dest }}"
-        state: present
-      with_items: "{{ uboot_pkg_files['results'] }}"
-      tags: install, uboot, update
-
-    - name: Upload chameleon ec packages
-      ansible.builtin.copy:
-        src: '{{ item.path }}'
-        dest: /var/cache/pacman/pkg
-      with_items: "{{ hostvars['localhost']['ec_pkg_files']['files'] }}"
-      register: ec_pkg_files
-      tags: install, ec, update
-
-    - name: Install chameleon ec package
-      community.general.pacman:
-        package:
-          - "{{ item.dest }}"
-        state: present
-      with_items: "{{ ec_pkg_files['results'] }}"
-      tags: install, ec, update
-
-    - name: Upload chameleon fpga bitstream package
-      ansible.builtin.copy:
-        src: '{{ item.path }}'
-        dest: /var/cache/pacman/pkg
-      with_items: "{{ hostvars['localhost']['fpga_pkg_files']['files'] }}"
-      register: fpga_pkg_files
-      tags: install, fpga, update
-
-    - name: Install chameleon fpga bitstream package
-      community.general.pacman:
-        package:
-          - "{{ item.dest }}"
-        state: present
-      with_items: "{{ fpga_pkg_files['results'] }}"
-      tags: install, fpga, update
+          - fpga-bitstream-chameleonv3
+          - "uboot-chameleonv3-{{ fpga_type }}"
+          - linux-enclustra-chameleonv3
+          - linux-enclustra-headers
+          - ec-firmware-chameleonv3
+        state: latest
+      tags: install, fpga, uboot, kernel, ec, update, chameleon_pkg_repo
 
     - name: Weaken sshd security for ChromeOS lab infra, cipher (b/233429241)
       ansible.builtin.replace:

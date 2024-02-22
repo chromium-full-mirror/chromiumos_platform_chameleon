@@ -61,9 +61,13 @@ inventory_template.yml for more details on how or where to put them.
 alarm/ansible% sudo ansible-playbook -i inventory.yml *.play*.yml -v
 ```
 
-It will try looking for chameleon binary packages in each of the other
-non-ansible folders in alarm/. Make sure they exist or ansible will
-remind you pretty early.
+This will create an operating system image containing the *latest*
+[Arch Linux ARM packages](https://archlinuxarm.org/packages),
+our *latest* [chameleon package binaries](https://console.cloud.google.com/storage/browser/chromeos-hardware-tools-chameleon-v3/pkg)
+and tip of tree [chameleon git repo](https://chromium.googlesource.com/chromiumos/platform/chameleon/)
+(containing `v3/chameleond/`). It is impossible to be able to pick and choose
+component versions, you only get the latest (which we may or may not have direct
+control of) at that snapshot in time, please make sure you test the result.
 
 Once you have an sd card image produced, dd it to an sd card, then boot it
 on a real chameleon and adjust the end of `inventory.yml` with the new

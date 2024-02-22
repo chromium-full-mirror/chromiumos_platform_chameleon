@@ -78,3 +78,20 @@ In theory the Chrome OS cross compiler can work too, but is untested.
 The makepkg invocation will result in a few packages (`*.pkg*`) in the package
 folder, upload them then install with `pacman -U` on a chameleon
 (or use the ansible scripts)
+
+### Publishing
+
+The resulting packages `*.pkg*` files should be uploaded to our [storage bucket](https://console.cloud.google.com/storage/browser/chromeos-hardware-tools-chameleon-v3/pkg) where pacman will grab them
+when creating an sd card image or when doing a hacky update
+(eg `pikaur -Syu`) from a development chameleon.
+
+Arch's [repo add](https://archlinux.org/pacman/repo-add.8.html) utility needs to
+be rerun (`repo-add chameleon.db.tar.gz *.pkg*`) every time a new package is
+added so the [database (aka package index)](https://storage.googleapis.com/chromeos-hardware-tools-chameleon-v3/pkg/chameleon.db.tar.gz)
+gets updated. Additionally, due to the fact that google cloud console does not
+support symlinks, the symlinks have to be emulated by making another copy of
+the database files:
+
+```
+for f in $(find -type l); do cp --remove-destination $(readlink $f) $f; done
+```
