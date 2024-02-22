@@ -65,7 +65,8 @@ Each MP board should have the unique FPGA module serial number and MAC address
 ## Prepare the SD Card
 
 1. Download the latest SD card image (`.img.tar.zst`) from the
-`full sd card images folder` in [Golden Images](https://drive.google.com/corp/drive/folders/13N8OwKaUmtJ5AwKAJXoOQRp9RaM-HcKe?resourcekey=0-W4_bnGelfRCpNLI12SGApg); select `270_2`, `270_3` or `480_2`, depending on
+[cloud bucket img/ folder](https://console.cloud.google.com/storage/browser/chromeos-hardware-tools-chameleon-v3/img);
+select `270_2`, `270_3` or `480_2`, depending on
 which FPGA module you have ([see above](#how-to-tell-what-fpga-module-you-have))
 
 2. Untar the file with `tar xf`
@@ -161,8 +162,8 @@ will handle those.
 
 4. If you don’t have the latest chameleon install
 
-    a) download a fresh update payload (`*.btrfs.zst`) from
-    [golden images](https://drive.google.com/corp/drive/folders/13N8OwKaUmtJ5AwKAJXoOQRp9RaM-HcKe?resourcekey=0-W4_bnGelfRCpNLI12SGApg)
+    a) download a fresh update payload (`*.btrfs.zst`) from the
+    [cloud bucket updates/ folder](https://console.cloud.google.com/storage/browser/chromeos-hardware-tools-chameleon-v3/updates)
 
     b) run:
 
