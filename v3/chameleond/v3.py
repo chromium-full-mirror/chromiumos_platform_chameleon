@@ -275,9 +275,8 @@ class ChameleondDriver(ChameleondInterface):
   def Reset(self):
     """Resets Chameleon board."""
     # Let's reset the EC!
-    rst_gpio = _check_output(["sudo", "gpiofind", "STM32_RST_L"])
-    _check_output(f"sudo gpioset -D open-drain {rst_gpio}=0", shell=True)
-    _check_output(f"sudo gpioset -D open-drain {rst_gpio}=1", shell=True)
+    _check_output("sudo gpioset -t0 -d open-drain --by-name STM32_RST_L=0", shell=True)
+    _check_output("sudo gpioset -t0 -d open-drain --by-name STM32_RST_L=1", shell=True)
 
     # Block until we can talk to it
     for attempt in range(5):
