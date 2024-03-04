@@ -10,6 +10,8 @@ from enum import auto, Enum, IntEnum, StrEnum
 import functools
 import itertools
 import inspect
+import linuxpy.video.device as dev
+import linuxpy.video.raw as raw
 import logging
 import numpy
 import pathlib
@@ -23,9 +25,13 @@ import subprocess
 import tempfile
 import threading
 import time
+import types
 import xmlrpc.client
 
 from interface import ChameleondInterface
+from linuxpy.ioctl import ioctl
+from linuxpy.video.device import Buffer, Device, EventReader, VideoCapture
+from linuxpy.video.raw import EventType, BufType
 
 EC_PROTO_PATH = (pathlib.Path(__file__)/"../../../v3/ec/proto/v3.proto").resolve()
 EC_PROTO = pw_protobuf_compiler.python_protos.Library.from_paths([EC_PROTO_PATH]).modules_by_package[""][0]
@@ -35,9 +41,6 @@ VIDEOMUX_ITE = EC_PROTO.videomux_set_request.videomux_dest.RX
 VIDEOMUX_FPGA = EC_PROTO.videomux_set_request.videomux_dest.FPGA
 
 class ChameleondError(Exception):
-  pass
-
-class V4LResolutionChangeError(Exception):
   pass
 
 class PwExceptionWrap:
@@ -85,100 +88,106 @@ class V4L:
   pixelformat: str
   videomux_end: EC_PROTO.videomux_set_request.videomux_dest
 
+  class Timeout(Exception):
+    pass
+
   def __post_init__(self):
     if type(self.id) == int:
       self.path = f"/dev/v4l/by-path/platform-{self.id:x}.video-video-index0"
     else:
       self.path = self.id
     # make sure we support self.pixelformat
-    list_formats_ext = _check_output([
-      "v4l2-ctl",
-      "--device", self.path,
-      "--list-formats-ext",
-    ])
-    assert f"'{self.pixelformat}'" in list_formats_ext
-    self.fmt_video = f"pixelformat={self.pixelformat}"
-
-  INFO_RE = re.compile("Width/Height\s*: (?P<width>\d+)/(?P<height>\d+).*Size Image\s*: (?P<size>\d+)", re.DOTALL)
-  @classmethod
-  def parse_frame_info(cls, info):
-    if not (match := cls.INFO_RE.search(info)):
-      raise ChameleondError(f"INFO_RE can't parse:", info)
-
-    frame_info_dict = match.groupdict()
-    for field in ("width", "height", "size"):
-      frame_info_dict[field] = int(frame_info_dict[field])
-
-    if info.find("VIDIOC_DQBUF: failed: Input/output error") != -1:
-      raise V4LResolutionChangeError()
-
-    return frame_info_dict
+    with Device(self.path) as video_dev:
+      assert self.pixelformat in [fmt.pixel_format.human_str() for fmt in video_dev.info.formats]
 
   def get_frame_size(self):
-    info = _check_output([
-      "v4l2-ctl",
-      "--device", self.path,
-      "--set-fmt-video", self.fmt_video,
-      "--all",
-    ])
-    return self.parse_frame_info(info)
+    info = {}
+    with Device(self.path) as video_dev:
+      info["width"] = video_dev.info.frame_sizes[0].width
+      info["height"] = video_dev.info.frame_sizes[0].height
+      # TODO(b/270594577): Implement better way to access size of the image in linuxpy
+      fmt = dev.get_raw_format(video_dev.fileno(), BufType.VIDEO_CAPTURE)
+      info["size"] = fmt.fmt.pix.sizeimage
 
-  def get_frame(self, count=1, timeout=5):
-    buf = None
-    info = None
-    while info is None and (timeout is None or timeout > 0):
-      buf = tempfile.NamedTemporaryFile(prefix="chameleond_", suffix=".fb")
-      start = time.clock_gettime(time.CLOCK_MONOTONIC)
-      info = _check_output([
-          "v4l2-ctl",
-          "--device", self.path,
-          "--set-fmt-video", self.fmt_video,
-          "--stream-mmap",
-          "--stream-count", str(count),
-          "--stream-to", buf.name,
-          "--all",
-        ],
-        timeout=timeout,
-      )
-      if timeout is not None:
-        # Reduce timeout by elapsed time
-        timeout -= time.clock_gettime(time.CLOCK_MONOTONIC) - start
-      try:
-        info = self.parse_frame_info(info)
-      except V4LResolutionChangeError as err:
-        # Resolution changed during frame capturing, try again
-        info = None
-    return buf, info
+    return info
+
+  @staticmethod
+  def _process_frame(memory_map) -> tuple[Buffer, raw.v4l2_buffer]:
+    with memory_map.queue as buff:
+      # Call callback with its argument
+      memory_map._process_frame_callback(memory_map.buffers[buff.index], buff,
+                                         memory_map._process_frame_arg)
+      return b'', buff
+
+  @staticmethod
+  def save_frame_to_file(frame, buff, file):
+    # Write whole frame to the file
+    file.write(memoryview(frame)[:buff.bytesused])
+
+  def get_frame(self, count=1, timeout=5, callback=save_frame_to_file):
+    with Device(self.path) as video_dev:
+      with EventReader(video_dev) as event_queue:
+        video_dev.subscribe_event(EventType.SOURCE_CHANGE)
+        while timeout is None or timeout > 0:
+          start = time.clock_gettime(time.CLOCK_MONOTONIC)
+          # For now save frames into tempfile to keep previous behavior
+          buf = tempfile.NamedTemporaryFile(prefix="chameleond_", suffix=".fb")
+          # Make sure that expected pixelformat is selected
+          video_dev.set_format(BufType.VIDEO_CAPTURE, 0, 0, self.pixelformat)
+          try:
+            with VideoCapture(video_dev, source=raw.Capability.STREAMING) as video_capture:
+              video_capture.buffer._process_frame_arg = buf.file
+              video_capture.buffer._process_frame_callback = callback
+              video_capture.buffer.raw_grab = types.MethodType(self._process_frame,
+                                                               video_capture.buffer)
+              for i in range(count):
+                # For each frame _process_frame with callback is called
+                frame = video_capture.buffer.frame_reader.read(timeout)
+                if frame is None:
+                  raise self.Timeout()
+
+              # All frames collected, all of them have the same size
+              dv_timings = raw.v4l2_dv_timings()
+              ioctl(video_dev.fileno(), raw.IOC.G_DV_TIMINGS, dv_timings)
+              info = {}
+              info["width"] = dv_timings.bt.width
+              info["height"] = dv_timings.bt.height
+              # TODO(b/315132760): Now kernel only support 8 bit per color, but we should take into
+              #                    account what is actual pixel format.
+              info["size"] = dv_timings.bt.width * dv_timings.bt.height * 3
+              return buf, info
+          except OSError as e:
+            # Check if exception is due to an event
+            resolution_change = False
+            while event := event_queue.read(0):
+              if event.type == EventType.SOURCE_CHANGE:
+                if event.u.src_change.changes == EventType.SRC_CH_RESOLUTION:
+                  # This is resolution change, try again
+                  resolution_change = True
+            if not resolution_change:
+              # Unknown event, just throw the catched error
+              raise e from None
+            # Acknowledge to device that we are aware of resolution change
+            # TODO(b/270594577): Implement DV timings primitives directly in linuxpy
+            dv_timings = raw.v4l2_dv_timings()
+            ioctl(video_dev.fileno(), raw.IOC.QUERY_DV_TIMINGS, dv_timings)
+            ioctl(video_dev.fileno(), raw.IOC.S_DV_TIMINGS, dv_timings)
+          if timeout is not None:
+            # Reduce timeout by elapsed time
+            timeout -= time.clock_gettime(time.CLOCK_MONOTONIC) - start
+    raise self.Timeout()
 
   def clear_edid(self):
-    _check_output([
-      "v4l2-ctl",
-      "--device", self.path,
-      "--clear-edid"
-    ])
+    with Device(self.path) as video_dev:
+      return video_dev.clear_edid()
 
   def get_edid(self):
-    try:
-      return _check_output([
-        "v4l2-ctl",
-        "--device", self.path,
-        "--get-edid", "format=raw"
-      ], encoding=None)
-    except subprocess.CalledProcessError:
-      return b""
+    with Device(self.path) as video_dev:
+      return video_dev.get_edid()
 
   def set_edid(self, new_edid):
-    edid_file = tempfile.NamedTemporaryFile(prefix="chameleond_", suffix=".edid", mode="wb")
-    edid_file.write(new_edid)
-    edid_file.flush()
-    cmd = [
-      "v4l2-ctl",
-      "--device", self.path,
-      "--set-edid", f"file={edid_file.name},format=raw"
-    ]
-    stderr = _check_output(cmd, encoding=None, stderr=subprocess.STDOUT)
-    if stderr:
-      raise ChameleondError(stderr)
+    with Device(self.path) as video_dev:
+      return video_dev.set_edid(new_edid)
 
   def __repr__(self):
     return f"{self.__class__.__name__}({self.path!r})"
@@ -1087,7 +1096,7 @@ class ChameleondDriver(ChameleondInterface):
           v4l_frame_timeout = end_time - time.time()
         _buf, frame_info = port.video_dev.get_frame(timeout=v4l_frame_timeout)
         frame_size = frame_info["size"]
-    except subprocess.TimeoutExpired:
+    except V4L.Timeout:
       logging.warning("WaitVideoInputStable timed out at V4L")
       return False
 
