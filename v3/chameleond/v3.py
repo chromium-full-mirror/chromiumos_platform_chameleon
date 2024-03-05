@@ -189,6 +189,41 @@ class V4L:
     with Device(self.path) as video_dev:
       return video_dev.set_edid(new_edid)
 
+  def get_video_params(self):
+    with Device(self.path) as video_dev:
+      dv_timings = raw.v4l2_dv_timings()
+      ioctl(video_dev.fileno(), raw.IOC.QUERY_DV_TIMINGS, dv_timings)
+      htotal = (dv_timings.bt.width + dv_timings.bt.hsync +
+                dv_timings.bt.hbackporch + dv_timings.bt.hfrontporch)
+      vtotal = (dv_timings.bt.height + dv_timings.bt.vsync +
+                dv_timings.bt.vbackporch + dv_timings.bt.vfrontporch)
+      pixelclock = dv_timings.bt.pixelclock
+      # Calculate frame rate from pixel clock and total pixels transmited
+      frame_rate = pixelclock / (htotal * vtotal)
+
+      return {
+        'clock': pixelclock / 1e6, # Convert from Hz to MHz
+
+        'htotal': htotal,
+        'hfront_porch': dv_timings.bt.hfrontporch,
+        'hsync_width': dv_timings.bt.hsync,
+        'hback_porch': dv_timings.bt.hbackporch,
+        'hactive': dv_timings.bt.width,
+        'hsync_polarity': bool(raw.PositivePolarityFlag.V4L2_DV_HSYNC_POS_POL &
+                               dv_timings.bt.polarities),
+        'vtotal': vtotal,
+        'vfront_porch': dv_timings.bt.vfrontporch,
+        'vsync_width': dv_timings.bt.vsync,
+        'vback_porch': dv_timings.bt.vbackporch,
+        'vactive': dv_timings.bt.height,
+        'vsync_polarity': bool(raw.PositivePolarityFlag.V4L2_DV_VSYNC_POS_POL &
+                               dv_timings.bt.polarities),
+        'frame_rate': frame_rate,
+        'interlaced': dv_timings.bt.interlaced,
+        'bpc': 8, # TODO(b/315132760): Now kernel only support 8 bit, but later it should be
+                  #                    possible to get that info from pixel format
+      }
+
   def __repr__(self):
     return f"{self.__class__.__name__}({self.path!r})"
 
@@ -1309,6 +1344,12 @@ class ChameleondDriver(ChameleondInterface):
       'bpc': 8, # EC + ITE are hardcoded to 8, 10 might be possible
     }
 
+  def _GetFPGAVideoParams(self, port):
+    assert port.has_video
+    assert not port.is_ite
+
+    return port.video_dev.get_video_params()
+
   def GetVideoParams(self, port_id):
     """Gets video parameters.
 
@@ -1321,12 +1362,11 @@ class ChameleondDriver(ChameleondInterface):
     port = self.PORTS[port_id]
 
     if port.is_ite:
-      ec_reply = self._GetITEVideoParams()
-      assert (ec_reply["hactive"], ec_reply["vactive"]) == self.DetectResolution(port_id), \
+      ret = self._GetITEVideoParams(port)
+      assert (ret["hactive"], ret["vactive"]) == self.DetectResolution(port_id), \
               "Resolution directly from EC should match what we get via FPGA + V4L"
-      return ec_reply
     else:
-      raise NotImplementedError("Need to ask the FPGA Logic for VideoParams")
+      ret = self._GetFPGAVideoParams(port)
 
     # *_offset is weird in the interface.py, defined as:
     # ```offset from start edge to active edge```
