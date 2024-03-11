@@ -95,6 +95,7 @@ class BluezService(dbus.service.Object):
     def __init__(self, device_type, adapter_address):
         self._cinterrupt = None
         self._ccontrol = None
+        self._connected = False
         self._scch_watch_id = None
         self._sich_watch_id = None
 
@@ -195,6 +196,7 @@ class BluezService(dbus.service.Object):
                 # getpeername throw an exception when it is not connected.
                 logging.info("Interrupt socket is already disconnected")
 
+        self._connected = False
         self._Listen(self._address)
 
     def _InitBluezProfile(
@@ -269,8 +271,12 @@ class BluezService(dbus.service.Object):
         # asynchronously.
         self._scontrol.listen(1)
         self._sinterrupt.listen(1)
-        self._scch_watch_id = GLib.io_add_watch(self._scch, GLib.IO_IN, self.OnConnect)
-        self._sich_watch_id = GLib.io_add_watch(self._sich, GLib.IO_IN, self.OnConnect)
+        self._scch_watch_id = GLib.io_add_watch(
+            self._scch, GLib.IO_IN, self.OnConnect
+        )
+        self._sich_watch_id = GLib.io_add_watch(
+            self._sich, GLib.IO_IN, self.OnConnect
+        )
 
     @dbus.service.method("org.chromium.autotest.btkbservice", in_signature="s")
     def Connect(self, addr):
@@ -309,6 +315,10 @@ class BluezService(dbus.service.Object):
         "org.chromium.autotest.btkbservice", in_signature="yay"
     )
     def SendKeys(self, modifier, keys):
+        # Avoid sending HID report when the Bluetooth socket has not yet accepted a
+        # connection.
+        self.wait_for_connected()
+
         report = bytes([0xA1, 0x01, modifier, 0x00])
         report += bytes(keys[:6])
         self._cinterrupt.send(report)
@@ -316,6 +326,9 @@ class BluezService(dbus.service.Object):
     @dbus.service.method("org.chromium.autotest.btkbservice", in_signature="ay")
     def SendHIDReport(self, report):
         """Sends HID report across socket"""
+        # Avoid sending HID report when the Bluetooth socket has not yet accepted a
+        # connection.
+        self.wait_for_connected()
 
         # Convert from dbus to native type for socket send
         native_report = bytes(report)
@@ -327,4 +340,25 @@ class BluezService(dbus.service.Object):
 
     @dbus.service.signal("org.chromium.autotest.btkbservice", signature="")
     def Connected(self):
+        self._connected = True
         pass
+
+    def wait_for_connected(self):
+        end_time = time.time() + 30
+        next_log_time = time.time()
+        sleep_interval = 1
+        log_interval = 5
+
+        while time.time() <= end_time:
+            if self._connected:
+                logging.info("Bluez service connected")
+                return
+            else:
+                if time.time() >= next_log_time:
+                    logging.info("Bluez service may not be connected yet")
+                    next_log_time = time.time() + log_interval
+                time.sleep(sleep_interval)
+
+        raise BluezServiceException(
+            "Bluetooth Socket connection is not established yet"
+        )
