@@ -26,6 +26,7 @@ from chameleond.utils.bluez_service_consts import CLASS_OF_SERVICE_MASK
 from chameleond.utils.bluez_service_consts import PERIPHERAL_DEVICE_CLASS
 from chameleond.utils.bluez_service_consts import PERIPHERAL_DEVICE_NAME
 from chameleond.utils.system_tools import SystemTools
+import dbus
 import numpy as np
 from six.moves import range
 
@@ -123,6 +124,50 @@ class Ofono(object):
     """A class for managing the ofono process and its D-Bus API"""
 
     OFONO = "ofono"
+    DBUS_OFONO_SERVICE = "org.ofono"
+    DBUS_OFONO_MANAGER_INTERFACE = "org.ofono.Manager"
+    DBUS_OFONO_VOICE_CALL_MANAGER_INTERFACE = "org.ofono.VoiceCallManager"
+    DBUS_OFONO_VOICE_CALL_INTERFACE = "org.ofono.VoiceCall"
+    DBUS_OFONO_CALL_VOLUME_INTERFACE = "org.ofono.CallVolume"
+
+    DBUS_SERIAL_PROPERTY = "Serial"
+    DBUS_STATE_PROPERTY = "State"
+    DBUS_MICROPHONE_VOLUME_PROPERTY = "MicrophoneVolume"
+
+    DBUS_STATE_ACTIVE = "active"
+    DBUS_STATE_HELD = "held"
+    DBUS_STATE_DIALING = "dialing"
+    DBUS_STATE_ALERTING = "alerting"
+    DBUS_STATE_INCOMING = "incoming"
+    DBUS_STATE_WAITING = "waiting"
+    DBUS_STATE_DISCONNECTED = "disconnected"
+
+    def __init__(self):
+        self._dbus_system_bus = dbus.SystemBus()
+
+    def _getManager(self):
+        return dbus.Interface(
+            self._dbus_system_bus.get_object(self.DBUS_OFONO_SERVICE, "/"),
+            self.DBUS_OFONO_MANAGER_INTERFACE,
+        )
+
+    def _getCurrentCalls(self, remote_address):
+        modems = self._getManager().GetModems()
+        for path, properties in modems:
+            if (
+                self.DBUS_SERIAL_PROPERTY in properties
+                and remote_address == str(properties[self.DBUS_SERIAL_PROPERTY])
+            ):
+                mgr = dbus.Interface(
+                    self._dbus_system_bus.get_object(
+                        self.DBUS_OFONO_SERVICE, path
+                    ),
+                    self.DBUS_OFONO_VOICE_CALL_MANAGER_INTERFACE,
+                )
+
+                calls = mgr.GetCalls()
+                return calls
+        return []
 
     def Start(self):
         """Start/restart Ofono process.
@@ -130,8 +175,8 @@ class Ofono(object):
         Returns:
           True if it starts successfully.
         """
-        self.Stop()
 
+        self.Stop()
         try:
             SystemTools.Call("service", self.OFONO, "start")
             logging.info("%s is started.", self.OFONO)
@@ -146,6 +191,7 @@ class Ofono(object):
         Returns:
           True if it stops successfully.
         """
+
         stop_cmd_args = ["service", self.OFONO, "stop"]
         if SystemTools.OrigCall(*stop_cmd_args) == 0:
             logging.info("%s is stopped.", self.OFONO)
@@ -153,6 +199,158 @@ class Ofono(object):
         else:
             logging.warn("Failed to stop %s. Ignored.", self.OFONO)
             return False
+
+    def GetCurrentCallState(self, remote_address):
+        """Get current call state from ofono dbus.
+
+        Args:
+          remote_address: the address of the remote device to connect.
+
+        Returns:
+          Dictionary of total number of states for all current calls.
+        """
+
+        ret = {
+            self.DBUS_STATE_ACTIVE: 0,
+            self.DBUS_STATE_HELD: 0,
+            self.DBUS_STATE_DIALING: 0,
+            self.DBUS_STATE_ALERTING: 0,
+            self.DBUS_STATE_INCOMING: 0,
+            self.DBUS_STATE_WAITING: 0,
+            self.DBUS_STATE_DISCONNECTED: 0,
+        }
+
+        calls = self._getCurrentCalls(remote_address)
+        for path, properties in calls:
+            ret[str(properties[self.DBUS_STATE_PROPERTY])] += 1
+        return ret
+
+    def AnswerCall(self, remote_address):
+        """Answer incoming call via ofono dbus.
+
+        Args:
+          remote_address: the address of the remote device to connect.
+
+        Returns:
+          True if an incoming call exists, and answer it successfully.
+        """
+
+        calls = self._getCurrentCalls(remote_address)
+        for path, properties in calls:
+            state = str(properties[self.DBUS_STATE_PROPERTY])
+            if state != self.DBUS_STATE_INCOMING:
+                continue
+            call = dbus.Interface(
+                self._dbus_system_bus.get_object(self.DBUS_OFONO_SERVICE, path),
+                self.DBUS_OFONO_VOICE_CALL_INTERFACE,
+            )
+            call.Answer()
+            return True
+        return False
+
+    def RejectCall(self, remote_address):
+        """Reject incoming call via ofono dbus.
+
+        Args:
+          remote_address: the address of the remote device to connect.
+
+        Returns:
+          True if an incoming call exists, and reject it successfully.
+        """
+
+        calls = self._getCurrentCalls(remote_address)
+        for path, properties in calls:
+            state = str(properties[self.DBUS_STATE_PROPERTY])
+            if state != self.DBUS_STATE_INCOMING:
+                continue
+            call = dbus.Interface(
+                self._dbus_system_bus.get_object(self.DBUS_OFONO_SERVICE, path),
+                self.DBUS_OFONO_VOICE_CALL_INTERFACE,
+            )
+            call.Hangup()
+            return True
+        return False
+
+    def HangupCall(self, remote_address):
+        """Hangup active call via ofono dbus.
+
+        Args:
+          remote_address: the address of the remote device to connect.
+
+        Returns:
+          True if an active call exists, and hangup it successfully.
+        """
+
+        calls = self._getCurrentCalls(remote_address)
+        for path, properties in calls:
+            state = str(properties[self.DBUS_STATE_PROPERTY])
+            if state != self.DBUS_STATE_ACTIVE:
+                continue
+            call = dbus.Interface(
+                self._dbus_system_bus.get_object(self.DBUS_OFONO_SERVICE, path),
+                self.DBUS_OFONO_VOICE_CALL_INTERFACE,
+            )
+            call.Hangup()
+            return True
+        return False
+
+    def SetMicVolume(self, remote_address, volume):
+        """Set microphone volume via ofono dbus.
+
+        Args:
+          remote_address: the address of the remote device to connect.
+          volume: the volume(0-100) to set.
+
+        Returns:
+          True if an device with hfp profile exists,
+          and set microphone volume successfully.
+        """
+
+        modems = self._getManager().GetModems()
+        for path, properties in modems:
+            if (
+                self.DBUS_SERIAL_PROPERTY in properties
+                and remote_address == str(properties[self.DBUS_SERIAL_PROPERTY])
+            ):
+                call_volume = dbus.Interface(
+                    self._dbus_system_bus.get_object(
+                        self.DBUS_OFONO_SERVICE, path
+                    ),
+                    self.DBUS_OFONO_CALL_VOLUME_INTERFACE,
+                )
+
+                call_volume.SetProperty(
+                    self.DBUS_MICROPHONE_VOLUME_PROPERTY, dbus.Byte(volume)
+                )
+                return True
+        return False
+
+    def GetMicVolume(self, remote_address):
+        """Get microphone volume via ofono dbus.
+
+        Returns:
+          microphone volume if an device with hfp profile exists.
+        """
+
+        modems = self._getManager().GetModems()
+        for path, properties in modems:
+            if (
+                self.DBUS_SERIAL_PROPERTY in properties
+                and remote_address == str(properties[self.DBUS_SERIAL_PROPERTY])
+            ):
+                call_volume = dbus.Interface(
+                    self._dbus_system_bus.get_object(
+                        self.DBUS_OFONO_SERVICE, path
+                    ),
+                    self.DBUS_OFONO_CALL_VOLUME_INTERFACE,
+                )
+
+                return int(
+                    call_volume.GetProperties()[
+                        self.DBUS_MICROPHONE_VOLUME_PROPERTY
+                    ]
+                )
+        return None
 
 
 class BluetoothAudio(BluezPeripheral):
@@ -1395,6 +1593,137 @@ class BluetoothAudio(BluezPeripheral):
         self._recorded_file = None
 
         return True
+
+    def GetCurrentCallState(self):
+        """Get current calls state
+
+        Returns:
+          Dictionary of total number of states for all current calls
+        """
+        try:
+            return self._ofono.GetCurrentCallState(self.remote_address)
+        except Exception as e:
+            logging.error(
+                "Failed to get current call state from {}: {}".format(
+                    self.remote_address, e
+                )
+            )
+        return {}
+
+    def AnswerCall(self):
+        """answer call if incoming call exist.
+
+        Returns:
+          True if an incoming call exists, and answer it successfully.
+        """
+        try:
+            result = self._ofono.AnswerCall(self.remote_address)
+            if not result:
+                logging.error(
+                    "No incoming call to answer from {}".format(
+                        self.remote_address
+                    )
+                )
+            return result
+        except Exception as e:
+            logging.error(
+                "Failed answer call from {}: {}".format(self.remote_address, e)
+            )
+            return False
+        return True
+
+    def RejectCall(self):
+        """reject call if incoming call exist.
+
+        Returns:
+          True if an incoming call exists, and reject it successfully.
+        """
+        try:
+            result = self._ofono.RejectCall(self.remote_address)
+            if not result:
+                logging.error(
+                    "No incoming call to reject from {}".format(
+                        self.remote_address
+                    )
+                )
+            return False
+        except Exception as e:
+            logging.error(
+                "Failed reject call from {}: {}".format(self.remote_address, e)
+            )
+            return False
+        return True
+
+    def HangupCall(self):
+        """Hangup active call.
+
+        Returns:
+          True if an active call exists, and hangup it successfully.
+        """
+        try:
+            result = self._ofono.HangupCall(self.remote_address)
+            if not result:
+                logging.error(
+                    "No incoming call to reject from {}".format(
+                        self.remote_address
+                    )
+                )
+            return False
+        except Exception as e:
+            logging.error(
+                "Failed hangup call from {}: {}".format(self.remote_address, e)
+            )
+            return False
+        return True
+
+    def SetMicVolume(self, volume):
+        """Set hfp microphone volume
+
+        Returns:
+          True if an device with hfp profile exists,
+          and set microphone volume successfully.
+        """
+        try:
+            result = self._ofono.SetMicVolume(self.remote_address, volume)
+            if not result:
+                logging.error(
+                    "Cannot find the target {} to set mic volume {}".format(
+                        self.remote_address, volume
+                    )
+                )
+            return False
+        except Exception as e:
+            logging.error(
+                "Failed trigger mic volume {} from {}: {}".format(
+                    volume, self.remote_address, e
+                )
+            )
+            return False
+        return True
+
+    def GetMicVolume(self):
+        """Get microphone volume via ofono dbus
+
+        Returns:
+          microphone volume if an device with hfp profile exists.
+        """
+        try:
+            volume = self._ofono.GetMicVolume(self.remote_address)
+            if volume is None:
+                logging.error(
+                    "Cannot find the target {} mic volume".format(
+                        self.remote_address
+                    )
+                )
+                return False
+            return volume
+        except Exception as e:
+            logging.error(
+                "Failed get mic volume from {}: {}".format(
+                    self.remote_address, e
+                )
+            )
+        return False
 
     def ScpToDut(self, src_file, dst_file, dut_ip):
         """Scp the src_file to the dst_file at dut_ip.
