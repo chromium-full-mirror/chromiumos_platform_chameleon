@@ -119,11 +119,47 @@ class Wav(object):
         self.wav_file.close()
 
 
+class Ofono(object):
+    """A class for managing the ofono process and its D-Bus API"""
+
+    OFONO = "ofono"
+
+    def Start(self):
+        """Start/restart Ofono process.
+
+        Returns:
+          True if it starts successfully.
+        """
+        self.Stop()
+
+        try:
+            SystemTools.Call("service", self.OFONO, "start")
+            logging.info("%s is started.", self.OFONO)
+            return True
+        except Exception as e:
+            logging.error("Failed to start %s: %s.", self.OFONO, e)
+            return False
+
+    def Stop(self):
+        """Stop Ofono process.
+
+        Returns:
+          True if it stops successfully.
+        """
+        stop_cmd_args = ["service", self.OFONO, "stop"]
+        if SystemTools.OrigCall(*stop_cmd_args) == 0:
+            logging.info("%s is stopped.", self.OFONO)
+            return True
+        else:
+            logging.warn("Failed to stop %s. Ignored.", self.OFONO)
+            return False
+
+
 class BluetoothAudio(BluezPeripheral):
     """An object that performs Bluetooth audio device related operations."""
 
     PULSEAUDIO = "pulseaudio"
-    OFONO = "ofono"
+
     MPRISPROXY = "mpris-proxy"
     PLAYERCTL = "playerctl"
     NO_PLAYER_FOUND = "No players were found\n"
@@ -220,6 +256,8 @@ class BluetoothAudio(BluezPeripheral):
         self._start_pulseaudio_cmd = "%s --start" % SystemTools.GetToolPath(
             self.PULSEAUDIO
         )
+
+        self._ofono = Ofono()
 
     def _MakeAudioRecordDirectory(self, audio_record_dir):
         """Create a new directory for audio recording.
@@ -799,15 +837,7 @@ class BluetoothAudio(BluezPeripheral):
         Returns:
           True if it starts successfully.
         """
-        self.StopOfono()
-
-        try:
-            SystemTools.Call("service", self.OFONO, "start")
-            logging.info("%s is started.", self.OFONO)
-            return True
-        except Exception as e:
-            logging.error("Failed to start %s: %s.", self.OFONO, e)
-            return False
+        return self._ofono.Start()
 
     def StopOfono(self):
         """Stop Ofono process.
@@ -815,13 +845,7 @@ class BluetoothAudio(BluezPeripheral):
         Returns:
           True if it stops successfully.
         """
-        stop_cmd_args = ["service", self.OFONO, "stop"]
-        if SystemTools.OrigCall(*stop_cmd_args) == 0:
-            logging.info("%s is stopped.", self.OFONO)
-            return True
-        else:
-            logging.warn("Failed to stop %s. Ignored.", self.ofono)
-            return False
+        return self._ofono.Stop()
 
     def PlayAudio(self, audio_file):
         """Play the audio file.
