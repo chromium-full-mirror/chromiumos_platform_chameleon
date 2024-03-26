@@ -98,7 +98,7 @@
       vars:
         ansible_become_user: '{{username}}'
       ansible.builtin.shell: |
-        PKGDEST=/var/cache/pacman/pkg pikaur -Syu python-pigweed libgpiod stm32flash --mflags=--nocheck --noconfirm --needed
+        PKGDEST=/var/cache/pacman/pkg pikaur -Syu python-pigweed python-linuxpy libgpiod stm32flash --mflags=--nocheck --noconfirm --needed
       tags: install, pikaur
 
     - name: Copy chameleond.service
