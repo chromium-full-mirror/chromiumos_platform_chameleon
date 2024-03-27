@@ -35,10 +35,10 @@ PUBLIC=$(git describe --tags)
 popd
 
 # Get the hash for HEAD for Zephyr and the STM32 HAL
-pushd ~/chromiumos/src/third_party/zephyr/main
+pushd ~/zephyrproject/zephyr
 ZEPHYR=$(git log --oneline -n 1)
 popd
-pushd ~/chromiumos/src/third_party/zephyr/hal_stm32
+pushd ~/zephyrproject/modules/hal/stm32
 HAL=$(git log --oneline -n 1)
 popd
 
@@ -48,7 +48,7 @@ PIGWEED=$(git log --oneline -n 1)
 popd
 
 # Copy the EC binary to the package directory
-cp ~/chromiumos/src/platform/chameleon/v3/ec/build/zephyr/zephyr.bin "${PKG}"/"${PUBLIC}".bin
+cp ~/zephyrproject/build/zephyr/zephyr.bin "${PKG}"/"${PUBLIC}".bin
 
 # Create the manifest
 cat <<EOF >"${PKG}"/"${PUBLIC}".txt
