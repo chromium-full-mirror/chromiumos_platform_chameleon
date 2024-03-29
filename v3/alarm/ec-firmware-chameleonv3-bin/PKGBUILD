@@ -6,7 +6,7 @@
 buildarch=4
 
 pkgname=ec-firmware-chameleonv3-bin
-_version=v3-247-g50661cc
+_version=v3-268-gba980bb
 pkgver=$(echo ${_version}|sed "s/-/_/g")
 pkgrel=1
 provides=('ec-firmware-chameleonv3')
@@ -18,7 +18,7 @@ optdepends=('libgpiod: access the EC bootloader pins'
             'stm32flash: speaks the bootloader protocol to flash the image')
 source=("https://storage.googleapis.com/chromeos-hardware-tools-chameleon-v3/intermediate/ec/${_version}.bin"
         'flash_ec')
-sha256sums=('84a0b9caa6769c5e0d2df0c46bfd070c1162eb1f6ad686c93e23e81b7422dd78'
+sha256sums=('bf6e7b9bc0ff750df95bb20896b984bd10578fc6953725eb1d55b87d178cad62'
             '2d25f5f12b8d387a26c6310d7ea697531228aeaa2f32c9f393d37975a7dba464')
 
 # build() {
