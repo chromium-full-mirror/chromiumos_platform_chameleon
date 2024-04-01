@@ -295,6 +295,8 @@ class BluezService(dbus.service.Object):
 
                 self._ccontrol.connect((str(addr), P_CTRL))
                 self._cinterrupt.connect((str(addr), P_INTR))
+
+                self._connected = True
                 break
 
             except Exception as e:
