@@ -8,8 +8,8 @@ pkgbase=linux-enclustra
 _kernelname=${pkgbase#linux}
 _desc="ARMv7 Enclustra"
 pkgver=6.6
-pkgrel=1 # This needs to be incremented with every change to this file
-_commit=c69ce880b748b34feaf8745815bb9a5b03f739ca # CHROMIUM: media: Reduce max link rate to 5.4Gbps
+pkgrel=2 # This needs to be incremented with every change to this file
+_commit=70da7952150416e901a14f78fdc31cf1adf6771d # CHROMIUM: media: WA for not starting stream
 arch=('armv7h')
 url="https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chameleon-6.6"
 license=('GPL2')
@@ -19,7 +19,7 @@ source=("https://chromium.googlesource.com/chromiumos/third_party/kernel/+archiv
         'config'
         '60-linux.hook')
 sha256sums=('SKIP' # gerrit produces non reproducible archives
-	    'fe81c8e86a974af8a497daa636cf76504194c8e9d9a40acacaebca37cd325302'
+            'fe81c8e86a974af8a497daa636cf76504194c8e9d9a40acacaebca37cd325302'
             'ae2e95db94ef7176207c690224169594d49445e04249d2499e9d2fbc117a0b21')
 
 prepare() {
