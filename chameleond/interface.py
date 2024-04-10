@@ -147,6 +147,40 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
         """
         raise NotImplementedError("GetConnectorType")
 
+    def IsConflict(self, port_id_a, port_id_b):
+        """Check if ports can't be plugged at the same time.
+
+        Args:
+          port_id_a: The ID of the video port.
+          port_id_b: The ID of the video port.
+
+        Returns:
+          True if ports can't be plugged at the same time. Flase otherwise.
+        """
+        raise NotImplementedError("IsConflict")
+
+    def GetMutuallyExclusivePorts(self, port_id):
+        """Get ports that can't be plugged at the same time.
+
+        Args:
+          port_id: The ID of the video port.
+
+        Returns:
+          Tuple of port's IDs that can't be plugged at the same time as port_id.
+        """
+        raise NotImplementedError("GetMutuallyExclusivePorts")
+
+    def GetPortName(self, port_id):
+        """Get a human friendly name of the port.
+
+        Args:
+          port_id: The ID of the video port.
+
+        Returns:
+          String with name.
+        """
+        raise NotImplementedError("GetPortName")
+
     def HasAudioSupport(self, port_id):
         """Returns true if the port has audio support.
 

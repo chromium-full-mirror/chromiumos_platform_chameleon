@@ -4,7 +4,9 @@
 # found in the LICENSE file.
 """Chameleond Driver for Chameleon v3 hardware."""
 
-from dataclasses import dataclass
+from collections import namedtuple
+from dataclasses import dataclass, field
+from enum import auto, Enum, IntEnum, StrEnum
 import functools
 import itertools
 import inspect
@@ -27,6 +29,10 @@ from interface import ChameleondInterface
 
 EC_PROTO_PATH = (pathlib.Path(__file__)/"../../../v3/ec/proto/v3.proto").resolve()
 EC_PROTO = pw_protobuf_compiler.python_protos.Library.from_paths([EC_PROTO_PATH]).modules_by_package[""][0]
+ITE_PORT_1 = EC_PROTO.it68051_port_num.PORT1
+ITE_PORT_2 = EC_PROTO.it68051_port_num.PORT2
+VIDEOMUX_ITE = EC_PROTO.videomux_set_request.videomux_dest.RX
+VIDEOMUX_FPGA = EC_PROTO.videomux_set_request.videomux_dest.FPGA
 
 class ChameleondError(Exception):
   pass
@@ -75,10 +81,15 @@ def _check_output(args, encoding="utf-8", **kwargs):
 
 @dataclass
 class V4L:
-  path: str
+  id: str | int
   pixelformat: str
+  videomux_end: EC_PROTO.videomux_set_request.videomux_dest
 
   def __post_init__(self):
+    if type(self.id) == int:
+      self.path = f"/dev/v4l/by-path/platform-{self.id:x}.video-video-index0"
+    else:
+      self.path = self.id
     # make sure we support self.pixelformat
     list_formats_ext = _check_output([
       "v4l2-ctl",
@@ -172,6 +183,45 @@ class V4L:
   def __repr__(self):
     return f"{self.__class__.__name__}({self.path!r})"
 
+
+class PortId(IntEnum):
+  ITE_DP1 = 0
+  ITE_DP2 = 1
+  ITE_HDMI1 = 2
+  ITE_HDMI2 = 3
+  FPGA_DP1 = 4
+  FPGA_DP2 = 5
+  FPGA_DP2_MST0 = 5
+  FPGA_DP2_MST1 = 6
+  FPGA_DP2_MST2 = 7
+  FPGA_DP2_MST3 = 8
+
+
+class Mux(Enum):
+  VIDEOMUX_1 = auto()
+  VIDEOMUX_2 = auto()
+  ITE = auto()
+
+
+Connector = namedtuple('Connector', ['type', 'id'])
+
+
+class ConnectorId(Enum):
+  LEFT_DP = Connector('dp', 1)
+  RIGHT_DP = Connector('dp', 2)
+  LEFT_HDMI = Connector('hdmi', 1)
+  RIGHT_HDMI = Connector('hdmi', 2)
+
+  def mux_arg(self):
+    return self.value.type + str(self.value.id)
+
+  def mux(self):
+    if self.value.id == 1:
+      return Mux.VIDEOMUX_1
+    else:
+      return Mux.VIDEOMUX_2
+
+
 class ChameleondDriver(ChameleondInterface):
   frame_buffer: list
   # The frame index which is used for the regular DumpPixels API.
@@ -187,38 +237,43 @@ class ChameleondDriver(ChameleondInterface):
   @dataclass
   class Port:
     name: str
+    connector: ConnectorId
+    muxes: dict = field(default_factory=dict)
     video_dev: V4L = None
     audio_dev: object = None
 
     def __post_init__(self):
-      self.is_ite = self.name.startswith("ITE_")
-      self.external_name = self.name.removeprefix("ITE_")
-      if self.name[-1].isdigit():
-        self.port_num = int(self.name[-1])
-      self.connector_type = self.external_name.removesuffix(str(self.port_num))
+      # Implicit videomux configuration
+      self.muxes[self.connector.mux()] = (self.connector.mux_arg(), self.video_dev.videomux_end)
+      self.is_ite = Mux.ITE in self.muxes
+
+      self.connector_type = self.connector.value.type.upper()
 
       self.has_video = self.video_dev is not None
       self.has_audio = self.audio_dev is not None
 
-      if self.is_ite:
-        self.ite_port = getattr(EC_PROTO.it68051_port_num, f"PORT{self.port_num}")
-      dest_enum = EC_PROTO.videomux_set_request.videomux_dest
-      self.videomux_direction = dest_enum.RX if self.is_ite else dest_enum.FPGA
-
       self.edid = None
 
-  ite_v4l_dev = V4L("/dev/v4l/by-path/platform-c0060500.video-video-index0", pixelformat="RX24")
-  PORTS = [
-    Port("DP1",        video_dev=V4L("/dev/v4l/by-path/platform-c0060a00.video-video-index0", pixelformat="RGB3")), # SST
-    Port("DP2",        video_dev=V4L("/dev/v4l/by-path/platform-c0060600.video-video-index0", pixelformat="RGB3")), # MST
-    Port("ITE_DP1",    video_dev=ite_v4l_dev),
-    Port("ITE_DP2",    video_dev=ite_v4l_dev),
-    Port("ITE_HDMI1",  video_dev=ite_v4l_dev),
-    Port("ITE_HDMI2",  video_dev=ite_v4l_dev),
+  ite_v4l_dev = V4L(0xc0060500, pixelformat="RX24", videomux_end=VIDEOMUX_ITE)
+  PORTS = {
+          PortId.FPGA_DP1:  Port("FPGA DP1 (left)", ConnectorId.LEFT_DP,
+                                 video_dev=V4L(0xc0060a00, pixelformat="RGB3",
+                                               videomux_end=VIDEOMUX_FPGA)), # SST
+          PortId.FPGA_DP2:  Port("FPGA DP2 (right)", ConnectorId.RIGHT_DP,
+                                 video_dev=V4L(0xc0060600, pixelformat="RGB3",
+                                               videomux_end=VIDEOMUX_FPGA)), # MST
+          PortId.ITE_DP1:   Port("ITE DP1 (left)", ConnectorId.LEFT_DP, video_dev=ite_v4l_dev,
+                                 muxes={Mux.ITE: ITE_PORT_1}),
+          PortId.ITE_DP2:   Port("ITE DP2 (right)", ConnectorId.RIGHT_DP, video_dev=ite_v4l_dev,
+                                 muxes={Mux.ITE: ITE_PORT_2}),
+          PortId.ITE_HDMI1: Port("ITE HDMI1 (left)", ConnectorId.LEFT_HDMI, video_dev=ite_v4l_dev,
+                                 muxes={Mux.ITE: ITE_PORT_1}),
+          PortId.ITE_HDMI2: Port("ITE HDMI2 (right)", ConnectorId.RIGHT_HDMI, video_dev=ite_v4l_dev,
+                                 muxes={Mux.ITE: ITE_PORT_2}),
     #PORT("LINE_IN",   audio_dev=), # SSM2603
     #PORT("AUDIO_OUT", audio_dev=), # SSM2603
     #PORT("MIC",       audio_dev=), # SSM2603
-  ]
+  }
 
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
@@ -324,7 +379,7 @@ class ChameleondDriver(ChameleondInterface):
     """Reset the in-fpga decoder states."""
 
     # Disconect by default the in-fpga decoder HPDs
-    for port_id, port in enumerate(self.PORTS):
+    for port_id, port in self.PORTS.items():
       if port.has_video and not port.is_ite:
         self.Unplug(port_id)
 
@@ -389,6 +444,17 @@ class ChameleondDriver(ChameleondInterface):
       "--cursor-file", f"/tmp/{cursor}.chameleond_log_cursor",
     ])
 
+  def GetPortName(self, port_id):
+    """Get a human friendly name of the port.
+
+    Args:
+      port_id: The ID of the video port.
+
+    Returns:
+      String with name.
+    """
+    return self.PORTS[port_id].name
+
   def GetDetectedStatus(self):
     """Returns detetcted status of all devices.
 
@@ -399,7 +465,7 @@ class ChameleondDriver(ChameleondInterface):
       e.g. [('HDMI', True), ('MIC', False)]
     """
     return [(port.name, i in self.ProbePorts())
-              for i, port in enumerate(self.PORTS)]
+              for i, port in self.PORTS.items()]
 
   def GetSupportedPorts(self):
     """Returns all supported ports on the board.
@@ -410,7 +476,7 @@ class ChameleondDriver(ChameleondInterface):
     Returns:
       A tuple of port_id, for all supported ports on the board.
     """
-    return tuple(range(len(self.PORTS)))
+    return tuple([i.value for i in self.PORTS])
 
   def GetSupportedInputs(self):
     """Returns all supported input ports on the board.
@@ -561,6 +627,104 @@ class ChameleondDriver(ChameleondInterface):
         raise ChameleondError(f"{port} needs to have an EDID applied first before plugging.")
       port.video_dev.set_edid(port.edid)
 
+  def _is_port_routed(self, port):
+    """Returns true if muxes are set in the way that video reach the port.
+
+    Args:
+      port: Port() instance
+
+    Returns:
+      True if the port is routed; otherwise, False.
+    """
+    for mux, direction in port.muxes.items():
+      match mux:
+        case Mux.VIDEOMUX_1 | Mux.VIDEOMUX_2:
+          board_mux_conf = self.videomux_service.get()
+          current_direction = getattr(board_mux_conf, direction[0])
+          if current_direction != direction[1]:
+            return False
+        case Mux.ITE:
+          if self.it68051_service.get_selected_port().port != direction:
+            return False
+    return True
+
+  def _mux_to_port(self, port):
+    """Set muxes to route to the port
+
+    Args:
+      port: Port() instance
+    """
+    for mux, direction in port.muxes.items():
+      match mux:
+        case Mux.VIDEOMUX_1 | Mux.VIDEOMUX_2:
+          self.videomux_service.set(
+            **{direction[0]: direction[1]}
+          )
+        case Mux.ITE:
+          self.it68051_service.select_port(port=direction)
+
+  def _is_mutually_exclusive(self, port1, port2):
+    """Returns true if the first port is mutually exclusive with the second port.
+
+    Ports are mutually exclusive if they share connector or paths in muxes.
+
+    Args:
+      port1: Port() instance
+      port2: Port() instance
+
+    Returns:
+      True if ports are mutually exclusive; otherwise, False.
+    """
+    for mux in port1.muxes:
+      if not mux in port2.muxes:
+        continue
+      match mux:
+        case Mux.VIDEOMUX_1 | Mux.VIDEOMUX_2:
+          if port1.muxes[mux] == port2.muxes[mux]:
+            # The same mux configuration, so no conflict
+            continue
+          if port1.muxes[mux][0] == port2.muxes[mux][0]:
+            # Ports share connector, so they are in confilct
+            return True
+          if port1.muxes[mux][1] == port2.muxes[mux][1]:
+            # Ports share destination, so they are in confilct
+            return True
+        case Mux.ITE:
+          if port1.muxes[mux] != port2.muxes[mux]:
+            # Ports use different ITE port, so they are in conflict
+            return True
+    return False
+
+  def IsConflict(self, port_id_a, port_id_b):
+    """Check if ports can't be plugged at the same time.
+
+    Args:
+      port_id_a: The ID of the video port.
+      port_id_b: The ID of the video port.
+
+    Returns:
+      True if ports can't be plugged at the same time. Flase otherwise.
+    """
+    return self._is_mutually_exclusive(self.PORTS[port_id_a], self.PORTS[port_id_b])
+
+  def GetMutuallyExclusivePorts(self, port_id):
+    """Get ports that can't be plugged at the same time.
+
+    Args:
+      port_id: The ID of the video port.
+
+    Returns:
+      Tuple of port's IDs that can't be plugged at the same time as port_id.
+    """
+    port = self.PORTS[port_id]
+    port_ids = []
+    for i, other_port in self.PORTS.items():
+      if other_port.has_video:
+        if self._is_mutually_exclusive(port, other_port):
+          port_ids.append(i.value)
+
+    return tuple(port_ids)
+
   def IsPlugged(self, port_id):
     """Returns true if the port is emulated as plugged.
 
@@ -576,18 +740,12 @@ class ChameleondDriver(ChameleondInterface):
       # check videomux via the EC
 
       # let's check if videomux is routed the right way
-      board_mux_conf = self.videomux_service.get()
-      current_direction = getattr(board_mux_conf, port.external_name.lower())
-      if current_direction != port.videomux_direction:
+      if not self._is_port_routed(port):
         return False
 
       if port.is_ite:
-        # make sure ite is on the correct port
-        if self.it68051_service.get_selected_port().port != port.ite_port:
-          return False
-
         # make sure we're emitting hpd
-        if self.it68051_service.get_hpd(port=port.ite_port).on_off == 0:
+        if self.it68051_service.get_hpd(port=port.muxes[Mux.ITE]).on_off == 0:
           return False
       else: # in-fpga decoder
         # HPD is active when V4L has an EDID set
@@ -605,29 +763,20 @@ class ChameleondDriver(ChameleondInterface):
     port = self.PORTS[port_id]
 
     if port.has_video:
-      for other_port_id, other_port in enumerate(self.PORTS):
+      for other_port_id, other_port in self.PORTS.items():
         if port is other_port:
           continue
-        if self.IsPlugged(other_port_id):
-          if port.is_ite and other_port.is_ite:
-            raise ChameleondError(f"Other {other_port} already connected to ITE path.")
-          if port.external_name == other_port.external_name:
-            raise ChameleondError(f"Other path {other_port} connected to the same external port.")
+        if self._is_mutually_exclusive(port, other_port):
+          if self.IsPlugged(other_port_id):
+            raise ChameleondError(f"Other mutually exclusive port:{other_port} already connected")
 
       # set routing via the EC
-      self.videomux_service.set(
-        **{port.external_name.lower(): port.videomux_direction}
-      )
-      if port.is_ite:
-        self.it68051_service.select_port(port=port.ite_port)
-      else:
-        # fpga decoder routing is always hardcoded into separate v4l devices
-        pass # so no need to mux at this layer
+      self._mux_to_port(port)
 
       self._send_cached_edid_to_hardware(port)
 
       if port.is_ite:
-        self.it68051_service.set_hpd(port=port.ite_port, on_off=1)
+        self.it68051_service.set_hpd(port=port.muxes[Mux.ITE], on_off=1)
       else:
         # HPD was already asserted by just setting the edid a little up
         assert port.video_dev.get_edid(), f"by now {port} should have had an EDID set"
@@ -654,7 +803,7 @@ class ChameleondDriver(ChameleondInterface):
     port = self.PORTS[port_id]
     assert port.has_video
     if port.is_ite:
-      self.it68051_service.set_hpd(port=port.ite_port, on_off=0)
+      self.it68051_service.set_hpd(port=port.muxes[Mux.ITE], on_off=0)
     else:
       # Clearing EDID deasserts HPD
       port.video_dev.clear_edid()
@@ -846,15 +995,15 @@ class ChameleondDriver(ChameleondInterface):
     source_presence = self.board_service.get_source_presence()
 
     port_ids = []
-    for i, port in enumerate(self.PORTS):
+    for i, port in self.PORTS.items():
       if port.has_video:
-        connected = getattr(source_presence, port.external_name.lower())
+        connected = getattr(source_presence, port.connector.mux_arg())
         if port.connector_type == "HDMI" and board_version <= 2:
           # HACK(b/220139622): Temporarly lie, hw issue on proto2
           # otherwise autotest gets mad
           connected = False
       if connected:
-        port_ids.append(i)
+        port_ids.append(i.value)
 
     return tuple(port_ids)
 
