@@ -241,6 +241,9 @@ class ChameleondDriver(ChameleondInterface):
     muxes: dict = field(default_factory=dict)
     video_dev: V4L = None
     audio_dev: object = None
+    parent: PortId = None
+    is_mst: bool = False
+    children: set = field(default_factory=set)
 
     def __post_init__(self):
       # Implicit videomux configuration
@@ -256,12 +259,13 @@ class ChameleondDriver(ChameleondInterface):
 
   ite_v4l_dev = V4L(0xc0060500, pixelformat="RX24", videomux_end=VIDEOMUX_ITE)
   PORTS = {
-          PortId.FPGA_DP1:  Port("FPGA DP1 (left)", ConnectorId.LEFT_DP,
+          PortId.FPGA_DP1:  Port("FPGA DP1 (left) aka DP1 SST", ConnectorId.LEFT_DP,
                                  video_dev=V4L(0xc0060a00, pixelformat="RGB3",
                                                videomux_end=VIDEOMUX_FPGA)), # SST
-          PortId.FPGA_DP2:  Port("FPGA DP2 (right)", ConnectorId.RIGHT_DP,
+          PortId.FPGA_DP2:  Port("FPGA DP2 (right) aka DP2 MST0", ConnectorId.RIGHT_DP,
                                  video_dev=V4L(0xc0060600, pixelformat="RGB3",
-                                               videomux_end=VIDEOMUX_FPGA)), # MST
+                                               videomux_end=VIDEOMUX_FPGA),
+                                 is_mst=True), # MST
           PortId.ITE_DP1:   Port("ITE DP1 (left)", ConnectorId.LEFT_DP, video_dev=ite_v4l_dev,
                                  muxes={Mux.ITE: ITE_PORT_1}),
           PortId.ITE_DP2:   Port("ITE DP2 (right)", ConnectorId.RIGHT_DP, video_dev=ite_v4l_dev,
@@ -270,6 +274,18 @@ class ChameleondDriver(ChameleondInterface):
                                  muxes={Mux.ITE: ITE_PORT_1}),
           PortId.ITE_HDMI2: Port("ITE HDMI2 (right)", ConnectorId.RIGHT_HDMI, video_dev=ite_v4l_dev,
                                  muxes={Mux.ITE: ITE_PORT_2}),
+          PortId.FPGA_DP2_MST1: Port("FPGA DP2 MST1", ConnectorId.RIGHT_DP,
+                                     video_dev=V4L(0xc0060700, pixelformat="RGB3",
+                                                   videomux_end=VIDEOMUX_FPGA),
+                                     parent=PortId.FPGA_DP2_MST0, is_mst=True),
+          PortId.FPGA_DP2_MST2: Port("FPGA DP2 MST2", ConnectorId.RIGHT_DP,
+                                     video_dev=V4L(0xc0060800, pixelformat="RGB3",
+                                                   videomux_end=VIDEOMUX_FPGA),
+                                     parent=PortId.FPGA_DP2_MST0, is_mst=True),
+          PortId.FPGA_DP2_MST3: Port("FPGA DP2 MST3", ConnectorId.RIGHT_DP,
+                                     video_dev=V4L(0xc0060900, pixelformat="RGB3",
+                                                   videomux_end=VIDEOMUX_FPGA),
+                                     parent=PortId.FPGA_DP2_MST0, is_mst=True),
     #PORT("LINE_IN",   audio_dev=), # SSM2603
     #PORT("AUDIO_OUT", audio_dev=), # SSM2603
     #PORT("MIC",       audio_dev=), # SSM2603
@@ -280,6 +296,14 @@ class ChameleondDriver(ChameleondInterface):
 
     self.frame_buffer = []
     self.edid_database = {}
+
+    # Create dict of root ports as it is useful sometimes
+    self.ROOT_PORTS = {i: p for i, p in self.PORTS.items() if p.parent is None}
+    # Create children sets
+    for i, port in self.PORTS.items():
+      if port.parent is None:
+        continue
+      self.PORTS[port.parent].children.add(i)
 
     self.ec_serial = serial.Serial(self.EC_SERIAL_PORT, 115200, timeout=0.01)
     callback_client_impl = pw_hdlc.rpc.callback_client.Impl(
@@ -379,7 +403,7 @@ class ChameleondDriver(ChameleondInterface):
     """Reset the in-fpga decoder states."""
 
     # Disconect by default the in-fpga decoder HPDs
-    for port_id, port in self.PORTS.items():
+    for port_id, port in self.ROOT_PORTS.items():
       if port.has_video and not port.is_ite:
         self.Unplug(port_id)
 
@@ -465,7 +489,7 @@ class ChameleondDriver(ChameleondInterface):
       e.g. [('HDMI', True), ('MIC', False)]
     """
     return [(port.name, i in self.ProbePorts())
-              for i, port in self.PORTS.items()]
+              for i, port in self.ROOT_PORTS.items()]
 
   def GetSupportedPorts(self):
     """Returns all supported ports on the board.
@@ -476,7 +500,7 @@ class ChameleondDriver(ChameleondInterface):
     Returns:
       A tuple of port_id, for all supported ports on the board.
     """
-    return tuple([i.value for i in self.PORTS])
+    return tuple([i.value for i in self.ROOT_PORTS])
 
   def GetSupportedInputs(self):
     """Returns all supported input ports on the board.
@@ -511,6 +535,32 @@ class ChameleondDriver(ChameleondInterface):
       This value will be used later in tests, so it cannot be arbitrary.
     """
     return self.PORTS[port_id].connector_type
+
+  def GetChildren(self, port_id):
+    """Returns IDs of children of the selected port.
+
+    Get children ports that depends on the selected port. Children ports can be plugged
+    using PlugWithChildren method. Child ID can be used as a port ID in all methods
+    except Plug, Unplug and all HPD functions. Unplug of parent will unplug children.
+
+    Args:
+      port_id: The ID of the video port.
+
+    Returns:
+      Tuple of children IDs.
+    """
+    return tuple([c.value for c in self.PORTS[port_id].children])
+
+  def IsMst(self, port_id):
+    """Returns true if the port is configured as MST.
+
+    Args:
+      port_id: The ID of the video port.
+
+    Returns:
+      True if the port is MST; otherwise, False.
+    """
+    return self.PORTS[port_id].is_mst
 
   def HasAudioSupport(self, port_id):
     """Returns true if the port has audio support.
@@ -599,8 +649,8 @@ class ChameleondDriver(ChameleondInterface):
 
     port.edid = edid_bytes
     if self.IsPlugged(port_id):
-      self._send_cached_edid_to_hardware(port)
       if port.is_ite:
+        self._send_cached_edid_to_hardware(port)
         logging.warning("Might be too late to send EDID to ITE chip after port's been plugged.")
       else:
         logging.warning("New EDID will be used after next Plug() or FireHpdPulse()")
@@ -749,9 +799,44 @@ class ChameleondDriver(ChameleondInterface):
           return False
       else: # in-fpga decoder
         # HPD is active when V4L has an EDID set
+        while not port.parent is None:
+          # Check if child has EDID set and move to parent
+          if not bool(port.video_dev.get_edid()):
+            return False
+          port = self.PORTS[port.parent]
         return bool(port.video_dev.get_edid())
 
     # If nothing caught yet, it's probably connected
+    return True
+
+  def _can_be_plugged(self, port_id, port, raise_error=False):
+    """Check if port can be plugged now.
+
+    If video port cannot be plugged and raise_error is True, then appropriate error is raised.
+
+    Args:
+      port: Port() instance
+
+    Returns:
+      True if port can be plugged; otherwise, False.
+    """
+    if not port.has_video:
+      return False
+
+    if not port.parent is None:
+      if raise_error:
+        raise ChameleondError(f"{port_id} ({port}) has a parent. Use PlugWithChildren"
+                              f"({port.parent}, [{port_id}]) instead.")
+      return False
+    for other_port_id, other_port in self.PORTS.items():
+      if port is other_port:
+        continue
+      if self._is_mutually_exclusive(port, other_port):
+        if self.IsPlugged(other_port_id):
+          if raise_error:
+            raise ChameleondError(f"Other mutually exclusive port:{other_port} already connected")
+          return False
+
     return True
 
   def Plug(self, port_id):
@@ -762,13 +847,10 @@ class ChameleondDriver(ChameleondInterface):
     """
     port = self.PORTS[port_id]
 
-    if port.has_video:
-      for other_port_id, other_port in self.PORTS.items():
-        if port is other_port:
-          continue
-        if self._is_mutually_exclusive(port, other_port):
-          if self.IsPlugged(other_port_id):
-            raise ChameleondError(f"Other mutually exclusive port:{other_port} already connected")
+    if self._can_be_plugged(port_id, port, raise_error=True):
+      # If port has a child, unplug first to clear its EDID
+      if len(port.children) > 0:
+        self.UnplugHPD(port_id)
 
       # set routing via the EC
       self._mux_to_port(port)
@@ -783,6 +865,42 @@ class ChameleondDriver(ChameleondInterface):
 
     # If we switch v4l frameworks, perhaps re-open the device here
 
+  def PlugWithChildren(self, port_id, children_ids):
+    """Plug port with its children.
+
+    Plug port and its selected children.
+
+    Args:
+      port_id: The ID of the video port.
+      children_ids: Tuple of children ports to plug.
+    """
+    port = self.PORTS[port_id]
+
+    # Check if these are really children or grandchildren
+    for child in children_ids:
+      child_port = self.PORTS[child]
+      while child_port.parent != port_id:
+        if child_port.parent is None:
+          raise ChameleondError(f"{child} is not a child of {port_id}")
+        child_port = self.PORTS[child_port.parent]
+
+    if self._can_be_plugged(port_id, port, raise_error=True):
+      # Unplug HPD first to prevent flickering while we are setting edids to children
+      self.UnplugHPD(port_id)
+
+      self._mux_to_port(port)
+
+      for child in children_ids:
+        self._send_cached_edid_to_hardware(self.PORTS[child])
+
+      self._send_cached_edid_to_hardware(port)
+
+      if port.is_ite:
+        self.it68051_service.set_hpd(port=port.muxes[Mux.ITE], on_off=1)
+      else:
+        # HPD was already asserted by just setting the edid a little up
+        assert port.video_dev.get_edid(), f"by now {port} should have had an EDID set"
+
   def Unplug(self, port_id):
     """Emulates unplug, like deasserting HPD line to low on a video port.
 
@@ -790,8 +908,19 @@ class ChameleondDriver(ChameleondInterface):
       port_id: The ID of the input/output port.
     """
     port = self.PORTS[port_id]
+    if not port.parent is None:
+      raise ChameleondError(f"{port_id} ({port}) has a parent. Use Unplug({port.parent}) instead")
     if port.has_video:
       port.edid = None # forget the port's edid
+
+      def clear_grandchildren(port):
+        for child in port.children:
+          child_port = self.PORTS[child]
+          if child_port.has_video:
+            child_port.edid = None
+          clear_grandchildren(child_port)
+
+      clear_grandchildren(port)
       self.UnplugHPD(port_id)
 
   def UnplugHPD(self, port_id):
@@ -807,6 +936,15 @@ class ChameleondDriver(ChameleondInterface):
     else:
       # Clearing EDID deasserts HPD
       port.video_dev.clear_edid()
+
+      def clear_grandchildren(port):
+        for child in port.children:
+          child_port = self.PORTS[child]
+          if child_port.has_video:
+            child_port.video_dev.clear_edid()
+          clear_grandchildren(child_port)
+
+      clear_grandchildren(port)
 
   def FireHpdPulse(self, port_id,
                    deassert_interval_usec, assert_interval_usec=None,
@@ -995,7 +1133,7 @@ class ChameleondDriver(ChameleondInterface):
     source_presence = self.board_service.get_source_presence()
 
     port_ids = []
-    for i, port in self.PORTS.items():
+    for i, port in self.ROOT_PORTS.items():
       if port.has_video:
         connected = getattr(source_presence, port.connector.mux_arg())
         if port.connector_type == "HDMI" and board_version <= 2:

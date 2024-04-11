@@ -181,6 +181,32 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
         """
         raise NotImplementedError("GetPortName")
 
+    def GetChildren(self, port_id):
+        """Returns IDs of children of the selected port.
+
+        Get children ports that depends on the selected port. Children ports can be plugged
+        using PlugWithChildren method. Child ID can be used as a port ID in all methods
+        except Plug, Unplug and all HPD functions. Unplug of parent will unplug children.
+
+        Args:
+          port_id: The ID of the video port.
+
+        Returns:
+          Tuple of children IDs.
+        """
+        raise NotImplementedError("GetChildren")
+
+    def IsMst(self, port_id):
+        """Returns true if the port is configured as MST.
+
+        Args:
+          port_id: The ID of the video port.
+
+        Returns:
+          True if the port is MST; otherwise, False.
+        """
+        raise NotImplementedError("IsMst")
+
     def HasAudioSupport(self, port_id):
         """Returns true if the port has audio support.
 
@@ -308,6 +334,17 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
           port_id: The ID of the input/output port.
         """
         raise NotImplementedError("Plug")
+
+    def PlugWithChildren(self, port_id, children_ids):
+        """Plug port with its children.
+
+        Plug port and its selected children.
+
+        Args:
+          port_id: The ID of the video port.
+          children_ids: Tuple of children ports to plug.
+        """
+        raise NotImplementedError("PlugWithChildren")
 
     def Unplug(self, port_id):
         """Emulates unplug, like deasserting HPD line to low on a video port.
