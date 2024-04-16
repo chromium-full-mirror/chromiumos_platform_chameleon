@@ -7,6 +7,7 @@
 
 import argparse
 import codecs
+import os.path
 import subprocess
 import sys
 import tempfile
@@ -34,7 +35,22 @@ def read_edid(filename):
     edid += codecs.decode(line.strip(), "hex")
   return edid.ljust(256, b'\0')
 
-def capture_to_file(chameleon, port_id, filename="image.png"):
+def get_i_filename(i, filename):
+  d, f = os.path.split(filename)
+  return os.path.join(d, f"{i}_{f}")
+
+def save_to_file(pixels, size_str, filename):
+  print('Got pixel size %d' % len(pixels))
+  with tempfile.NamedTemporaryFile(suffix='.rgb') as f:
+    print('Temporarily write to file:', f.name)
+    f.write(pixels)
+    f.flush()
+    command = ['convert', '-size', size_str, '-depth', '8']
+    command += [f.name, filename]
+    subprocess.check_call(command)
+    print('Outputted to file:', filename)
+
+def capture_to_file(chameleon, port_id, count=1, filename="image.png"):
   """Writes an image to a file, uses `convert`
 
   Args:
@@ -47,17 +63,14 @@ def capture_to_file(chameleon, port_id, filename="image.png"):
   size_str = '%dx%d' % (width, height)
 
   print('Capturing the screen size %s...' % size_str)
-  pixels = chameleon.DumpPixels(port_id).data
-
-  print('Got pixel size %d' % len(pixels))
-  with tempfile.NamedTemporaryFile(suffix='.rgb') as f:
-    print('Temporarily write to file:', f.name)
-    f.write(pixels)
-    f.flush()
-    command = ['convert', '-size', size_str, '-depth', '8']
-    command += [f.name, options.output]
-    subprocess.check_call(command)
-    print('Outputted to file:', options.output)
+  if count == 1:
+    pixels = chameleon.DumpPixels(port_id).data
+    save_to_file(pixels, size_str, filename)
+  else:
+    chameleon.CaptureVideo(port_id, count)
+    for i in range(count):
+      pixels = chameleon.ReadCapturedFrame(i).data
+      save_to_file(pixels, size_str, get_i_filename(i, filename))
 
 def screenshot(chameleon, options):
   """Main entry point of the tool, takes a screenshot.
@@ -144,11 +157,18 @@ def screenshot(chameleon, options):
       else:
         raise Exception("Timeout while WaitVideoInputStable()")
 
-    capture_to_file(chameleon, port_id, filename=options.output)
+    capture_to_file(chameleon, port_id, count=options.count, filename=options.output)
 
     if options.open:
-      print(f"Opening {options.output!r}...")
-      subprocess.call(["xdg-open", options.output])
+      if options.count == 1:
+        print(f"Opening {options.output!r}...")
+        subprocess.call(["xdg-open", options.output])
+      else:
+        for i in range(options.count):
+          file = get_i_filename(i, options.output)
+          print(f"Opening {file!r}...")
+          subprocess.call(["xdg-open", file])
+
 
   except xmlrpc.client.Fault as e:
     if "already connected, don't want to disconnect it." in e.faultString:
@@ -187,6 +207,8 @@ if __name__ == "__main__":
                       help="output file name of screenshot")
   parser.add_argument("--open", action="store_true",
                       help="xdg-open the output in a GUI picture viewer")
+  parser.add_argument("--count", type=int, default=1,
+                      help="how many frames to collect")
   options = parser.parse_args()
 
   chameleon = xmlrpc.client.ServerProxy(f"http://{options.host}:{options.port}")
