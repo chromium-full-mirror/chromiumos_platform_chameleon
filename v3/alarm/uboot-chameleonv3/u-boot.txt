@@ -10,4 +10,4 @@ serverip=192.168.0.1
 bootcmd_txt=run bootcmd_mmc
 
 # Kernel cmdline
-bootargs=cma=256M console=ttyS1,115200 root=/dev/mmcblk0p3 rw rootwait
+bootargs=vmalloc=768M cma=768M console=ttyS1,115200 root=/dev/mmcblk0p3 rw rootwait
