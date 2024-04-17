@@ -40,6 +40,24 @@ ITE_PORT_2 = EC_PROTO.it68051_port_num.PORT2
 VIDEOMUX_ITE = EC_PROTO.videomux_set_request.videomux_dest.RX
 VIDEOMUX_FPGA = EC_PROTO.videomux_set_request.videomux_dest.FPGA
 
+# TODO(b/270594577): We need to upstream this fix to the linuxpy, monkey patch it for now
+def create_buffers(self, buffer_type: dev.BufferType, memory: dev.Memory, count: int) -> list[raw.v4l2_buffer]:
+  """request + query buffers"""
+  fd = self.fileno()
+  req = dev.request_buffers(fd, buffer_type, memory, count)
+  return [dev.query_buffer(fd, buffer_type, memory, index) for index in range(req.count)]
+
+Device.create_buffers = create_buffers
+
+def create_buffers_change_size(method):
+  def decorator_create_buffers_change_size(self, memory: dev.Memory):
+    buffers = method(self, memory)
+    self.size = len(buffers)
+    return buffers
+  return decorator_create_buffers_change_size
+
+dev.BufferManager.create_buffers = create_buffers_change_size(dev.BufferManager.create_buffers)
+
 class ChameleondError(Exception):
   pass
 
@@ -135,7 +153,7 @@ class V4L:
           # Make sure that expected pixelformat is selected
           video_dev.set_format(BufType.VIDEO_CAPTURE, 0, 0, self.pixelformat)
           try:
-            with VideoCapture(video_dev, source=raw.Capability.STREAMING) as video_capture:
+            with VideoCapture(video_dev, size=count, source=raw.Capability.STREAMING) as video_capture:
               video_capture.buffer._process_frame_arg = buf.file
               video_capture.buffer._process_frame_callback = callback
               video_capture.buffer.raw_grab = types.MethodType(self._process_frame,
