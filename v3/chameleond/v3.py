@@ -289,6 +289,26 @@ class ChameleondDriver(ChameleondInterface):
   # The frame index which is used for the regular DumpPixels API.
   _DEFAULT_FRAME_INDEX = 0
   _DEFAULT_FRAME_LIMIT = 1
+  # Default EDID ID
+  _DEFAULT_EDID_ID = 0
+  _DEFAULT_EDID_3840x2160 = bytes.fromhex("""
+     00FFFFFFFFFFFF0022F01A3200000000
+     2E180104B54728783A87D5A8554D9F25
+     0E5054210800D1C0A9C081C0D100B300
+     9500A94081804DD000A0F0703E803020
+     3500C48F2100001A000000FD00183C1E
+     873C000A202020202020000000FC0048
+     502053706563747265203332000000FF
+     00434E43393430303030310A2020018F
+     020318F14B101F041303120211010514
+     2309070783010000A36600A0F0701F80
+     30203500C48F2100001A565E00A0A0A0
+     295030203500C48F2100001AEF5100A0
+     F070198030203500C48F2100001AB339
+     00A080381F4030203A00C48F2100001A
+     283C80A070B0234030203600C48F2100
+     001A00000000000000000000000000C4
+     """)
 
   edid_database: dict # {edid_id: edid_bytes}
 
@@ -357,7 +377,7 @@ class ChameleondDriver(ChameleondInterface):
     super().__init__(*args, **kwargs)
 
     self.frame_buffer = []
-    self.edid_database = {}
+    self.edid_database = {self._DEFAULT_EDID_ID: self._DEFAULT_EDID_3840x2160}
 
     # Create dict of root ports as it is useful sometimes
     self.ROOT_PORTS = {i: p for i, p in self.PORTS.items() if p.parent is None}
@@ -495,7 +515,7 @@ class ChameleondDriver(ChameleondInterface):
     for port_id, port in self.PORTS.items():
       if port.has_video:
         port.edid = None
-    self.edid_database = {}
+    self.edid_database = {self._DEFAULT_EDID_ID: self._DEFAULT_EDID_3840x2160}
 
     self.frame_buffer.clear()
 
@@ -671,6 +691,8 @@ class ChameleondDriver(ChameleondInterface):
     Args:
       edid_id: The ID of the EDID, which was created by CreateEdid().
     """
+    if edid_id == self._DEFAULT_EDID_ID:
+      raise ChameleondError(f"Default EDID cannot be destroyed.")
     del self.edid_database[edid_id]
 
   def ReadEdid(self, port_id):
