@@ -565,7 +565,7 @@ class BluezPeripheral(PeripheralKit):
         reset_cmds = [
             "systemctl daemon-reload",
             "service bluetooth restart",
-            "/etc/init.d/chameleond restart",
+            "service chameleond restart",
         ]
 
         # If we know what device type is used next, we can specify which plugins
