@@ -569,6 +569,24 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
         """
         raise NotImplementedError("ReadCapturedFrame")
 
+    def GetCapturedFrameMetadata(self, frame_index):
+        """Reads the metadata of the captured frame.
+
+        Args:
+          frame_index: The index of the frame to read.
+
+        Returns:
+          A dict containing frame metadata. Fields are omitted if unknown.
+          Possible keys are:
+            width (int): width of the frame in pixels
+            height (int): height of the frame in pixels
+            timestamp (float): time when kernel received the frame in seconds
+            port_id (int): Video port from which the frame was captured
+            sequence (int): Sequence number of the frame
+            size (int): Size of the frame in bytes
+        """
+        raise NotImplementedError("GetCapturedFrameMetadata")
+
     def CacheFrameThumbnail(self, frame_index, ratio=2):
         """Caches the thumbnail of the dumped field to a temp file.
 

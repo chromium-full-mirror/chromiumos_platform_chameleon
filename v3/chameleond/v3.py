@@ -142,7 +142,7 @@ class V4L:
     # Write whole frame to the file
     file.write(memoryview(frame)[:buff.bytesused])
 
-  def get_frame(self, count=1, timeout=5, callback=save_frame_to_file):
+  def get_frame(self, port_id, count=1, timeout=5, callback=save_frame_to_file):
     with Device(self.path) as video_dev:
       with EventReader(video_dev) as event_queue:
         video_dev.subscribe_event(EventType.SOURCE_CHANGE)
@@ -150,6 +150,7 @@ class V4L:
           start = time.clock_gettime(time.CLOCK_MONOTONIC)
           # For now save frames into tempfile to keep previous behavior
           buf = tempfile.NamedTemporaryFile(prefix="chameleond_", suffix=".fb")
+          info = []
           # Make sure that expected pixelformat is selected
           video_dev.set_format(BufType.VIDEO_CAPTURE, 0, 0, self.pixelformat)
           try:
@@ -163,16 +164,14 @@ class V4L:
                 frame = video_capture.buffer.frame_reader.read(timeout)
                 if frame is None:
                   raise self.Timeout()
+                info.append({"width": frame.width,
+                             "height": frame.height,
+                             "timestamp": frame.timestamp,
+                             "port_id": port_id,
+                             "sequence": frame.frame_nb,
+                             "size": frame.nbytes,
+                            })
 
-              # All frames collected, all of them have the same size
-              dv_timings = raw.v4l2_dv_timings()
-              ioctl(video_dev.fileno(), raw.IOC.G_DV_TIMINGS, dv_timings)
-              info = {}
-              info["width"] = dv_timings.bt.width
-              info["height"] = dv_timings.bt.height
-              # TODO(b/315132760): Now kernel only support 8 bit per color, but we should take into
-              #                    account what is actual pixel format.
-              info["size"] = dv_timings.bt.width * dv_timings.bt.height * 3
               return buf, info
           except OSError as e:
             # Check if exception is due to an event
@@ -266,6 +265,7 @@ class Mux(Enum):
 
 
 Connector = namedtuple('Connector', ['type', 'id'])
+Frame = namedtuple('Frame', ['data', 'metadata'])
 
 
 class ConnectorId(Enum):
@@ -1147,8 +1147,8 @@ class ChameleondDriver(ChameleondInterface):
         v4l_frame_timeout = None
         if end_time != float("inf"):
           v4l_frame_timeout = end_time - time.time()
-        _buf, frame_info = port.video_dev.get_frame(timeout=v4l_frame_timeout)
-        frame_size = frame_info["size"]
+        _buf, frame_info = port.video_dev.get_frame(port_id, timeout=v4l_frame_timeout)
+        frame_size = frame_info[0]["size"]
     except V4L.Timeout:
       logging.warning("WaitVideoInputStable timed out at V4L")
       return False
@@ -1255,10 +1255,10 @@ class ChameleondDriver(ChameleondInterface):
 
     self.frame_buffer.clear()
 
-    buf, v4l_frame_info = dev.get_frame(frame_count)
+    buf, v4l_frame_info = dev.get_frame(port_id, frame_count)
     if port.is_ite:
-      assert ec_frame_info["hactive"] == v4l_frame_info["width"] and \
-              ec_frame_info["vactive"] == v4l_frame_info["height"], \
+      assert ec_frame_info["hactive"] == v4l_frame_info[0]["width"] and \
+              ec_frame_info["vactive"] == v4l_frame_info[0]["height"], \
               "Resolution directly from EC should match what we get via FPGA + V4L"
 
     raw_buffer = numpy.memmap(buf.name, dtype=numpy.uint8)
@@ -1267,7 +1267,7 @@ class ChameleondDriver(ChameleondInterface):
     # fully interpret dimensions
     frames = raw_buffer.reshape(
       frame_count,
-      v4l_frame_info["height"], v4l_frame_info["width"],
+      v4l_frame_info[0]["height"], v4l_frame_info[0]["width"],
       -1, # let channels get autodetected for now
     )
 
@@ -1278,7 +1278,7 @@ class ChameleondDriver(ChameleondInterface):
     # TODO: Make use of x, y, width, height to crop in software
 
     for i, frame in enumerate(frames):
-      self.frame_buffer.append(frame)
+      self.frame_buffer.append(Frame(frame, v4l_frame_info[i]))
 
       if i==0: logging.debug(f"Captured {frame.size=} {frame.shape=}")
       peek = frame.flatten()[:20].tobytes().hex()
@@ -1294,7 +1294,8 @@ class ChameleondDriver(ChameleondInterface):
       A (width, height) tuple.
     """
 
-    height, width, _channels = self.frame_buffer[-1].shape
+    height = self.frame_buffer[-1].metadata["height"]
+    width = self.frame_buffer[-1].metadata["width"]
     return (width, height)
 
   def ReadCapturedFrame(self, frame_index):
@@ -1309,9 +1310,27 @@ class ChameleondDriver(ChameleondInterface):
       A byte-array of the pixels, wrapped in a xmlrpclib.Binary object.
     """
 
-    frame_bytes = self.frame_buffer[frame_index].flatten().tobytes()
+    frame_bytes = self.frame_buffer[frame_index].data.flatten().tobytes()
 
     return xmlrpc.client.Binary(frame_bytes)
+
+  def GetCapturedFrameMetadata(self, frame_index):
+    """Reads the metadata of the captured frame.
+
+    Args:
+      frame_index: The index of the frame to read.
+
+    Returns:
+      A dict containing frame metadata. Fields are omitted if unknown.
+      Possible keys are:
+        width (int): width of the frame in pixels
+        height (int): height of the frame in pixels
+        timestamp (float): time when kernel received the frame in seconds
+        port_id (int): Video port from which the frame was captured
+        sequence (int): Sequence number of the frame
+        size (int): Size of the frame in bytes
+    """
+    return self.frame_buffer[frame_index].metadata
 
   def DumpPixels(self, port_id, x=None, y=None, width=None, height=None):
     """Dumps the raw pixel array of the selected area.
