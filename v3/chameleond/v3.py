@@ -430,7 +430,7 @@ class ChameleondDriver(ChameleondInterface):
       raise last_error
 
     # Clear EDIDs cached in chameleond
-    for port in self.PORTS:
+    for port_id, port in self.PORTS.items():
       if port.has_video:
         port.edid = None
     self.edid_database = {}
