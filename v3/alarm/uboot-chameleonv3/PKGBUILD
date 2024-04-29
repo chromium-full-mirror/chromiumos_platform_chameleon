@@ -33,7 +33,6 @@ build() {
 }
 
 package() {
-  backup=("boot/u-boot.txt")
   install=u-boot.install
 
   install ../u-boot.txt -Dt "${pkgdir}"/boot/
