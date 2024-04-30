@@ -79,7 +79,7 @@ which FPGA module you have ([see above](#how-to-tell-what-fpga-module-you-have))
 4. Write the image to the card
 
     ```bash
-    sudo dd if=chameleon_480_2.img of=/dev/mmcblk0 bs=1M status=progress oflag=direct conv=fsync
+    sudo dd if=chameleon_270_2.img of=/dev/mmcblk0 bs=1M status=progress oflag=direct conv=fsync
     ```
 
 5. Eject the microSD card
@@ -165,11 +165,28 @@ will handle those.
     a) download a fresh update payload (`*.btrfs.zst`) from the
     [cloud bucket updates/ folder](https://console.cloud.google.com/storage/browser/chromeos-hardware-tools-chameleon-v3/updates)
 
-    b) run:
+    **NOTE:**
+    Make sure that your filename starts with `chameleon`. If it start with
+    `updates_`, remove this prefix. Otherwise, the update process can fail.
 
-        ```
-        v3/alarm/ansible/update.py --payload new_update.btrfs.zst your_chameleon_ip
-        ```
+    b) run:
+    ```
+    v3/alarm/ansible/update.py --payload new_update.btrfs.zst your_chameleon_ip
+    ```
+
+    **NOTE**
+
+    If your update process is stuck on the `Rebooting to new subvolume`,
+    you may need to remove the cached SSH keys for the chameleon board in
+    the `~/.ssh/known_hosts` file.
+    This can be done using the command:
+
+    `ssh-keygen -R your_chameleon_ip`
+
+    You should execute this in a separate shell without stopping the update process.
+    After removing the entries, the updater will ask if you want to
+    continue connecting to the new host.
+    You have to write “yes” and press enter to continue.
 
 ## Interact with chameleond directly
 
