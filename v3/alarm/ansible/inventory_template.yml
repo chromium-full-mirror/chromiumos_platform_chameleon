@@ -12,6 +12,7 @@ all:
     #ssh_key:     '/home/{{host_username}}/cros/src/third_party/chromiumos-overlay/chromeos-base/chromeos-ssh-testkeys/files/testing_rsa'
     ssh_key_pub: '{{ssh_key}}.pub'
     ansible_ssh_private_key_file: '{{ssh_key}}'
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
     # How u-boot package (which loads appropriate fpga bitstream) is selected
     # One of: 270_2, 270_3, 480_2
