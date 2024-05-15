@@ -23,6 +23,11 @@ See <http://go/chameleon-fpga-architecture> for more details.
 * `v3*.sv` describes the whole board
     * According to <http://go/verilog-style#standard-files>
 
+### History
+
+If you are a googler, you can access historical commits by accessing the
+[internal repo](https://chrome-internal.googlesource.com/chromeos/platform/video-chameleon/+/main/v3/fpga).
+
 ### Register map
 
 Register map is available at: [doc/register_map.md](doc/register_map.md)
