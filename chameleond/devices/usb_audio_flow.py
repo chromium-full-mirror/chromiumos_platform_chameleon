@@ -123,9 +123,22 @@ class USBAudioFlow(chameleon_device.Flow):
         Enables audio gadget driver.
         """
         if analog_audio_testbed.Exists():
-            logging.info("Analog audio testbed detected.")
-            analog_audio_testbed.SwitchRelay(True)
+            # Simulate 3.5mm Microphone with TRRS (Pi handles analog audio via USB)
+            use_trrs = False
+            if self._port_id and self._port_id == ids.USB_AUDIO_OUT:
+                logging.info("self.port_id: %s", ids.USB_AUDIO_OUT)
+                use_trrs = True
+            logging.info(
+                "Analog audio testbed detected. Switching Relay to CLOSE(connect) the circuit."
+            )
+            logging.info(
+                "Simulating 3.5mm %s with %s cable.",
+                "Microphone" if use_trrs else "Headphone",
+                "TRRS" if use_trrs else "TRS",
+            )
+            analog_audio_testbed.SwitchRelay(True, use_trrs)
         self._usb_ctrl.EnableDriver()
+        logging.info("Plug: Completed")
 
     def Unplug(self):
         """Emulates unplug for USB audio gadget.
@@ -133,8 +146,22 @@ class USBAudioFlow(chameleon_device.Flow):
         Disables audio gadget driver.
         """
         if analog_audio_testbed.Exists():
-            analog_audio_testbed.SwitchRelay(False)
+            # Simulate 3.5mm Microphone with TRRS (Pi handles analog audio via USB)
+            use_trrs = False
+            if self._port_id and self._port_id == ids.USB_AUDIO_OUT:
+                logging.info("self.port_id: %s", ids.USB_AUDIO_OUT)
+                use_trrs = True
+            logging.info(
+                "Analog audio testbed detected. Switching Relay to OPEN(disconnect) the circuit."
+            )
+            logging.info(
+                "Stop simulating 3.5mm %s with %s cable.",
+                "Microphone" if use_trrs else "Headphone",
+                "TRRS" if use_trrs else "TRS",
+            )
+            analog_audio_testbed.SwitchRelay(False, use_trrs)
         self._usb_ctrl.DisableDriver()
+        logging.info("Unplug: Completed")
 
     def DoFSM(self):
         """Do nothing for USBAudioFlow.

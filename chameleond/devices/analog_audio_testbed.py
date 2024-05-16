@@ -21,7 +21,8 @@ import re
 import subprocess
 
 
-LIST_OF_RPI_GPIO_PINs = [20, 21, 26]
+RPI_GPIO_PINS_FOR_TRRS_CIRCUIT = [20, 21, 26]
+RPI_GPIO_PINS_FOR_TRS_CIRCUIT = [20, 21]
 
 
 class _AnalogAudioTestbedException(Exception):
@@ -44,7 +45,7 @@ def Exists():
     return bool(ext_card)
 
 
-def SwitchRelay(active):
+def SwitchRelay(active, use_trrs):
     """Switch the NO (normally opened) Relay.
 
     The relay is used to connect / disconnect the circuit of TRRS cable.
@@ -66,8 +67,10 @@ def SwitchRelay(active):
     DUT hardware detection.
 
     Input:
-        True if you want to connect the circuit.
-        False if you want to disconnect the circuit (for hardware detection)
+        active: True if want to connect the circuit.
+                False if want to disconnect the circuit.
+        use_trrs: True if want to use TRRS circuit.
+                  False if want to use TRS circuit.
     """
     if not Exists():
         raise _AnalogAudioTestbedException("Relay doesn't exist.")
@@ -75,8 +78,14 @@ def SwitchRelay(active):
     # import from here to avoid breaking V2
     from RPi import GPIO
 
-    logging.info("Switching GPIO Relay. TRRS Circuit connection: %s", active)
+    logging.info("Switching GPIO Relay. Circuit connection: %s", active)
     GPIO.setmode(GPIO.BCM)
-    for pin in LIST_OF_RPI_GPIO_PINs:
+    pins = (
+        RPI_GPIO_PINS_FOR_TRRS_CIRCUIT
+        if use_trrs
+        else RPI_GPIO_PINS_FOR_TRS_CIRCUIT
+    )
+    logging.info("Switching GPIO pins: %s", pins)
+    for pin in pins:
         GPIO.setup(pin, GPIO.OUT)
         GPIO.output(pin, 0 if active else 1)
