@@ -1121,7 +1121,7 @@ class ChameleondDriver(ChameleondInterface):
     first_edge(port_id)
     self._scheduled_hpd.start()
 
-  def WaitVideoInputStable(self, port_id, timeout=None):
+  def WaitVideoInputStable(self, port_id, timeout=5):
     """Waits the video input stable or timeout.
 
     Args:

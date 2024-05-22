@@ -239,7 +239,7 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
         """
         raise NotImplementedError("SetVgaMode")
 
-    def WaitVideoInputStable(self, port_id, timeout=None):
+    def WaitVideoInputStable(self, port_id, timeout=5):
         """Waits the video input stable or timeout.
 
         Args:
