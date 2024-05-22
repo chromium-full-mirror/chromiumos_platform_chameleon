@@ -820,19 +820,6 @@ class BluetoothAudio(BluezPeripheral):
             self.StopPulseaudio()
             return self.StartPipewire()
 
-    def SystemctlReload(self):
-        """Perform daemon reload on the systemd user instance.
-
-        Whenever there's a runtime change in daemon configuration,
-        a daemon reload is necessary for these changes to take effect.
-
-        Returns: True if systemctl can do daemon reload successfully.
-        """
-        args_str = "--user daemon-reload"
-        rc = SystemTools.OrigCall(self.SYSTEMCTL, *args_str.split())
-        logging.info(f"systemctl {args_str}: {rc}")
-        return rc == 0
-
     def ChangeWpSettings(self, audio_config):
         """Change the Wireplumber settings dynamically.
 
@@ -901,11 +888,7 @@ class BluetoothAudio(BluezPeripheral):
         """
         self._audio_config.update(audio_config)
 
-        if not self.ChangeWpSettings(audio_config):
-            logging.error("Faild to change wireplumber settings")
-            return False
-
-        return self.SystemctlReload()
+        return self.ChangeWpSettings(audio_config)
 
     def _PrintProcessStderr(self, proc):
         """Print the stderr of the proc if any."""
