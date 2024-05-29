@@ -413,8 +413,10 @@ class PnPCharacteristic(Characteristic):
 
     PNP_UUID = "0x2a50"
 
-    # Current value picked to match MX Anywhere 2S device
-    PNP = [0x02, 0x6D, 0x04, 0x1A, 0xB0, 0x03, 0x00]
+    # Current value picked to match MX Anywhere 2S device, but the byte
+    # 0x1A is changed to 0x55 to not clash with the list of devices which
+    # looks like a keyboard but it isn't (b/330731210).
+    PNP = [0x02, 0x6D, 0x04, 0x55, 0xB0, 0x03, 0x00]
 
     def __init__(self, bus, index, service):
         Characteristic.__init__(
