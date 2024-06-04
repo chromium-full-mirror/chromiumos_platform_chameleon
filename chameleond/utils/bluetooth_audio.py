@@ -380,8 +380,8 @@ class BluetoothAudio(BluezPeripheral):
     LC3 = "lc3"
 
     # pipewire related processes
-    # Note: pipewire-pulse is not needed in tests
     PIPEWIRE = "pipewire"
+    PIPEWIRE_PULSE = "pipewire-pulse"
     WIREPLUMBER = "wireplumber"
     WPCTL = "wpctl"
     SYSTEMCTL = "systemctl"
@@ -396,11 +396,13 @@ class BluetoothAudio(BluezPeripheral):
     # - pipewire: the audio server process
     # - wireplumber: an auxiliary process for configuring pipewire
     # Note: starting pipewire will auto start pipewire.socket as well.
-    PIPEWIRE_PROCESSES_TO_START = [f"{PIPEWIRE}", f"{WIREPLUMBER}"]
+    PIPEWIRE_PROCESSES_TO_START = [f"{PIPEWIRE}", f"{PIPEWIRE_PULSE}",
+                                   f"{WIREPLUMBER}"]
 
     # Note: the pipewire.socket must be stopped before pipewire.
     #       Otherwise, pipewire.socket will auto restart pipewire.
-    PIPEWIRE_PROCESSES_TO_STOP = [f"{PIPEWIRE}.socket", f"{PIPEWIRE}"]
+    PIPEWIRE_PROCESSES_TO_STOP = [f"{PIPEWIRE}.socket", f"{PIPEWIRE}",
+                                  f"{PIPEWIRE_PULSE}.socket", f"{PIPEWIRE_PULSE}"]
 
     def __init__(self):
         """Initializes a Bluetooth audio object."""
