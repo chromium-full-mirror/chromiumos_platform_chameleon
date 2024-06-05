@@ -388,9 +388,9 @@ class BluetoothAudio(BluezPeripheral):
     START_PIPEWIRE_TIMES = 2
     PIPEWIRE_READY_TIMEOUT_SECS = 5
     INTERVAL_BETWEEN_START_PIPEWIRE_SECS = 1
-    WP_BLUETOOTH_LUA_D_DIR = "/home/pi/.config/wireplumber/bluetooth.lua.d"
-    WP_BLUEZ_AAC_CONFIG = "51-bluez-aac-config.lua"
-    WP_BLUEZ_SWB_CONFIG = "51-bluez-swb-config.lua"
+    WP_BLUETOOTH_CONF_D_DIR = "/home/pi/.config/wireplumber/wireplumber.conf.d/"
+    WP_BLUEZ_AAC_CONFIG = "bluez-aac-properties.conf"
+    WP_BLUEZ_SWB_CONFIG = "bluez-swb-properties.conf"
 
     # The pipewire related processes:
     # - pipewire: the audio server process
@@ -843,20 +843,20 @@ class BluetoothAudio(BluezPeripheral):
         """
 
         def _RemoveOldConfigs():
-            # "51-*.lua" config files are created by our tests to dynamically
+            # "bluez-*.conf" config files are created by our tests to dynamically
             # manipuate the settings. Remove them first to have clean default
             # settings.
-            config_fpath = os.path.join(self.WP_BLUETOOTH_LUA_D_DIR, "51-*.lua")
+            config_fpath = os.path.join(self.WP_BLUETOOTH_CONF_D_DIR, "bluez-*.conf")
             rc = SystemTools.OrigCallAsPi("rm", config_fpath)
             # It is fine if the "51-*.lua" files do not exist. Just return True.
             return True
 
         def _CopyConfig(config_fname):
             config_fpath = os.path.join(
-                self.WP_BLUETOOTH_LUA_D_DIR, config_fname
+                self.WP_BLUETOOTH_CONF_D_DIR, config_fname
             )
             config_orig_fpath = os.path.join(
-                self.WP_BLUETOOTH_LUA_D_DIR, config_fname + ".orig"
+                self.WP_BLUETOOTH_CONF_D_DIR, config_fname + ".orig"
             )
             args_str = config_orig_fpath + " " + config_fpath
             rc = SystemTools.OrigCallAsPi("cp", args_str)

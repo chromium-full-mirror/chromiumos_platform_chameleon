@@ -1,0 +1,4 @@
+monitor.bluez.properties = {
+   bluez5.roles = [hfp_hf]
+   bluez5.codecs = [lc3]
+}
