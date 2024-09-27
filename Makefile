@@ -25,6 +25,10 @@ COMMIT_FILE := $(DISTDIR)/commit
 PY_VERSION_FILE := $(DISTDIR)/py_version
 CHAMELEOND_DIR := /usr/bin
 
+PANDORA_STABLE_VERSION := 0.0.6
+PANDORA_DIR := /tmp/bt-test-interfaces-$(PANDORA_STABLE_VERSION)
+
+
 # Set python3 as default after all teams using chameleon finish switching
 # to python3.
 PY_VERSION := python3
@@ -202,6 +206,24 @@ ifdef CHAMELEON_HOST
 	@scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
 	    $(DISTDIR)/$(BUNDLE) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
+
+	rm -rf $(PANDORA_DIR)
+	wget https://github.com/google/bt-test-interfaces/archive/v\
+	$(PANDORA_STABLE_VERSION).tar.gz -P /tmp
+	tar -xvzf /tmp/v$(PANDORA_STABLE_VERSION).tar.gz -C /tmp
+	cp -r ./chameleond/bluetooth/interfaces/pandora_experimental $(PANDORA_DIR)/
+	cp ./chameleond/bluetooth/pandora/setup.py $(PANDORA_DIR)/
+	cp ./chameleond/bluetooth/pandora/protoc-gen-custom_grpc $(PANDORA_DIR)/
+
+	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+	-i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
+	$(CHAMELEON_USER)@$(CHAMELEON_HOST) \
+	"cd /tmp && rm -rf $(PANDORA_DIR)"
+
+	@scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+	-i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
+	$(PANDORA_DIR) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
+
 	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 	    -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
 	    $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
@@ -213,7 +235,8 @@ ifdef CHAMELEON_HOST
 	        "BUNDLE_VERSION=$(BUNDLE_VERSION) " \
 	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
 	        "PY_VERSION=$(PY_VERSION)"\
-	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"
+	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"\
+			"PANDORA_DIR=$(PANDORA_DIR)"
 else
 	$(error CHAMELEON_HOST is undefined)
 endif
