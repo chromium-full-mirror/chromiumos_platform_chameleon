@@ -30,6 +30,8 @@ setup(
         "chameleond.devices",
         "chameleond.drivers",
         "chameleond.utils",
+        "chameleond.bluetooth.server",
+        "chameleond.bluetooth.pandora.server",
     ],
     package_data={
         "chameleond": [
