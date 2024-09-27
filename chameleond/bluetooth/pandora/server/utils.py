@@ -29,6 +29,15 @@ def address_to(address: str):
     return request_address
 
 
+def address_from_bluez_device_path(device_path: str):
+    """Converts Bluez device D-Bus object path to Bluetooth MAC address.
+
+    For example:
+    "/org/bluez/dev_00_11_22_33_FF_EE" to "00:11:22:33:FF:EE".
+    """
+    return device_path.split("/")[-1].replace("_", ":")[4:]
+
+
 # anext build-in is new in python3.10. Deprecate this function
 # when we are able to use it.
 async def anext(ait):
