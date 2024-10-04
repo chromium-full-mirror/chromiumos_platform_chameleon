@@ -475,7 +475,8 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
 
     # Install Pandora packages
 	validate_python_package_installation "google-api-python-client"
-	validate_python_package_installation "grpcio"
+
+    ${pip_cmd} install grpcio --no-binary=grpcio
     validate_python_package_installation "grpcio-tools"
 
     # TODO(johnlai): We are using Python version 3.7 in Chameleon.
