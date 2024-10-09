@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option java_outer_classname = "AudioProto";
+
+package pandora;
+
+import "google/protobuf/empty.proto";
+
+service Audio {
+  // Start recording incoming audio to the specified path
+  rpc StartRecordAudio(StartRecordAudioRequest) returns (google.protobuf.Empty);
+  // Stop recording audio
+  rpc StopRecordAudio(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Start playing audio
+  rpc StartPlayAudio(StartPlayAudioRequest) returns (google.protobuf.Empty);
+  // Stop playing audio
+  rpc StopPlayAudio(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+// Bluetooth Audio Profile
+enum Profile {
+  Audio_Profile_A2DP = 0x0;
+  Audio_Profile_HFP = 0x1;
+}
+
+// Request for the `StartRecordAudio` method.
+message StartRecordAudioRequest {
+  // Specify which profile to record
+  Profile profile = 1;
+  // Path to the recorded file
+  string path = 2;
+}
+
+// Request for the `StartPlayAudio` method.
+message StartPlayAudioRequest {
+  // Path to the audio file to play
+  string path = 1;
+}

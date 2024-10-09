@@ -223,6 +223,7 @@ ifdef CHAMELEON_HOST
 	tar -xvzf /tmp/v$(PANDORA_STABLE_VERSION).tar.gz -C $(PANDORA_TMP_DIR) --strip-components=1
 # 	Copy all protos to the temporary directory
 	cp -r ./chameleond/bluetooth_grpc/pandora_experimental/interface $(PANDORA_EXPERIMENTAL_TMP_DIR)/pandora_experimental
+	cp -r ./chameleond/bluetooth_grpc/blueship/interface $(BLUESHIP_TMP_DIR)/blueship
 # 	Copy necessary tools for installing package to the temporary directory
 	cp ./chameleond/bluetooth_grpc/setup.py $(BLUETOOTH_GRPC_ROOT_DIR)/
 	cp ./chameleond/bluetooth_grpc/protoc-gen-custom_grpc $(BLUETOOTH_GRPC_ROOT_DIR)/
