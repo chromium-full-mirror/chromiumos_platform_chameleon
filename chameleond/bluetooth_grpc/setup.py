@@ -9,7 +9,7 @@ import setuptools
 
 setuptools.setup(
     name="bluetooth_grpc",
-    packages=["pandora", "pandora_experimental"],
+    packages=["pandora", "pandora_experimental", "blueship"],
     package_dir={"": "./python"},
     description="Bluetooth test gRPC interfaces",
 )

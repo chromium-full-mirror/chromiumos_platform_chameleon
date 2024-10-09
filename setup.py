@@ -31,6 +31,7 @@ setup(
         "chameleond.drivers",
         "chameleond.utils",
         "chameleond.bluetooth_grpc.server",
+        "chameleond.bluetooth_grpc.blueship.server",
         "chameleond.bluetooth_grpc.pandora.server",
     ],
     package_data={

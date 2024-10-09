@@ -481,6 +481,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     # Ensure the python files are readable by all users.
     chmod 0644 ${BLUETOOTH_GRPC_ROOT_DIR}/python/pandora/__init__.py
     chmod 0644 ${BLUETOOTH_GRPC_ROOT_DIR}/python/pandora_experimental/__init__.py
+    chmod 0644 ${BLUETOOTH_GRPC_ROOT_DIR}/python/blueship/__init__.py
 
     # TODO(johnlai): We are using Python version 3.7 in Chameleon.
     # However, the plugin provided by Pandora uses syntax
@@ -492,7 +493,9 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         --plugin=protoc-gen-grpc=${BLUETOOTH_GRPC_ROOT_DIR}/protoc-gen-custom_grpc \
         --python_out=${BLUETOOTH_GRPC_ROOT_DIR}/python \
         --grpc_out=${BLUETOOTH_GRPC_ROOT_DIR}/python \
-        ${PANDORA_TMP_DIR}/pandora/* ${PANDORA_EXPERIMENTAL_TMP_DIR}/pandora_experimental/*
+        ${PANDORA_TMP_DIR}/pandora/* \
+        ${PANDORA_EXPERIMENTAL_TMP_DIR}/pandora_experimental/* \
+        ${BLUESHIP_TMP_DIR}/blueship/*
 
     ${pip_cmd} install --upgrade ${BLUETOOTH_GRPC_ROOT_DIR}
 
