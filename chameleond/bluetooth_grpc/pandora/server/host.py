@@ -7,7 +7,7 @@
 import asyncio
 from typing import AsyncGenerator
 
-from chameleond.bluetooth.pandora.server import utils
+from chameleond.bluetooth_grpc.pandora.server import utils
 from google.protobuf import empty_pb2
 import grpc
 from pandora import host_grpc_aio

@@ -13,8 +13,8 @@ import argparse
 import asyncio
 import logging
 
-from chameleond.bluetooth.pandora.server import host
-from chameleond.bluetooth.pandora.server import security
+from chameleond.bluetooth_grpc.pandora.server import host
+from chameleond.bluetooth_grpc.pandora.server import security
 from chameleond.drivers import fpga_tio
 from chameleond.utils import ids
 import grpc

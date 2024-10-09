@@ -10,7 +10,7 @@ import logging
 import queue
 from typing import AsyncGenerator, AsyncIterator
 
-from chameleond.bluetooth.pandora.server import utils
+from chameleond.bluetooth_grpc.pandora.server import utils
 import dbus
 import dbus.mainloop.glib
 import dbus.service

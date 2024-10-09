@@ -25,8 +25,11 @@ COMMIT_FILE := $(DISTDIR)/commit
 PY_VERSION_FILE := $(DISTDIR)/py_version
 CHAMELEOND_DIR := /usr/bin
 
+BLUETOOTH_GRPC_ROOT_DIR := /tmp/bluetooth_grpc
 PANDORA_STABLE_VERSION := 0.0.6
-PANDORA_DIR := /tmp/bt-test-interfaces-$(PANDORA_STABLE_VERSION)
+PANDORA_TMP_DIR := ${BLUETOOTH_GRPC_ROOT_DIR}/bt-test-interfaces-${PANDORA_STABLE_VERSION}
+PANDORA_EXPERIMENTAL_VERSION := 0.0.0
+PANDORA_EXPERIMENTAL_TMP_DIR := ${BLUETOOTH_GRPC_ROOT_DIR}/pandora-experimental-${PANDORA_EXPERIMENTAL_VERSION}
 
 
 # Set python3 as default after all teams using chameleon finish switching
@@ -207,22 +210,34 @@ ifdef CHAMELEON_HOST
 	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
 	    $(DISTDIR)/$(BUNDLE) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
 
-	rm -rf $(PANDORA_DIR)
+#	Recreate the caching directory to ensure a fresh start.
+	rm -rf $(BLUETOOTH_GRPC_ROOT_DIR)
+	mkdir $(BLUETOOTH_GRPC_ROOT_DIR)
+	mkdir -p ${PANDORA_TMP_DIR}
+	mkdir -p ${PANDORA_EXPERIMENTAL_TMP_DIR}
+#	Download the pandora repo from the archive.
 	wget https://github.com/google/bt-test-interfaces/archive/v\
 	$(PANDORA_STABLE_VERSION).tar.gz -P /tmp
-	tar -xvzf /tmp/v$(PANDORA_STABLE_VERSION).tar.gz -C /tmp
-	cp -r ./chameleond/bluetooth/interfaces/pandora_experimental $(PANDORA_DIR)/
-	cp ./chameleond/bluetooth/pandora/setup.py $(PANDORA_DIR)/
-	cp ./chameleond/bluetooth/pandora/protoc-gen-custom_grpc $(PANDORA_DIR)/
+# 	Extract the downloaded archive into a temporary directory.
+#	--strip-components=1 removes the top-level directory from the archive
+	tar -xvzf /tmp/v$(PANDORA_STABLE_VERSION).tar.gz -C $(PANDORA_TMP_DIR) --strip-components=1
+# 	Copy all protos to the temporary directory
+	cp -r ./chameleond/bluetooth_grpc/pandora_experimental/interface $(PANDORA_EXPERIMENTAL_TMP_DIR)/pandora_experimental
+# 	Copy necessary tools for installing package to the temporary directory
+	cp ./chameleond/bluetooth_grpc/setup.py $(BLUETOOTH_GRPC_ROOT_DIR)/
+	cp ./chameleond/bluetooth_grpc/protoc-gen-custom_grpc $(BLUETOOTH_GRPC_ROOT_DIR)/
+	cp -r ./chameleond/bluetooth_grpc/python $(BLUETOOTH_GRPC_ROOT_DIR)
+#	Move the python files of stable pandora to the root python directory
+	mv ${PANDORA_TMP_DIR}/python/pandora ${BLUETOOTH_GRPC_ROOT_DIR}/python
 
 	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	-i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
-	$(CHAMELEON_USER)@$(CHAMELEON_HOST) \
-	"cd /tmp && rm -rf $(PANDORA_DIR)"
+	    -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
+	    $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
+	    "rm -rf $(BLUETOOTH_GRPC_ROOT_DIR)"
 
 	@scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	-i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
-	$(PANDORA_DIR) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
+	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
+	    $(BLUETOOTH_GRPC_ROOT_DIR) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
 
 	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 	    -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
@@ -232,11 +247,13 @@ ifdef CHAMELEON_HOST
 	    "make install " \
 	        "REMOTE_INSTALL=TRUE" \
 	        "HOST_NOW=\"$(HOST_NOW)\"" \
-	        "BUNDLE_VERSION=$(BUNDLE_VERSION) " \
+	        "BUNDLE_VERSION=$(BUNDLE_VERSION)" \
 	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
 	        "PY_VERSION=$(PY_VERSION)"\
 	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"\
-			"PANDORA_DIR=$(PANDORA_DIR)"
+		"BLUETOOTH_GRPC_ROOT_DIR=${BLUETOOTH_GRPC_ROOT_DIR}"\
+		"PANDORA_TMP_DIR=$(PANDORA_TMP_DIR)"\
+		"PANDORA_EXPERIMENTAL_TMP_DIR=${PANDORA_EXPERIMENTAL_TMP_DIR}"
 else
 	$(error CHAMELEON_HOST is undefined)
 endif

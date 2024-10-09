@@ -8,8 +8,8 @@ import setuptools
 
 
 setuptools.setup(
-    name="pandora",
+    name="bluetooth_grpc",
     packages=["pandora", "pandora_experimental"],
     package_dir={"": "./python"},
-    description="AOSP bluetooth test interfaces",
+    description="Bluetooth test gRPC interfaces",
 )
