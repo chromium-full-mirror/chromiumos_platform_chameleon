@@ -13,6 +13,8 @@ import argparse
 import asyncio
 import logging
 
+from blueship import audio_grpc_aio
+from chameleond.bluetooth_grpc.blueship.server import audio
 from chameleond.bluetooth_grpc.pandora.server import host
 from chameleond.bluetooth_grpc.pandora.server import security
 from chameleond.drivers import fpga_tio
@@ -53,6 +55,14 @@ async def start_bluetooth_test_server(port, device_id, io_capability):
                 break
 
             bluetooth = getattr(chameleon, chameleon_devices[device_id])
+            if device_id == ids.BLUETOOTH_AUDIO:
+                # Use the speicialized audio server to enable WBS.
+                # The specialized version was claimed that it suffered from
+                # stability issues so it was not a default option, but at least
+                # from the dashboard, the test
+                # `au_hfp_wbs_to_a2dp_dut_as_source_test` is quite stable,
+                # therefore, we use the specialized audio server as default here
+                bluetooth.StartAudioServer("hfp_wbs")
 
             server = grpc.aio.server()
             security_service = security.SecurityService(
@@ -61,6 +71,9 @@ async def start_bluetooth_test_server(port, device_id, io_capability):
             security_grpc_aio.add_SecurityServicer_to_server(
                 security_service, server
             )
+
+            audio_service = audio.AudioService(bluetooth)
+            audio_grpc_aio.add_AudioServicer_to_server(audio_service, server)
 
             host_service = host.HostService(server, bluetooth, security_service)
             host_grpc_aio.add_HostServicer_to_server(host_service, server)
