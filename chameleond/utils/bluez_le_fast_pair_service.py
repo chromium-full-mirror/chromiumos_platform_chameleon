@@ -250,10 +250,13 @@ class KeyBasedPairingChrc(Characteristic):
     REQUEST_BYTES_LENGTH = 16
     REQUEST_TYPE = 0x0
     RESPONSE_TYPE = 0x01
+    EXT_RESPONSE_TYPE = 0x02
     SALT_BYTES_LENGTH = 9
+    EXT_SALT_BYTES_LENGTH = 7
     KEY_BASED_PAIRING_REQUEST_TYPE = 0x0
     ENCRYPTED_REQUEST_BYTES_LENGTH = 16
     REQUEST_WITH_KEY_LENGTH = 80
+    EXT_RESPONSE_FLAGS = 0xC0
 
     def __init__(self, bus, index, service):
         Characteristic.__init__(
@@ -261,6 +264,7 @@ class KeyBasedPairingChrc(Characteristic):
         )
 
         self._notifying = False
+        self._supports_ble_spec = False
 
     def VerifyRequestBytes(self, request_bytes):
         """Verify the request bytes according to the spec.
@@ -285,15 +289,22 @@ class KeyBasedPairingChrc(Characteristic):
             )
             return False
 
-        # Second byte should either be 0x0 or 0x10, which are the two flag values we
+        # Second byte should be 0x0, 0x10, 0x08, 0x18 which are the four flag values we
         # support
-        if request_bytes[1] != 0x0 and request_bytes[1] != 0x10:
+        if request_bytes[1] not in [0x0, 0x10, 0x08, 0x18]:
             logging.warning(
-                """Invalid second byte in request bytes: Expected:0x0 or 0x10
+                """Invalid second byte in request bytes: Expected:0x0, 0x10, 0x08, or 0x18
                                             , Actual:%s""",
                 hex(request_bytes[1]),
             )
             return False
+
+        # Flag = 0x08 and 0x18 indicates the seeker supports the BLE Device Specification
+        if request_bytes[1] == 0x08 or request_bytes[1] == 0x18:
+            logging.info(
+                "Seeker indicates support for BLE device specification."
+            )
+            self._supports_ble_spec = True
 
         # Bytes 2-7 should be this devices address.
         if self.service.GetDeviceAddressBytes() != request_bytes[2:8]:
@@ -325,6 +336,24 @@ class KeyBasedPairingChrc(Characteristic):
 
         # Bytes 7-15 are random bytes to represent a salt value.
         response_bytes += urandom(self.SALT_BYTES_LENGTH)
+
+        return response_bytes
+
+    def BuildExtendedResponseBytes(self):
+        # First byte is the message type, 0x02 = Key-based pairing extended response.
+        response_bytes = bytes([self.EXT_RESPONSE_TYPE])
+
+        # Byte 1 is the flags. We support LE only and prefer LE bonding.
+        response_bytes += bytes([self.EXT_RESPONSE_FLAGS])
+
+        # Byte 2 is the number of provider's addresses. We support 1.
+        response_bytes += bytes([0x01])
+
+        # Bytes 3-8 are this devices address.
+        response_bytes += self.service.GetDeviceAddressBytes()
+
+        # Bytes 9-15 are random bytes to represent a salt value.
+        response_bytes += urandom(self.EXT_SALT_BYTES_LENGTH)
 
         return response_bytes
 
@@ -398,7 +427,10 @@ class KeyBasedPairingChrc(Characteristic):
             logging.warning("Ignoring request due to invalid bytes")
             return
 
-        response_bytes = self.BuildResponseBytes()
+        if self._supports_ble_spec:
+            response_bytes = self.BuildExtendedResponseBytes()
+        else:
+            response_bytes = self.BuildResponseBytes()
         encrypted_response = self.service.Encrypt(response_bytes)
 
         if encrypted_response is None:
