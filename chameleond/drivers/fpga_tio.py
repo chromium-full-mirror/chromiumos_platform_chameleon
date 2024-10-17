@@ -139,6 +139,8 @@ class ChameleondDriver(ChameleondInterface):
     def __init__(self, *args, **kwargs):
         super(ChameleondDriver, self).__init__(*args, **kwargs)
 
+        self._ready = False
+
         self._platform = os.environ.get("PLATFORM")
         logging.info("platform: %s", self._platform)
 
@@ -232,6 +234,8 @@ class ChameleondDriver(ChameleondInterface):
         self._flow_manager = flow_manager.FlowManager(self._flows)
 
         self.Reset()
+
+        self._ready = True
 
     def _dispatch(self, method, params):
         try:
@@ -343,8 +347,13 @@ class ChameleondDriver(ChameleondInterface):
         }
         return devices
 
+    def is_ready(self):
+        return self._ready
+
     def Reset(self):
         """Resets Chameleon board."""
+        self._ready = False
+
         logging.info("Execute the reset process")
         self._flow_manager.Reset()
         self._device_manager.Reset()
@@ -353,10 +362,17 @@ class ChameleondDriver(ChameleondInterface):
         self._ClearPrinterFiles()
         caching_server.ClearCachedDir()
 
+        self._ready = True
+
     def Reboot(self):
         """Reboots Chameleon board."""
         logging.info("The chameleon board is going to reboot.")
         system_tools.SystemTools.Call("reboot")
+
+    def restart_chameleond(self):
+        """Restart chamelon service."""
+        self._ready = False
+        os.system("service chameleond restart")
 
     def dump_bt_peer_info(self):
         """Dump the kernel, BlueZ, chameleon bundle info"""

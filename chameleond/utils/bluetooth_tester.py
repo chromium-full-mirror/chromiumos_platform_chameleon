@@ -90,7 +90,6 @@ class BluetoothTester(BluetoothVirtualDevice, VirtualFlow):
         self.AdapterPowerOn()
         reset_cmds = [
             "service bluetooth restart",
-            "service chameleond restart",
         ]
 
         # Restart chameleon and bluetooth service
