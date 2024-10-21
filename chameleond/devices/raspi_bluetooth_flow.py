@@ -10,6 +10,7 @@ import logging
 import time
 
 from chameleond.devices import chameleon_device
+from chameleond.utils import pairing_agent
 from chameleond.utils.bluetooth_audio import BluetoothAudio
 from chameleond.utils.bluetooth_peripheral_kit import PeripheralKit
 from chameleond.utils.bluetooth_raspi import BluezPeripheral
@@ -786,3 +787,11 @@ class RaspiBLEFastPair(RaspiFlow, BluezPeripheral):
             return
 
         self._gatt_server.SetAdvertiseNameAndHID(enabled)
+
+    def SetPasskey(self, passkey):
+        """Sets the passkey for this device's pairing agent"""
+        if self._agent is None:
+            logging.warn("Failed to set passkey.")
+            return
+
+        pairing_agent.agent.SetPasskey(passkey)

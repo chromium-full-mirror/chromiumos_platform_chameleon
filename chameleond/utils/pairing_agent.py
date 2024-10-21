@@ -8,6 +8,7 @@
 from __future__ import print_function
 
 import logging
+import threading
 
 import dbus  # pylint: disable=import-error
 import dbus.mainloop.glib  # pylint: disable=import-error
@@ -39,17 +40,30 @@ class Agent(dbus.service.Object):
 
     PASSKEY = dbus.UInt32(123456)
     PIN = dbus.String("0000")
+    PASSKEY_TIMEOUT_SEC = 5
+
+    _passkey_event = threading.Event()
 
     def __init__(self, *args, **kwargs):
         super(Agent, self).__init__(*args, **kwargs)
         self.passkey = None
         self._pin = None
 
+    def wait_for_passkey(self):
+        logging.info(
+            "Waiting for passkey for %d seconds", self.PASSKEY_TIMEOUT_SEC
+        )
+        event_set = self._passkey_event.wait(self.PASSKEY_TIMEOUT_SEC)
+        if not event_set:
+            logging.warning("Never received passkey")
+
     def SetPin(self, pin):
         self._pin = dbus.String(pin)
 
     def SetPasskey(self, passkey):
+        logging.info("Setting passkey to %d", passkey)
         self.passkey = dbus.UInt32(passkey)
+        self._passkey_event.set()
 
     def DoesPasskeyMatch(self, other_passkey):
         return self.passkey is not None and self.passkey == other_passkey
@@ -80,6 +94,13 @@ class Agent(dbus.service.Object):
     @dbus.service.method(AGENT_INTERFACE, in_signature="o", out_signature="u")
     def RequestPasskey(self, device):
         logging.info("RequestPasskey (%s)", device)
+
+        if not self._passkey_event.is_set():
+            thread = threading.Thread(target=self.wait_for_passkey)
+            thread.start()
+            thread.join()
+        self._passkey_event.clear()
+
         self.SetTrusted(device)
         return self.passkey or self.PASSKEY
 
