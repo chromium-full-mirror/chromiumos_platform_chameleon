@@ -14,9 +14,14 @@ import asyncio
 import logging
 
 from blueship import audio_grpc_aio
+from blueship import config_grpc_aio
 from chameleond.bluetooth_grpc.blueship.server import audio
+from chameleond.bluetooth_grpc.blueship.server import config
 from chameleond.bluetooth_grpc.pandora.server import host
 from chameleond.bluetooth_grpc.pandora.server import security
+from chameleond.bluetooth_grpc.server.device_config import (
+    DEFAULT_CHAMELEON_CONFIG,
+)
 from chameleond.drivers import fpga_tio
 from chameleond.utils import ids
 import grpc
@@ -56,7 +61,7 @@ async def start_bluetooth_test_server(port, device_id, io_capability):
 
             bluetooth = getattr(chameleon, chameleon_devices[device_id])
             if device_id == ids.BLUETOOTH_AUDIO:
-                # Use the speicialized audio server to enable WBS.
+                # Use the specialized audio server to enable WBS.
                 # The specialized version was claimed that it suffered from
                 # stability issues so it was not a default option, but at least
                 # from the dashboard, the test
@@ -84,6 +89,9 @@ async def start_bluetooth_test_server(port, device_id, io_capability):
             security_grpc_aio.add_SecurityStorageServicer_to_server(
                 security_storage_service, server
             )
+
+            config_service = config.ConfigService(DEFAULT_CHAMELEON_CONFIG)
+            config_grpc_aio.add_ConfigServicer_to_server(config_service, server)
 
             server.add_insecure_port(f"[::]:{port}")
 
