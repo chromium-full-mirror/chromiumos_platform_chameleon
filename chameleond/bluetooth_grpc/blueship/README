@@ -6,3 +6,5 @@ BlueShip: Bluetooth Simplified High-level Interface for Peripherals
 
 Supported profiles:
 	Audio: Interface for interacting with audio servers
+	Config: Interface for configuring the peripherals, including
+		IO-Capability, device type, etc.

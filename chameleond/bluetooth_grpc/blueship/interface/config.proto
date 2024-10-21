@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+option java_outer_classname = "ConfigProto";
+
+package blueship;
+
+import "google/protobuf/empty.proto";
+
+service Config {
+  rpc ClearConfig(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc WriteConfig(WriteConfigRequest) returns (WriteConfigResponse);
+  rpc ReadConfig(google.protobuf.Empty) returns (ReadConfigResponse);
+}
+
+message APIConfig { ConfigVariant support_api_version = 1; }
+
+enum IOCapability {
+  IO_CAPABILITY_DISPLAY_ONLY = 0;
+  IO_CAPABILITY_DISPLAY_YES_NO = 1;
+  IO_CAPABILITY_KEYBOARD_ONLY = 2;
+  IO_CAPABILITY_NO_INPUT_NO_OUTPUT = 3;
+  IO_CAPABILITY_KEYBOARD_DISPLAY = 4;
+}
+
+enum DeviceCategory {
+  DEVICE_CATEGORY_AUDIO = 0;
+  DEVICE_CATEGORY_KEYBOARD = 1;
+  DEVICE_CATEGORY_MOUSE = 2;
+  DEVICE_CATEGORY_PHONE = 3;
+}
+
+message SupportedProfiles { ConfigVariant uuid = 1; }
+
+message DeviceInfoConfig {
+  ConfigVariant mac_address = 1;
+  ConfigVariant name = 2;
+  ConfigVariant io_capability = 3;
+  ConfigVariant class_of_device = 4;
+  ConfigVariant category = 5;
+  ConfigVariant supported_profiles = 6;
+}
+
+message ControllerConfig {
+  ConfigVariant support_classic = 1;
+  ConfigVariant support_le = 2;
+}
+
+message SecurityConfig { ConfigVariant pin = 1; }
+
+message AudioConfig { ConfigVariant supported_codecs = 1; }
+
+enum Codec {
+  CODEC_SBC = 0;
+  CODEC_AAC = 1;
+}
+
+message RepeatedString { repeated string string_list = 1; }
+
+message RepeatedCodec { repeated Codec string_list = 1; }
+
+message ConfigVariant {
+  bool writable = 1;
+
+  oneof value {
+    // Built-in types
+    string string_value = 2;
+    bytes bytes_value = 3;
+    bool bool_value = 4;
+    int32 int32_value = 5;
+    // Enum
+    IOCapability io_capability = 101;
+    DeviceCategory device_category = 102;
+    // Message
+    RepeatedString string_list = 201;
+    RepeatedCodec codec_list = 202;
+  }
+}
+
+// TODO: Make the fields optional to allow clients to update a subset of
+// configurations. This is currently not doable because the generator script
+// is too old and we are not able to update it because of python version in pi.
+message Configuration {
+  APIConfig api = 1;
+  DeviceInfoConfig device = 2;
+  ControllerConfig controller = 3;
+  SecurityConfig security = 4;
+  AudioConfig audio = 5;
+}
+
+message WriteConfigRequest { Configuration config = 1; }
+
+message WriteConfigResponse { bool success = 1; }
+
+message ReadConfigResponse { Configuration config = 1; }
