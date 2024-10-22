@@ -33,6 +33,7 @@ setup(
         "chameleond.bluetooth_grpc.server",
         "chameleond.bluetooth_grpc.blueship.server",
         "chameleond.bluetooth_grpc.pandora.server",
+        "chameleond.bluetooth_grpc.client.sanity_checker",
     ],
     package_data={
         "chameleond": [
