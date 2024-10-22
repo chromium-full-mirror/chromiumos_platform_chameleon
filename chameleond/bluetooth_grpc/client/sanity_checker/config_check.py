@@ -17,6 +17,7 @@ class ConfigGrpcTests(unittest.TestCase):
 
     DEFAULT_API_VERSION = "0.0"
     DEFAULT_IO_CAPABILITY = config_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT
+    DEFAULT_DEVICE_CATEGORY = config_pb2.DEVICE_CATEGORY_KEYBOARD
 
     def setUp(self):
         """Setup the testing environment"""
@@ -74,6 +75,31 @@ class ConfigGrpcTests(unittest.TestCase):
         self.assertEqual(
             resp.config.device.io_capability.io_capability,
             config_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY,
+        )
+
+    def test_read_device_category(self):
+        """Test device category can be read"""
+        resp = self.config_proxy.ReadConfig()
+        self.assertEqual(
+            resp.config.device.category.device_category,
+            self.DEFAULT_DEVICE_CATEGORY,
+        )
+
+    def test_write_device_category(self):
+        """Test device category can be written"""
+        write_config = config_pb2.Configuration()
+        write_config.device.category.device_category = (
+            config_pb2.DEVICE_CATEGORY_AUDIO
+        )
+        resp = self.config_proxy.WriteConfig(write_config)
+        # Write config request should succeed
+        self.assertTrue(resp.success)
+
+        # IO Capability should be changed.
+        resp = self.config_proxy.ReadConfig()
+        self.assertEqual(
+            resp.config.device.category.device_category,
+            config_pb2.DEVICE_CATEGORY_AUDIO,
         )
 
 

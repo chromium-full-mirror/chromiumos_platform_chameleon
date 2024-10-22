@@ -16,5 +16,8 @@ DEFAULT_CHAMELEON_CONFIG = config_pb2.Configuration(
             writable=True,
             io_capability=config_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT,
         ),
+        category=config_pb2.ConfigVariant(
+            writable=True, device_category=config_pb2.DEVICE_CATEGORY_KEYBOARD
+        ),
     ),
 )

@@ -33,12 +33,13 @@ from pandora import security_grpc_aio
 class TestServerContext:
     """The context of the test server."""
 
-    def __init__(self, chameleon, bluetooth_device, config):
+    def __init__(self, chameleon, config):
         self.chameleon = chameleon
-        self.btd = bluetooth_device
         self.config = config
         self.default_config = config_pb2.Configuration()
         self.default_config.CopyFrom(config)
+
+        self.reset_bluetooth_device()
 
     @property
     def io_capability(self):
@@ -56,8 +57,58 @@ class TestServerContext:
             return "KeyboardDisplay"
         return None
 
+    @property
+    def device_type(self):
+        """Helper function to convert Device Category from proto to String"""
+        device_type = self.config.device.category.device_category
+        support_le = False
+        if device_type == config_pb2.DEVICE_CATEGORY_AUDIO:
+            return "BLUETOOTH_AUDIO"
+        elif device_type == config_pb2.DEVICE_CATEGORY_KEYBOARD:
+            if support_le:
+                return "BLE_KEYBOARD"
+            else:
+                return "KEYBOARD"
+        elif device_type == config_pb2.DEVICE_CATEGORY_MOUSE:
+            if support_le:
+                return "BLE_MOUSE"
+            else:
+                return "MOUSE"
+        elif device_type == config_pb2.DEVICE_CATEGORY_PHONE:
+            if support_le:
+                return "BLE_PHONE"
+        return None
 
-async def start_bluetooth_test_server(port, device_id):
+    def reset_bluetooth_device(self):
+        if self.device_type == "BLUETOOTH_AUDIO":
+            self.btd = self.chameleon.bluetooth_audio
+        elif self.device_type == "BLE_KEYBOARD":
+            self.btd = self.chameleon.ble_keyboard
+        elif self.device_type == "KEYBOARD":
+            self.btd = self.chameleon.bluetooth_keyboard
+        elif self.device_type == "BLE_MOUSE":
+            self.btd = self.chameleon.ble_mouse
+        elif self.device_type == "MOUSE":
+            self.btd = self.chameleon.bluetooth_mouse
+        elif self.device_type == "BLE_PHONE":
+            self.btd = self.chameleon.ble_phone
+
+        self.btd.ResetStack(next_device_type=self.device_type)
+        self.btd.SpecifyDeviceType(self.device_type)
+
+        if self.device_type == "BLUETOOTH_AUDIO":
+            # Use the specialized audio server to enable WBS.
+            # The specialized version was claimed that it suffered from
+            # stability issues so it was not a default option, but at least
+            # from the dashboard, the test
+            # `au_hfp_wbs_to_a2dp_dut_as_source_test` is quite stable,
+            # therefore, we use the specialized audio server as default here
+            self.btd.StartAudioServer("hfp_wbs")
+
+        self.btd.SetIOCapability(self.io_capability)
+
+
+async def start_bluetooth_test_server(port):
     """Start serving the bluetooth test server."""
 
     try:
@@ -65,41 +116,9 @@ async def start_bluetooth_test_server(port, device_id):
         chameleon = None
         while True:
             chameleon = fpga_tio.ChameleondDriver()
-            chameleon_devices = {
-                ids.BLUETOOTH_AUDIO: "bluetooth_audio",
-                ids.BLUETOOTH_HID_KEYBOARD: "bluetooth_keyboard",
-                ids.BLUETOOTH_HID_MOUSE: "bluetooth_mouse",
-                ids.BLUETOOTH_HID_GAMEPAD: "bluetooth_gamepad",
-                ids.BLUETOOTH_BASE: "bluetooth_base",
-                ids.BLUETOOTH_TESTER: "bluetooth_tester",
-                ids.BLE_KEYBOARD: "ble_keyboard",
-                ids.BLE_MOUSE: "ble_mouse",
-                ids.BLE_PHONE: "ble_phone",
-                ids.BLE_FAST_PAIR: "ble_fast_pair",
-            }
-
-            if device_id in chameleon_devices:
-                logging.info("Using device: %s!", chameleon_devices[device_id])
-            else:
-                logging.error(
-                    "Device id %s is not supported! The server has stopped.",
-                    device_id,
-                )
-                break
-
-            bluetooth = getattr(chameleon, chameleon_devices[device_id])
             shared_context = TestServerContext(
-                chameleon, bluetooth, DEFAULT_CHAMELEON_CONFIG
+                chameleon, DEFAULT_CHAMELEON_CONFIG
             )
-
-            if device_id == ids.BLUETOOTH_AUDIO:
-                # Use the specialized audio server to enable WBS.
-                # The specialized version was claimed that it suffered from
-                # stability issues so it was not a default option, but at least
-                # from the dashboard, the test
-                # `au_hfp_wbs_to_a2dp_dut_as_source_test` is quite stable,
-                # therefore, we use the specialized audio server as default here
-                bluetooth.StartAudioServer("hfp_wbs")
 
             server = grpc.aio.server()
             security_service = security.SecurityService(
@@ -157,46 +176,4 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # from chameleond/utils/ids.py
-    device_map = {
-        "BLUETOOTH_HID_KEYBOARD": 12,
-        "BLUETOOTH_HID_GAMEPAD": 13,
-        "BLUETOOTH_HID_MOUSE": 14,
-        "BLUETOOTH_HID_COMBO": 15,
-        "BLUETOOTH_HID_JOYSTICK": 16,
-        "AVSYNC_PROBE": 17,
-        "AUDIO_BOARD": 18,
-        "MOTOR_BOARD": 19,
-        "BLUETOOTH_HOG_KEYBOARD": 20,
-        "BLUETOOTH_HOG_GAMEPAD": 21,
-        "BLUETOOTH_HOG_MOUSE": 22,
-        "BLUETOOTH_HOG_COMBO": 23,
-        "BLUETOOTH_HOG_JOYSTICK": 24,
-        "USB_PRINTER": 25,
-        "BLUETOOTH_A2DP_SINK": 26,
-        "BLE_MOUSE": 27,
-        "BLE_KEYBOARD": 28,
-        "BLUETOOTH_BASE": 29,
-        "BLUETOOTH_TESTER": 30,
-        "BLE_PHONE": 31,
-        "BLUETOOTH_AUDIO": 32,
-        "BLE_FAST_PAIR": 33,
-    }
-
-    parser = argparse.ArgumentParser(
-        description="Launch a Bluetooth test server daemon.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument(
-        "--device_type",
-        choices=list(device_map.keys()),
-        type=str,
-        default="BLUETOOTH_AUDIO",
-        help="bluetooth device to create",
-    )
-
-    options = parser.parse_args()
-
-    asyncio.run(
-        start_bluetooth_test_server(8999, device_map.get(options.device_type))
-    )
+    asyncio.run(start_bluetooth_test_server(8999))
