@@ -17,15 +17,22 @@ from pandora import host_pb2
 class HostService(host_grpc_aio.HostServicer):
     """Service to trigger Bluetooth Host procedures."""
 
-    def __init__(self, server, bluetooth, security):
+    def __init__(self, server, shared_context, security):
+        """Initialize the struct
+
+        Args:
+            server: the gRPC server instance
+            shared_context: context that is shared by all service
+            security: instance of SecurityService
+        """
         self.server = server
-        self.bluetooth = bluetooth
+        self.ctx = shared_context
         self.security = security
 
     async def FactoryReset(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
-        self.bluetooth.ResetStack()
+        self.ctx.btd.ResetStack()
         asyncio.create_task(self.server.stop(None))
         return empty_pb2.Empty()
 
@@ -33,13 +40,13 @@ class HostService(host_grpc_aio.HostServicer):
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
         # Side effect: the device will be set to discoverable.
-        self.bluetooth.Reboot()
+        self.ctx.btd.Reboot()
         return empty_pb2.Empty()
 
     async def ReadLocalAddress(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> host_pb2.ReadLocalAddressResponse:
-        address = self.bluetooth.GetLocalBluetoothAddress()
+        address = self.ctx.btd.GetLocalBluetoothAddress()
         return host_pb2.ReadLocalAddressResponse(
             address=utils.address_to(address)
         )
@@ -137,9 +144,9 @@ class HostService(host_grpc_aio.HostServicer):
                 "SetDiscoverabilityMode: limited discoverable mode is not supported",
             )
         elif mode == host_pb2.NOT_DISCOVERABLE:
-            self.bluetooth.SetDiscoverableNoConfigAdv(False)
+            self.ctx.btd.SetDiscoverableNoConfigAdv(False)
         elif mode == host_pb2.DISCOVERABLE_GENERAL:
-            self.bluetooth.SetDiscoverableNoConfigAdv(True)
+            self.ctx.btd.SetDiscoverableNoConfigAdv(True)
         return empty_pb2.Empty()
 
     async def SetConnectabilityMode(

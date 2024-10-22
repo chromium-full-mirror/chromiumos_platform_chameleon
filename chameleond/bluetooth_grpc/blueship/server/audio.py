@@ -17,8 +17,13 @@ import grpc
 class AudioService(audio_grpc_aio.AudioServicer):
     """Service to trigger Chameleon Audio procedures."""
 
-    def __init__(self, bluetooth):
-        self.bluetooth = bluetooth
+    def __init__(self, shared_context):
+        """Initialize the struct
+
+        Args:
+            shared_context: context that is shared by all service
+        """
+        self.ctx = shared_context
 
     async def StartRecordAudio(
         self,
@@ -43,13 +48,13 @@ class AudioService(audio_grpc_aio.AudioServicer):
             test_data["rate"] = 16000
             test_data["channels"] = 1
 
-        self.bluetooth.StartRecordingAudioSubprocess(audio_profile, test_data)
+        self.ctx.btd.StartRecordingAudioSubprocess(audio_profile, test_data)
         return empty_pb2.Empty()
 
     async def StopRecordAudio(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
-        self.bluetooth.StopRecordingingAudioSubprocess()
+        self.ctx.btd.StopRecordingingAudioSubprocess()
         return empty_pb2.Empty()
 
     async def StartPlayAudio(
@@ -66,11 +71,11 @@ class AudioService(audio_grpc_aio.AudioServicer):
             "format": "S16_LE",
         }
 
-        self.bluetooth.StartPlayingAudioSubprocess("hfp_wbs", test_data)
+        self.ctx.btd.StartPlayingAudioSubprocess("hfp_wbs", test_data)
         return empty_pb2.Empty()
 
     async def StopPlayAudio(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
-        self.bluetooth.StopPlayingAudioSubprocess()
+        self.ctx.btd.StopPlayingAudioSubprocess()
         return empty_pb2.Empty()

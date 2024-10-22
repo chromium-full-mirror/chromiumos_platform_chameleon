@@ -29,6 +29,17 @@ from pandora import host_grpc_aio
 from pandora import security_grpc_aio
 
 
+class TestServerContext:
+    """The context of the test server."""
+
+    def __init__(self, chameleon, bluetooth_device, config):
+        self.chameleon = chameleon
+        self.btd = bluetooth_device
+        self.config = config
+        self.default_config = config_pb2.Configuration()
+        self.default_config.CopyFrom(config)
+
+
 async def start_bluetooth_test_server(port, device_id, io_capability):
     """Start serving the bluetooth test server."""
 
@@ -60,6 +71,10 @@ async def start_bluetooth_test_server(port, device_id, io_capability):
                 break
 
             bluetooth = getattr(chameleon, chameleon_devices[device_id])
+            shared_context = TestServerContext(
+                chameleon, bluetooth, DEFAULT_CHAMELEON_CONFIG
+            )
+
             if device_id == ids.BLUETOOTH_AUDIO:
                 # Use the specialized audio server to enable WBS.
                 # The specialized version was claimed that it suffered from
@@ -71,26 +86,29 @@ async def start_bluetooth_test_server(port, device_id, io_capability):
 
             server = grpc.aio.server()
             security_service = security.SecurityService(
-                bluetooth, io_capability
+                shared_context,
+                io_capability,
             )
             security_grpc_aio.add_SecurityServicer_to_server(
                 security_service, server
             )
 
-            audio_service = audio.AudioService(bluetooth)
+            audio_service = audio.AudioService(shared_context)
             audio_grpc_aio.add_AudioServicer_to_server(audio_service, server)
 
-            host_service = host.HostService(server, bluetooth, security_service)
+            host_service = host.HostService(
+                server, shared_context, security_service
+            )
             host_grpc_aio.add_HostServicer_to_server(host_service, server)
 
             security_storage_service = security.SecurityStorageService(
-                bluetooth
+                shared_context
             )
             security_grpc_aio.add_SecurityStorageServicer_to_server(
                 security_storage_service, server
             )
 
-            config_service = config.ConfigService(DEFAULT_CHAMELEON_CONFIG)
+            config_service = config.ConfigService(shared_context)
             config_grpc_aio.add_ConfigServicer_to_server(config_service, server)
 
             server.add_insecure_port(f"[::]:{port}")
@@ -177,6 +195,7 @@ if __name__ == "__main__":
     )
 
     options = parser.parse_args()
+
     asyncio.run(
         start_bluetooth_test_server(
             8999, device_map.get(options.device_type), options.io_capability

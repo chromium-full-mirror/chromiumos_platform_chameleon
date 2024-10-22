@@ -15,17 +15,15 @@ import grpc
 class ConfigService(config_grpc_aio.ConfigServicer):
     """Service to trigger Chameleon Config procedures."""
 
-    def __init__(self, device_config):
-        self.device_config = device_config
-        self.default_config = config_pb2.Configuration()
-        self.default_config.CopyFrom(device_config)
+    def __init__(self, shared_context):
+        self.ctx = shared_context
 
     async def ClearConfig(
         self,
         request: empty_pb2.Empty,
         context: grpc.ServicerContext,
     ) -> empty_pb2.Empty:
-        self.device_config.CopyFrom(self.default_config)
+        self.ctx.config.CopyFrom(self.ctx.default_config)
         return empty_pb2.Empty()
 
     async def WriteConfig(
@@ -36,7 +34,7 @@ class ConfigService(config_grpc_aio.ConfigServicer):
         success = True
 
         req_config_dict = MessageToDict(request.config)
-        cur_config_dict = MessageToDict(self.device_config)
+        cur_config_dict = MessageToDict(self.ctx.config)
 
         for section_name, section_dict in req_config_dict.items():
             for entry_name, entry_variant in section_dict.items():
@@ -57,7 +55,7 @@ class ConfigService(config_grpc_aio.ConfigServicer):
                 cur_entry[req_entry_value_type] = req_entry_value
 
         if success:
-            ParseDict(cur_config_dict, self.device_config)
+            ParseDict(cur_config_dict, self.ctx.config)
 
         resp = config_pb2.WriteConfigResponse()
         resp.success = success
@@ -66,4 +64,4 @@ class ConfigService(config_grpc_aio.ConfigServicer):
     async def ReadConfig(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> config_pb2.ReadConfigResponse:
-        return config_pb2.ReadConfigResponse(config=self.device_config)
+        return config_pb2.ReadConfigResponse(config=self.ctx.config)

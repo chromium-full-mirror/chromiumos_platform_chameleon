@@ -191,17 +191,18 @@ class Agent(dbus.service.Object):
 
 
 class SecurityService(security_grpc_aio.SecurityServicer):
-    """gRPC Service that triggers Bluetooth security procedures using Bluez.
+    """gRPC Service that triggers Bluetooth security procedures using Bluez."""
 
-    Args:
-        bluetooth: chameleond.utils.bluetooth_raspi.BluezPeripheral.
-        io_capability: The IO capability of the bluetooth device, the
-        values is one of "DisplayOnly", "DisplayYesNo", "KeyboardOnly",
-        "NoInputNoOutput" and "KeyboardDisplay".
-    """
+    def __init__(self, shared_context, io_capability):
+        """Initialize the struct
 
-    def __init__(self, bluetooth, io_capability):
-        self.bluetooth = bluetooth
+        Args:
+            shared_context: context that is shared by all service.
+            io_capability: The IO capability of the bluetooth device, the
+            values is one of "DisplayOnly", "DisplayYesNo", "KeyboardOnly",
+            "NoInputNoOutput" and "KeyboardDisplay".
+        """
+        self.ctx = shared_context
         self.io_capability = io_capability
         self.manually_confirm = False
 
@@ -328,8 +329,8 @@ class SecurityService(security_grpc_aio.SecurityServicer):
 class SecurityStorageService(security_grpc_aio.SecurityStorageServicer):
     """Service to trigger Bluetooth Host security persistent storage procedures."""
 
-    def __init__(self, bluetooth):
-        self.bluetooth = bluetooth
+    def __init__(self, shared_context):
+        self.shared_context = shared_context
 
     async def IsBonded(
         self,
