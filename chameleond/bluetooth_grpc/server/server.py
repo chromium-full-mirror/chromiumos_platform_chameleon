@@ -15,6 +15,7 @@ import logging
 
 from blueship import audio_grpc_aio
 from blueship import config_grpc_aio
+from blueship import config_pb2
 from chameleond.bluetooth_grpc.blueship.server import audio
 from chameleond.bluetooth_grpc.blueship.server import config
 from chameleond.bluetooth_grpc.pandora.server import host
@@ -39,8 +40,24 @@ class TestServerContext:
         self.default_config = config_pb2.Configuration()
         self.default_config.CopyFrom(config)
 
+    @property
+    def io_capability(self):
+        """Helper function to convert IO Capability from proto to String"""
+        io_cap = self.config.device.io_capability.io_capability
+        if io_cap == config_pb2.IO_CAPABILITY_DISPLAY_ONLY:
+            return "DisplayOnly"
+        elif io_cap == config_pb2.IO_CAPABILITY_DISPLAY_YES_NO:
+            return "DisplayYesNo"
+        elif io_cap == config_pb2.IO_CAPABILITY_KEYBOARD_ONLY:
+            return "KeyboardOnly"
+        elif io_cap == config_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT:
+            return "NoInputNoOutput"
+        elif io_cap == config_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY:
+            return "KeyboardDisplay"
+        return None
 
-async def start_bluetooth_test_server(port, device_id, io_capability):
+
+async def start_bluetooth_test_server(port, device_id):
     """Start serving the bluetooth test server."""
 
     try:
@@ -87,7 +104,6 @@ async def start_bluetooth_test_server(port, device_id, io_capability):
             server = grpc.aio.server()
             security_service = security.SecurityService(
                 shared_context,
-                io_capability,
             )
             security_grpc_aio.add_SecurityServicer_to_server(
                 security_service, server
@@ -167,14 +183,6 @@ if __name__ == "__main__":
         "BLE_FAST_PAIR": 33,
     }
 
-    choices_io_capability = [
-        "DisplayOnly",
-        "DisplayYesNo",
-        "KeyboardOnly",
-        "NoInputNoOutput",
-        "KeyboardDisplay",
-    ]
-
     parser = argparse.ArgumentParser(
         description="Launch a Bluetooth test server daemon.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -186,18 +194,9 @@ if __name__ == "__main__":
         default="BLUETOOTH_AUDIO",
         help="bluetooth device to create",
     )
-    parser.add_argument(
-        "--io_capability",
-        choices=choices_io_capability,
-        type=str,
-        default="NoInputNoOutput",
-        help="io capability of the bluetooth device",
-    )
 
     options = parser.parse_args()
 
     asyncio.run(
-        start_bluetooth_test_server(
-            8999, device_map.get(options.device_type), options.io_capability
-        )
+        start_bluetooth_test_server(8999, device_map.get(options.device_type))
     )

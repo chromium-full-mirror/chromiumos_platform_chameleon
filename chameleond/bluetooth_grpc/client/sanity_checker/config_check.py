@@ -16,6 +16,7 @@ class ConfigGrpcTests(unittest.TestCase):
     """Class to perform sanity check on ConfigService via unittest framework"""
 
     DEFAULT_API_VERSION = "0.0"
+    DEFAULT_IO_CAPABILITY = config_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT
 
     def setUp(self):
         """Setup the testing environment"""
@@ -48,6 +49,31 @@ class ConfigGrpcTests(unittest.TestCase):
         self.assertEqual(
             resp.config.api.support_api_version.string_value,
             self.DEFAULT_API_VERSION,
+        )
+
+    def test_read_io_capability(self):
+        """Test IO Capability can be read"""
+        resp = self.config_proxy.ReadConfig()
+        self.assertEqual(
+            resp.config.device.io_capability.io_capability,
+            self.DEFAULT_IO_CAPABILITY,
+        )
+
+    def test_write_io_capability(self):
+        """Test IO Capability can be written"""
+        write_config = config_pb2.Configuration()
+        write_config.device.io_capability.io_capability = (
+            config_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY
+        )
+        resp = self.config_proxy.WriteConfig(write_config)
+        # Write config request should succeed
+        self.assertTrue(resp.success)
+
+        # IO Capability should be changed.
+        resp = self.config_proxy.ReadConfig()
+        self.assertEqual(
+            resp.config.device.io_capability.io_capability,
+            config_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY,
         )
 
 

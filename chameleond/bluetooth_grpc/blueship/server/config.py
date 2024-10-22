@@ -32,6 +32,9 @@ class ConfigService(config_grpc_aio.ConfigServicer):
         context: grpc.ServicerContext,
     ) -> config_pb2.WriteConfigResponse:
         success = True
+        updated = False
+
+        bluetooth_device = self.ctx.btd
 
         req_config_dict = MessageToDict(request.config)
         cur_config_dict = MessageToDict(self.ctx.config)
@@ -52,10 +55,18 @@ class ConfigService(config_grpc_aio.ConfigServicer):
                     success = False
                     continue
 
+                if cur_entry[req_entry_value_type] == req_entry_value:
+                    continue
+
+                updated = True
                 cur_entry[req_entry_value_type] = req_entry_value
 
         if success:
             ParseDict(cur_config_dict, self.ctx.config)
+            if updated:
+                # Re-initialize the Bluetooth to apply the new configuration
+                bluetooth_device.ResetStack()
+                bluetooth_device.SetIOCapability(self.io_capability)
 
         resp = config_pb2.WriteConfigResponse()
         resp.success = success

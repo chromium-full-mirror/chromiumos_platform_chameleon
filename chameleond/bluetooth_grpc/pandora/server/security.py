@@ -193,17 +193,13 @@ class Agent(dbus.service.Object):
 class SecurityService(security_grpc_aio.SecurityServicer):
     """gRPC Service that triggers Bluetooth security procedures using Bluez."""
 
-    def __init__(self, shared_context, io_capability):
+    def __init__(self, shared_context):
         """Initialize the struct
 
         Args:
             shared_context: context that is shared by all service.
-            io_capability: The IO capability of the bluetooth device, the
-            values is one of "DisplayOnly", "DisplayYesNo", "KeyboardOnly",
-            "NoInputNoOutput" and "KeyboardDisplay".
         """
         self.ctx = shared_context
-        self.io_capability = io_capability
         self.manually_confirm = False
 
     async def OnPairing(
@@ -230,7 +226,7 @@ class SecurityService(security_grpc_aio.SecurityServicer):
             agent_manager = dbus.Interface(bluez_obj, AGENT_MANAGER_INTERFACE)
 
             agent_manager.RegisterAgent(
-                AGENT_PATH, dbus.String(self.io_capability)
+                AGENT_PATH, dbus.String(self.ctx.io_capability)
             )
             agent_manager.RequestDefaultAgent(AGENT_PATH)
             logging.info("OnPairing: pairing agent registered.")
@@ -330,7 +326,7 @@ class SecurityStorageService(security_grpc_aio.SecurityStorageServicer):
     """Service to trigger Bluetooth Host security persistent storage procedures."""
 
     def __init__(self, shared_context):
-        self.shared_context = shared_context
+        self.ctx = shared_context
 
     async def IsBonded(
         self,

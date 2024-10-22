@@ -894,6 +894,28 @@ class BluezPeripheral(PeripheralKit):
             self._gatt_server._ConfigureAdvertisements()
         return True
 
+    def SetIOCapability(self, io_capability):
+        """Set IO Capability in kernel
+
+        @param index: Controller index.
+        @param io_capability: IO Capability in one of
+            Possible values for the parameter:
+                'DisplayOnly'
+                'DisplayYesNo'
+                'KeyboardOnly'
+                'NoInputNoOutput'
+                'KeyboardDisplay'
+
+        @return True on success,
+                False on failure.
+        """
+        logging.info("Setting IO Capability to %s", io_capability)
+        _control = bluetooth_socket.BluetoothControlSocket()
+        if not _control.set_io_capability(0, io_capability):
+            logging.error("Failed to set IO Capability")
+            return False
+        return True
+
     def SetRPATimeout(self, timeout):
         """Set the timeout value for random private address
 

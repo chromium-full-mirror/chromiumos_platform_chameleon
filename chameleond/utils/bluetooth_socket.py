@@ -1249,6 +1249,35 @@ class BluetoothControlSocket(BluetoothSocket):
         ) = struct.unpack_from("<6sB", memoryview(data))
         return (address, address_type)
 
+    def set_io_capability(self, index, io_capability):
+        """Set IO Capability in kernel
+
+        @param index: Controller index.
+        @param io_capability: IO Capability in one of
+            Possible values for the parameter:
+                'DisplayOnly'
+                'DisplayYesNo'
+                'KeyboardOnly'
+                'NoInputNoOutput'
+                'KeyboardDisplay'
+
+        @return True on success,
+                False on failure.
+        """
+
+        mgmt_io_capability = [
+            "DisplayOnly",
+            "DisplayYesNo",
+            "KeyboardOnly",
+            "NoInputNoOutput",
+            "KeyboardDisplay",
+        ]
+        msg_data = struct.pack("<B", mgmt_io_capability.index(io_capability))
+        (status, data) = self.send_command_and_wait(
+            MGMT_OP_SET_IO_CAPABILITY, index, msg_data
+        )
+        return status == MGMT_STATUS_SUCCESS
+
 
 class BluetoothRawSocket(BluetoothSocket):
     """Bluetooth Raw HCI Socket.
