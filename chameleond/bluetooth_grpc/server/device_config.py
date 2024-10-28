@@ -20,4 +20,14 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
             writable=True, device_category=manager_pb2.DEVICE_CATEGORY_KEYBOARD
         ),
     ),
+    controller=manager_pb2.ControllerConfig(
+        support_classic=manager_pb2.ConfigVariant(
+            writable=True,
+            bool_value=False,
+        ),
+        support_le=manager_pb2.ConfigVariant(
+            writable=True,
+            bool_value=True,
+        ),
+    ),
 )

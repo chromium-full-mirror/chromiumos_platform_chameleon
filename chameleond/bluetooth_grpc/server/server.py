@@ -59,22 +59,27 @@ class TestServerContext:
     def device_type(self):
         """Helper function to convert Device Category from proto to String"""
         device_type = self.config.device.category.device_category
-        support_le = False
+        support_le = self.config.controller.support_le.bool_value
+        support_classic = self.config.controller.support_classic.bool_value
+
         if device_type == manager_pb2.DEVICE_CATEGORY_AUDIO:
-            return "BLUETOOTH_AUDIO"
+            if support_classic:
+                return "BLUETOOTH_AUDIO"
+            # LE Audio is not implemented yet
         elif device_type == manager_pb2.DEVICE_CATEGORY_KEYBOARD:
             if support_le:
                 return "BLE_KEYBOARD"
-            else:
+            elif support_classic:
                 return "KEYBOARD"
         elif device_type == manager_pb2.DEVICE_CATEGORY_MOUSE:
             if support_le:
                 return "BLE_MOUSE"
-            else:
+            elif support_classic:
                 return "MOUSE"
         elif device_type == manager_pb2.DEVICE_CATEGORY_PHONE:
             if support_le:
                 return "BLE_PHONE"
+            # Classic phone is not implemented
         return None
 
     @property

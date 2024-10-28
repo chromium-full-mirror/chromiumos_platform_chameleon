@@ -19,6 +19,8 @@ class ConfigGrpcTests(unittest.TestCase):
     DEFAULT_API_VERSION = "0.0"
     DEFAULT_IO_CAPABILITY = manager_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT
     DEFAULT_DEVICE_CATEGORY = manager_pb2.DEVICE_CATEGORY_KEYBOARD
+    DEFAULT_SUPPORT_CLASSIC = False
+    DEFAULT_SUPPORT_LE = True
 
     def setUp(self):
         """Setup the testing environment"""
@@ -37,7 +39,6 @@ class ConfigGrpcTests(unittest.TestCase):
             # Wait for the channel to become ready, with a timeout
             channel_ready_future = grpc.channel_ready_future(self.proxy)
             channel_ready_future.result(timeout=60)  # Adjust timeout as needed
-            print("Connected to server!")
         except grpc.FutureTimeoutError:
             print("Connection timed out.")
         except grpc.RpcError as e:
@@ -105,7 +106,7 @@ class ConfigGrpcTests(unittest.TestCase):
         """Test device category can be written"""
         write_config = manager_pb2.Configuration()
         write_config.device.category.device_category = (
-            manager_pb2.DEVICE_CATEGORY_AUDIO
+            manager_pb2.DEVICE_CATEGORY_MOUSE
         )
         resp = self.manager_proxy.RestartServer(write_config)
 
@@ -116,8 +117,37 @@ class ConfigGrpcTests(unittest.TestCase):
         resp = self.manager_proxy.ReadConfig()
         self.assertEqual(
             resp.config.device.category.device_category,
-            manager_pb2.DEVICE_CATEGORY_AUDIO,
+            manager_pb2.DEVICE_CATEGORY_MOUSE,
         )
+
+    def test_read_controller(self):
+        """Test controller can be read"""
+        resp = self.manager_proxy.ReadConfig()
+        self.assertEqual(
+            resp.config.controller.support_classic.bool_value,
+            self.DEFAULT_SUPPORT_CLASSIC,
+        )
+        self.assertEqual(
+            resp.config.controller.support_le.bool_value,
+            self.DEFAULT_SUPPORT_LE,
+        )
+
+    def test_write_controller(self):
+        """Test device category can be written"""
+        write_config = manager_pb2.Configuration()
+        write_config.controller.support_classic.bool_value = True
+        write_config.controller.support_le.bool_value = False
+        resp = self.manager_proxy.RestartServer(write_config)
+
+        # Wait for the server to be restarted
+        self.connect_to_server()
+
+        # Controller should be changed.
+        resp = self.manager_proxy.ReadConfig()
+        self.assertEqual(
+            resp.config.controller.support_classic.bool_value, True
+        )
+        self.assertEqual(resp.config.controller.support_le.bool_value, False)
 
 
 if __name__ == "__main__":
