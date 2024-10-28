@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 from blueship.audio_grpc import Audio
-from blueship.config_grpc import Config
+from blueship.manager_grpc import Manager
 import grpc
 from pandora.host_grpc import Host
 from pandora.security_grpc import Security
@@ -15,7 +15,7 @@ proxy = grpc.insecure_channel(f"localhost:{PANDORA_SERVER_PORT}")
 host_proxy = Host(proxy)
 security_proxy = Security(proxy)
 audio_proxy = Audio(proxy)
-config_proxy = Config(proxy)
+manager_proxy = Manager(proxy)
 
 print(
     "Example usage:\n"
@@ -32,7 +32,7 @@ print(
     f"\thost_proxy ({type(host_proxy)})\n"
     f"\tsecurity_proxy ({type(security_proxy)})\n"
     f"\taudio_proxy ({type(audio_proxy)})\n"
-    f"\tconfig_proxy ({type(config_proxy)})\n"
+    f"\tmanager_proxy ({type(manager_proxy)})\n"
 )
 
 while True:

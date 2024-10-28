@@ -14,10 +14,10 @@ import asyncio
 import logging
 
 from blueship import audio_grpc_aio
-from blueship import config_grpc_aio
-from blueship import config_pb2
+from blueship import manager_grpc_aio
+from blueship import manager_pb2
 from chameleond.bluetooth_grpc.blueship.server import audio
-from chameleond.bluetooth_grpc.blueship.server import config
+from chameleond.bluetooth_grpc.blueship.server import manager
 from chameleond.bluetooth_grpc.pandora.server import host
 from chameleond.bluetooth_grpc.pandora.server import security
 from chameleond.bluetooth_grpc.server.device_config import (
@@ -36,22 +36,22 @@ class TestServerContext:
     def __init__(self, config):
         self.chameleon = fpga_tio.ChameleondDriver()
         self.config = config
-        self.default_config = config_pb2.Configuration()
+        self.default_config = manager_pb2.Configuration()
         self.default_config.CopyFrom(config)
 
     @property
     def io_capability(self):
         """Helper function to convert IO Capability from proto to String"""
         io_cap = self.config.device.io_capability.io_capability
-        if io_cap == config_pb2.IO_CAPABILITY_DISPLAY_ONLY:
+        if io_cap == manager_pb2.IO_CAPABILITY_DISPLAY_ONLY:
             return "DisplayOnly"
-        elif io_cap == config_pb2.IO_CAPABILITY_DISPLAY_YES_NO:
+        elif io_cap == manager_pb2.IO_CAPABILITY_DISPLAY_YES_NO:
             return "DisplayYesNo"
-        elif io_cap == config_pb2.IO_CAPABILITY_KEYBOARD_ONLY:
+        elif io_cap == manager_pb2.IO_CAPABILITY_KEYBOARD_ONLY:
             return "KeyboardOnly"
-        elif io_cap == config_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT:
+        elif io_cap == manager_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT:
             return "NoInputNoOutput"
-        elif io_cap == config_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY:
+        elif io_cap == manager_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY:
             return "KeyboardDisplay"
         return None
 
@@ -60,19 +60,19 @@ class TestServerContext:
         """Helper function to convert Device Category from proto to String"""
         device_type = self.config.device.category.device_category
         support_le = False
-        if device_type == config_pb2.DEVICE_CATEGORY_AUDIO:
+        if device_type == manager_pb2.DEVICE_CATEGORY_AUDIO:
             return "BLUETOOTH_AUDIO"
-        elif device_type == config_pb2.DEVICE_CATEGORY_KEYBOARD:
+        elif device_type == manager_pb2.DEVICE_CATEGORY_KEYBOARD:
             if support_le:
                 return "BLE_KEYBOARD"
             else:
                 return "KEYBOARD"
-        elif device_type == config_pb2.DEVICE_CATEGORY_MOUSE:
+        elif device_type == manager_pb2.DEVICE_CATEGORY_MOUSE:
             if support_le:
                 return "BLE_MOUSE"
             else:
                 return "MOUSE"
-        elif device_type == config_pb2.DEVICE_CATEGORY_PHONE:
+        elif device_type == manager_pb2.DEVICE_CATEGORY_PHONE:
             if support_le:
                 return "BLE_PHONE"
         return None
@@ -146,8 +146,10 @@ async def start_bluetooth_test_server(port):
                 security_storage_service, server
             )
 
-            config_service = config.ConfigService(shared_context)
-            config_grpc_aio.add_ConfigServicer_to_server(config_service, server)
+            manager_service = manager.ManagerService(shared_context, server)
+            manager_grpc_aio.add_ManagerServicer_to_server(
+                manager_service, server
+            )
 
             server.add_insecure_port(f"[::]:{port}")
 
@@ -156,6 +158,7 @@ async def start_bluetooth_test_server(port):
             logging.info("Bluetooth test server started.")
 
             await server.wait_for_termination()
+            logging.info("Bluetooth test server stopped, restarting...")
     finally:
         if server is not None:
             await server.stop(None)

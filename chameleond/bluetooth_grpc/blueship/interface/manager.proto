@@ -1,14 +1,18 @@
 syntax = "proto3";
 
-option java_outer_classname = "ConfigProto";
+option java_outer_classname = "ManagerProto";
 
 package blueship;
 
 import "google/protobuf/empty.proto";
 
-service Config {
-  rpc ClearConfig(google.protobuf.Empty) returns (google.protobuf.Empty);
-  rpc WriteConfig(WriteConfigRequest) returns (WriteConfigResponse);
+service Manager {
+  // Reset the gRPC server to the default state.
+  rpc ResetServer(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Restart the gRPC server with the specified configurations
+  // after clearing existing states.
+  rpc RestartServer(RestartServerRequest) returns (RestartServerResponse);
+  // Read the current applied configurations
   rpc ReadConfig(google.protobuf.Empty) returns (ReadConfigResponse);
 }
 
@@ -87,8 +91,8 @@ message Configuration {
   AudioConfig audio = 5;
 }
 
-message WriteConfigRequest { Configuration config = 1; }
+message RestartServerRequest { Configuration next_config = 1; }
 
-message WriteConfigResponse { bool success = 1; }
+message RestartServerResponse { bool success = 1; }
 
 message ReadConfigResponse { Configuration config = 1; }

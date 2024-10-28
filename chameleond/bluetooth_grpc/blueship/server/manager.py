@@ -2,39 +2,42 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Config grpc interface."""
+"""Manager grpc interface."""
 
-from blueship import config_grpc_aio
-from blueship import config_pb2
+import asyncio
+
+from blueship import manager_grpc_aio
+from blueship import manager_pb2
 from google.protobuf import empty_pb2
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.json_format import ParseDict
 import grpc
 
 
-class ConfigService(config_grpc_aio.ConfigServicer):
-    """Service to trigger Chameleon Config procedures."""
+class ManagerService(manager_grpc_aio.ManagerServicer):
+    """Service to trigger Chameleon Manager procedures."""
 
-    def __init__(self, shared_context):
+    def __init__(self, shared_context, server):
         self.ctx = shared_context
+        self.server = server
 
-    async def ClearConfig(
+    async def ResetServer(
         self,
         request: empty_pb2.Empty,
         context: grpc.ServicerContext,
     ) -> empty_pb2.Empty:
         self.ctx.config.CopyFrom(self.ctx.default_config)
+        asyncio.create_task(self.server.stop(None))
         return empty_pb2.Empty()
 
-    async def WriteConfig(
+    async def RestartServer(
         self,
-        request: config_pb2.WriteConfigRequest,
+        request: manager_pb2.RestartServerRequest,
         context: grpc.ServicerContext,
-    ) -> config_pb2.WriteConfigResponse:
+    ) -> manager_pb2.RestartServerResponse:
         success = True
-        updated = False
 
-        req_config_dict = MessageToDict(request.config)
+        req_config_dict = MessageToDict(request.next_config)
         cur_config_dict = MessageToDict(self.ctx.config)
 
         for section_name, section_dict in req_config_dict.items():
@@ -56,20 +59,17 @@ class ConfigService(config_grpc_aio.ConfigServicer):
                 if cur_entry[req_entry_value_type] == req_entry_value:
                     continue
 
-                updated = True
                 cur_entry[req_entry_value_type] = req_entry_value
 
         if success:
             ParseDict(cur_config_dict, self.ctx.config)
-            if updated:
-                # Re-initialize the Bluetooth to apply the new configuration
-                self.ctx.reset_bluetooth_device()
+            # Stop the server and rely on the |start_bluetooth_test_server|
+            # to restart.
+            asyncio.create_task(self.server.stop(None))
 
-        resp = config_pb2.WriteConfigResponse()
-        resp.success = success
-        return resp
+        return empty_pb2.Empty()
 
     async def ReadConfig(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
-    ) -> config_pb2.ReadConfigResponse:
-        return config_pb2.ReadConfigResponse(config=self.ctx.config)
+    ) -> manager_pb2.ReadConfigResponse:
+        return manager_pb2.ReadConfigResponse(config=self.ctx.config)

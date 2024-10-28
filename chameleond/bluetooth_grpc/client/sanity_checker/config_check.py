@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import time
 import unittest
 
-from blueship import config_pb2
-from blueship.config_grpc import Config
+from blueship import manager_pb2
+from blueship.manager_grpc import Manager
 import grpc
 
 
@@ -16,22 +17,35 @@ class ConfigGrpcTests(unittest.TestCase):
     """Class to perform sanity check on ConfigService via unittest framework"""
 
     DEFAULT_API_VERSION = "0.0"
-    DEFAULT_IO_CAPABILITY = config_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT
-    DEFAULT_DEVICE_CATEGORY = config_pb2.DEVICE_CATEGORY_KEYBOARD
+    DEFAULT_IO_CAPABILITY = manager_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT
+    DEFAULT_DEVICE_CATEGORY = manager_pb2.DEVICE_CATEGORY_KEYBOARD
 
     def setUp(self):
         """Setup the testing environment"""
         # TODO: Start gRPC server before the tests
-        self.proxy = grpc.insecure_channel(f"localhost:{PANDORA_SERVER_PORT}")
-        self.config_proxy = Config(self.proxy)
+        self.connect_to_server()
+        self.manager_proxy = Manager(self.proxy)
 
     def tearDown(self):
         """Clear the testing environment"""
-        self.config_proxy.ClearConfig()
+        self.manager_proxy.ResetServer()
+        self.connect_to_server()
+
+    def connect_to_server(self):
+        self.proxy = grpc.insecure_channel(f"localhost:{PANDORA_SERVER_PORT}")
+        try:
+            # Wait for the channel to become ready, with a timeout
+            channel_ready_future = grpc.channel_ready_future(self.proxy)
+            channel_ready_future.result(timeout=60)  # Adjust timeout as needed
+            print("Connected to server!")
+        except grpc.FutureTimeoutError:
+            print("Connection timed out.")
+        except grpc.RpcError as e:
+            print(f"Error connecting to server: {e}")
 
     def test_read_api(self):
         """Test Support API Version can be read"""
-        resp = self.config_proxy.ReadConfig()
+        resp = self.manager_proxy.ReadConfig()
         self.assertEqual(
             resp.config.api.support_api_version.string_value,
             self.DEFAULT_API_VERSION,
@@ -39,14 +53,15 @@ class ConfigGrpcTests(unittest.TestCase):
 
     def test_write_api(self):
         """Test Support API Version can not be written on chameleon"""
-        write_config = config_pb2.Configuration()
+        write_config = manager_pb2.Configuration()
         write_config.api.support_api_version.string_value = "0.2"
-        resp = self.config_proxy.WriteConfig(write_config)
-        # Write config request should succeed
-        self.assertTrue(resp.success)
+        resp = self.manager_proxy.RestartServer(write_config)
+
+        # Wait for the server to be restarted
+        self.connect_to_server()
 
         # API version should not be changed.
-        resp = self.config_proxy.ReadConfig()
+        resp = self.manager_proxy.ReadConfig()
         self.assertEqual(
             resp.config.api.support_api_version.string_value,
             self.DEFAULT_API_VERSION,
@@ -54,7 +69,7 @@ class ConfigGrpcTests(unittest.TestCase):
 
     def test_read_io_capability(self):
         """Test IO Capability can be read"""
-        resp = self.config_proxy.ReadConfig()
+        resp = self.manager_proxy.ReadConfig()
         self.assertEqual(
             resp.config.device.io_capability.io_capability,
             self.DEFAULT_IO_CAPABILITY,
@@ -62,24 +77,25 @@ class ConfigGrpcTests(unittest.TestCase):
 
     def test_write_io_capability(self):
         """Test IO Capability can be written"""
-        write_config = config_pb2.Configuration()
+        write_config = manager_pb2.Configuration()
         write_config.device.io_capability.io_capability = (
-            config_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY
+            manager_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY
         )
-        resp = self.config_proxy.WriteConfig(write_config)
-        # Write config request should succeed
-        self.assertTrue(resp.success)
+        resp = self.manager_proxy.RestartServer(write_config)
+
+        # Wait for the server to be restarted
+        self.connect_to_server()
 
         # IO Capability should be changed.
-        resp = self.config_proxy.ReadConfig()
+        resp = self.manager_proxy.ReadConfig()
         self.assertEqual(
             resp.config.device.io_capability.io_capability,
-            config_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY,
+            manager_pb2.IO_CAPABILITY_KEYBOARD_DISPLAY,
         )
 
     def test_read_device_category(self):
         """Test device category can be read"""
-        resp = self.config_proxy.ReadConfig()
+        resp = self.manager_proxy.ReadConfig()
         self.assertEqual(
             resp.config.device.category.device_category,
             self.DEFAULT_DEVICE_CATEGORY,
@@ -87,19 +103,20 @@ class ConfigGrpcTests(unittest.TestCase):
 
     def test_write_device_category(self):
         """Test device category can be written"""
-        write_config = config_pb2.Configuration()
+        write_config = manager_pb2.Configuration()
         write_config.device.category.device_category = (
-            config_pb2.DEVICE_CATEGORY_AUDIO
+            manager_pb2.DEVICE_CATEGORY_AUDIO
         )
-        resp = self.config_proxy.WriteConfig(write_config)
-        # Write config request should succeed
-        self.assertTrue(resp.success)
+        resp = self.manager_proxy.RestartServer(write_config)
+
+        # Wait for the server to be restarted
+        self.connect_to_server()
 
         # IO Capability should be changed.
-        resp = self.config_proxy.ReadConfig()
+        resp = self.manager_proxy.ReadConfig()
         self.assertEqual(
             resp.config.device.category.device_category,
-            config_pb2.DEVICE_CATEGORY_AUDIO,
+            manager_pb2.DEVICE_CATEGORY_AUDIO,
         )
 
 
