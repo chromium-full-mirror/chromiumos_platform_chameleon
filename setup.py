@@ -22,19 +22,25 @@ if "--cyclone5" not in sys.argv:
 else:
     sys.argv.remove("--cyclone5")
 
-setup(
-    name="chameleond",
-    version="0.0.2",
-    packages=[
-        "chameleond",
-        "chameleond.devices",
-        "chameleond.drivers",
-        "chameleond.utils",
+packages = [
+    "chameleond",
+    "chameleond.devices",
+    "chameleond.drivers",
+    "chameleond.utils",
+]
+
+if "--grpc" in sys.argv:
+    packages += [
         "chameleond.bluetooth_grpc.server",
         "chameleond.bluetooth_grpc.blueship.server",
         "chameleond.bluetooth_grpc.pandora.server",
         "chameleond.bluetooth_grpc.client.sanity_checker",
-    ],
+    ]
+
+setup(
+    name="chameleond",
+    version="0.0.2",
+    packages=packages,
     package_data={
         "chameleond": [
             "data/*.bin",

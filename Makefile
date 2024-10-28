@@ -116,10 +116,19 @@ PLATFORM = $(shell awk -F= '/CHROMEOS_RELEASE_NAME/ {print $$2}' \
 # Valid value: true / false.
 NEEDS_SYSTEM_UPDATE ?= 'false'
 
+ifndef INSTALL_GRPC
+	INSTALL_GRPC := false
+endif
+
 SETUP_SUFFIX =
 ifeq ($(PLATFORM), cyclone5)
 	SETUP_SUFFIX = --cyclone5
 endif
+ifeq ($(INSTALL_GRPC), true)
+	SETUP_SUFFIX += --grpc
+endif
+
+
 
 .PHONY: install
 install:
@@ -212,6 +221,7 @@ ifdef CHAMELEON_HOST
 	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
 	    $(DISTDIR)/$(BUNDLE) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
 
+ifeq ($(INSTALL_GRPC), true)
 #	Recreate the caching directory to ensure a fresh start.
 	rm -rf $(BLUETOOTH_GRPC_ROOT_DIR)
 	mkdir $(BLUETOOTH_GRPC_ROOT_DIR)
@@ -255,10 +265,25 @@ ifdef CHAMELEON_HOST
 	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
 	        "PY_VERSION=$(PY_VERSION)"\
 	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"\
+		"INSTALL_GRPC=$(INSTALL_GRPC)"
 		"BLUETOOTH_GRPC_ROOT_DIR=${BLUETOOTH_GRPC_ROOT_DIR}"\
 		"PANDORA_TMP_DIR=$(PANDORA_TMP_DIR)"\
 		"PANDORA_EXPERIMENTAL_TMP_DIR=${PANDORA_EXPERIMENTAL_TMP_DIR}"\
 		"BLUESHIP_TMP_DIR=${BLUESHIP_TMP_DIR}"
+else
+	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+	    -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
+	    $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
+	    "cd /tmp && rm -rf $(BUNDLEDIR) && tar zxf $(BUNDLE) &&" \
+	    "cd $(BUNDLEDIR) && find -exec touch -c {} \; &&" \
+	    "make install " \
+	        "REMOTE_INSTALL=TRUE" \
+	        "HOST_NOW=\"$(HOST_NOW)\"" \
+	        "BUNDLE_VERSION=$(BUNDLE_VERSION)" \
+	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
+	        "PY_VERSION=$(PY_VERSION)"\
+	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"
+endif
 else
 	$(error CHAMELEON_HOST is undefined)
 endif
