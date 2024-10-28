@@ -21,6 +21,7 @@ class ConfigGrpcTests(unittest.TestCase):
     DEFAULT_DEVICE_CATEGORY = manager_pb2.DEVICE_CATEGORY_KEYBOARD
     DEFAULT_SUPPORT_CLASSIC = False
     DEFAULT_SUPPORT_LE = True
+    DEFAULT_PIN = "0000"
 
     def setUp(self):
         """Setup the testing environment"""
@@ -148,6 +149,27 @@ class ConfigGrpcTests(unittest.TestCase):
             resp.config.controller.support_classic.bool_value, True
         )
         self.assertEqual(resp.config.controller.support_le.bool_value, False)
+
+    def test_read_security(self):
+        """Test security can be read"""
+        resp = self.manager_proxy.ReadConfig()
+        self.assertEqual(
+            resp.config.security.pin.string_value,
+            self.DEFAULT_PIN,
+        )
+
+    def test_write_security(self):
+        """Test security can be written"""
+        write_config = manager_pb2.Configuration()
+        write_config.security.pin.string_value = "1234"
+        resp = self.manager_proxy.RestartServer(write_config)
+
+        # Wait for the server to be restarted
+        self.connect_to_server()
+
+        # PIN should be changed.
+        resp = self.manager_proxy.ReadConfig()
+        self.assertEqual(resp.config.security.pin.string_value, "1234")
 
 
 if __name__ == "__main__":

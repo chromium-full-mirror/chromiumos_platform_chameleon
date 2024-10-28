@@ -30,4 +30,7 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
             bool_value=True,
         ),
     ),
+    security=manager_pb2.SecurityConfig(
+        pin=manager_pb2.ConfigVariant(writable=True, string_value="0000"),
+    ),
 )
