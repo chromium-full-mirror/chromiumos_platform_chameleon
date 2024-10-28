@@ -54,13 +54,17 @@ message SecurityConfig { ConfigVariant pin = 1; }
 message AudioConfig { ConfigVariant supported_codecs = 1; }
 
 enum Codec {
+  /* A2DP Codec */
   CODEC_SBC = 0;
   CODEC_AAC = 1;
+  /* HFP Codec */
+  CODEC_MSBC = 100;
+  CODEC_CVSD = 101;
 }
 
 message RepeatedString { repeated string string_list = 1; }
 
-message RepeatedCodec { repeated Codec string_list = 1; }
+message RepeatedCodec { repeated Codec codec_list = 1; }
 
 message ConfigVariant {
   bool writable = 1;

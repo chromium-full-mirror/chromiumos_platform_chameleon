@@ -4,12 +4,9 @@
 
 """Audio grpc interface."""
 
-import asyncio
-from typing import AsyncGenerator
 
 from blueship import audio_grpc_aio
 from blueship import audio_pb2
-from chameleond.bluetooth_grpc.pandora.server import utils
 from google.protobuf import empty_pb2
 import grpc
 
@@ -24,6 +21,7 @@ class AudioService(audio_grpc_aio.AudioServicer):
             shared_context: context that is shared by all service
         """
         self.ctx = shared_context
+        self.is_wbs = self.ctx.hfp_codec == "CVSD"
 
     async def StartRecordAudio(
         self,
@@ -42,11 +40,14 @@ class AudioService(audio_grpc_aio.AudioServicer):
             test_data["rate"] = 48000
             test_data["channels"] = 2
         elif request.profile == audio_pb2.AUDIO_PROFILE_HFP:
-            # This is assuming that WBS is in used.
-            # TODO: Get the selected codec from configuration
-            audio_profile = "hfp_wbs"
-            test_data["rate"] = 16000
-            test_data["channels"] = 1
+            if self.is_wbs:
+                audio_profile = "hfp_wbs"
+                test_data["rate"] = 16000
+                test_data["channels"] = 1
+            else:
+                audio_profile = "hfp_nbs"
+                test_data["rate"] = 8000
+                test_data["channels"] = 1
 
         self.ctx.btd.StartRecordingAudioSubprocess(audio_profile, test_data)
         return empty_pb2.Empty()
@@ -62,16 +63,24 @@ class AudioService(audio_grpc_aio.AudioServicer):
         request: audio_pb2.StartPlayAudioRequest,
         context: grpc.ServicerContext,
     ) -> empty_pb2.Empty:
-        # This is assuming that WBS is in used.
-        # TODO: Get the selected codec from configuration
-        test_data = {
-            "rate": 16000,
-            "channels": 1,
-            "device_file": request.path,
-            "format": "S16_LE",
-        }
+        if self.is_wbs:
+            audio_profile = "hfp_wbs"
+            test_data = {
+                "rate": 16000,
+                "channels": 1,
+                "device_file": request.path,
+                "format": "S16_LE",
+            }
+        else:
+            audio_profile = "hfp_nbs"
+            test_data = {
+                "rate": 8000,
+                "channels": 1,
+                "device_file": request.path,
+                "format": "S16_LE",
+            }
 
-        self.ctx.btd.StartPlayingAudioSubprocess("hfp_wbs", test_data)
+        self.ctx.btd.StartPlayingAudioSubprocess(audio_profile, test_data)
         return empty_pb2.Empty()
 
     async def StopPlayAudio(
