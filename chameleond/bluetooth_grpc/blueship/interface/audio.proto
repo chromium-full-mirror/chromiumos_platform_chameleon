@@ -15,6 +15,11 @@ service Audio {
   rpc StartPlayAudio(StartPlayAudioRequest) returns (google.protobuf.Empty);
   // Stop playing audio
   rpc StopPlayAudio(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Send an AVRCP command to the media player
+  rpc SendAvrcpCmd(SendAvrcpCmdRequest) returns (google.protobuf.Empty);
+  // Generate Media info event when changed. It is guaranteed to generate the
+  // first event so that client can get the initial status.
+  rpc OnMediaInfoChanged(google.protobuf.Empty) returns (stream MediaInfo);
 }
 
 // Bluetooth Audio Profile
@@ -36,4 +41,35 @@ message StartRecordAudioRequest {
 message StartPlayAudioRequest {
   // Path to the audio file to play
   string path = 1;
+}
+
+enum PlayerCmd {
+  AUDIO_PLAYER_UNKNOWN = 0;
+  AUDIO_PLAYER_PLAY = 1;
+  AUDIO_PLAYER_PAUSE = 2;
+  AUDIO_PLAYER_STOP = 3;
+  AUDIO_PLAYER_NEXT = 4;
+  AUDIO_PLAYER_PREV = 5;
+  AUDIO_PLAYER_VOL_UP = 6;
+  AUDIO_PLAYER_VOL_DOWN = 7;
+}
+
+message SendAvrcpCmdRequest { PlayerCmd cmd = 1; }
+
+enum PlayerStatus {
+  PLAYER_STATUS_UNKNOWN = 0;
+  PLAYER_STATUS_STOPPED = 1;
+  PLAYER_STATUS_PLAYING = 2;
+  PLAYER_STATUS_PAUSED = 3;
+  PLAYER_STATUS_FWD_SEEK = 4;
+  PLAYER_STATUS_REV_SEEK = 5;
+  PLAYER_STATUS_ERROR = 255;
+}
+
+message MediaInfo {
+  string artist = 1;
+  string title = 2;
+  string album = 3;
+  int32 length = 4;
+  PlayerStatus status = 5;
 }

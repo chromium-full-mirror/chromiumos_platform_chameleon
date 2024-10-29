@@ -20,6 +20,7 @@ from chameleond.bluetooth_grpc.blueship.server import audio
 from chameleond.bluetooth_grpc.blueship.server import manager
 from chameleond.bluetooth_grpc.pandora.server import host
 from chameleond.bluetooth_grpc.pandora.server import security
+from chameleond.bluetooth_grpc.pandora.server import utils
 from chameleond.bluetooth_grpc.server.device_config import (
     DEFAULT_CHAMELEON_CONFIG,
 )
@@ -123,6 +124,8 @@ class TestServerContext:
             # therefore, we use the specialized audio server as default here
             self.btd.StartAudioServer("hfp_wbs")
             self.btd.StartOfono()
+            if not self.btd.ExportMediaPlayer():
+                logging.info("Failed to export media player")
 
         self.btd.SpecifyDeviceType(self.device_type)
         self.btd.SetIOCapability(self.io_capability)

@@ -396,13 +396,20 @@ class BluetoothAudio(BluezPeripheral):
     # - pipewire: the audio server process
     # - wireplumber: an auxiliary process for configuring pipewire
     # Note: starting pipewire will auto start pipewire.socket as well.
-    PIPEWIRE_PROCESSES_TO_START = [f"{PIPEWIRE}", f"{PIPEWIRE_PULSE}",
-                                   f"{WIREPLUMBER}"]
+    PIPEWIRE_PROCESSES_TO_START = [
+        f"{PIPEWIRE}",
+        f"{PIPEWIRE_PULSE}",
+        f"{WIREPLUMBER}",
+    ]
 
     # Note: the pipewire.socket must be stopped before pipewire.
     #       Otherwise, pipewire.socket will auto restart pipewire.
-    PIPEWIRE_PROCESSES_TO_STOP = [f"{PIPEWIRE}.socket", f"{PIPEWIRE}",
-                                  f"{PIPEWIRE_PULSE}.socket", f"{PIPEWIRE_PULSE}"]
+    PIPEWIRE_PROCESSES_TO_STOP = [
+        f"{PIPEWIRE}.socket",
+        f"{PIPEWIRE}",
+        f"{PIPEWIRE_PULSE}.socket",
+        f"{PIPEWIRE_PULSE}",
+    ]
 
     def __init__(self):
         """Initializes a Bluetooth audio object."""
@@ -846,7 +853,9 @@ class BluetoothAudio(BluezPeripheral):
             # "bluez-*.conf" config files are created by our tests to dynamically
             # manipuate the settings. Remove them first to have clean default
             # settings.
-            config_fpath = os.path.join(self.WP_BLUETOOTH_CONF_D_DIR, "bluez-*.conf")
+            config_fpath = os.path.join(
+                self.WP_BLUETOOTH_CONF_D_DIR, "bluez-*.conf"
+            )
             rc = SystemTools.OrigCallAsPi("rm", config_fpath)
             # It is fine if the "51-*.lua" files do not exist. Just return True.
             return True
@@ -1767,6 +1776,9 @@ class BluetoothAudio(BluezPeripheral):
         Returns:
           Return player name if only one player found, empty string otherwise.
         """
+        if self._media_player is not None:
+            return self._media_player
+
         if self.DBUS_SESSION_ENV_VAR_NAME not in os.environ:
             os.environ[
                 self.DBUS_SESSION_ENV_VAR_NAME
@@ -1774,7 +1786,7 @@ class BluetoothAudio(BluezPeripheral):
 
         output = SystemTools.Output(self.PLAYERCTL, "--list-all")
         if len(output.splitlines()) != 1 or output == self.NO_PLAYER_FOUND:
-            return ""
+            return None
 
         self._media_player = output.strip()
         return self._media_player
@@ -1788,13 +1800,12 @@ class BluetoothAudio(BluezPeripheral):
         Returns:
           Requested media information on success, empty string otherwise.
         """
-        if self._media_player is None:
+        player = self.GetExportedMediaPlayer()
+        if player is None:
             logging.error("No Bluetooth media player was exported.")
             return ""
 
-        return SystemTools.Output(
-            self.PLAYERCTL, "-p", self._media_player, *args
-        ).strip()
+        return SystemTools.Output(self.PLAYERCTL, "-p", player, *args).strip()
 
     def SendMediaPlayerCommand(self, command):
         """Execute command towards the given player.
@@ -1805,16 +1816,12 @@ class BluetoothAudio(BluezPeripheral):
         Returns:
           Return True if success, False otherwise.
         """
-        if self._media_player is None:
+        player = self.GetExportedMediaPlayer()
+        if player is None:
             logging.error("No Bluetooth media player was exported.")
             return False
 
-        return (
-            SystemTools.OrigCall(
-                self.PLAYERCTL, "-p", self._media_player, command
-            )
-            == 0
-        )
+        return SystemTools.OrigCall(self.PLAYERCTL, "-p", player, command) == 0
 
     def GetMediaPlayerMediaInfo(self):
         """Retrieve media information through playerctl calls.
