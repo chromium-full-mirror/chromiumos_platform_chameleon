@@ -575,6 +575,10 @@ class BluezPeripheral(PeripheralKit):
         self.CleanCachedFiles()
         self.AdapterPowerOff()
 
+        # Since bluetoothd is going to be restarted, clean up the dbus proxy to
+        # enforce we create a new one once restarted.
+        self._dbus_hci_props = None
+
         # Stop Bluetooth audio related daemons which may interfere
         # with HID tests.
         # Since these commands may return non zero value if they are not
