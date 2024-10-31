@@ -247,6 +247,12 @@ class BluezPeripheral(PeripheralKit):
 
         os.system("sudo service bluetooth start")
 
+    def unpack_if_variant(self, value):
+        """If given value is GLib.Variant, unpack it to the actual type."""
+        if isinstance(value, GLib.Variant):
+            return value.unpack()
+        return value
+
     def _check_prop_handle(self, handle):
         """Checks if bluetoothd is running by accessing an adapter object"""
 
@@ -367,6 +373,28 @@ class BluezPeripheral(PeripheralKit):
                 time.sleep(0.1)
 
         return None
+
+    def get_device_property(self, address, prop_name):
+        """Reads a property of remote bluetooth device.
+
+        Args:
+            address: string address of remote bluetooth device.
+
+        Returns:
+            prop_name: property to be queried.
+        """
+        device = self.GetDeviceWithAddress(address)
+        prop_val = None
+
+        if device:
+            prop_val = self.unpack_if_variant(
+                device[DBUS_PROP_IFACE].Get(DBUS_BLUEZ_DEVICE_IFACE, prop_name)
+            )
+        else:
+            logging.error(
+                f"get_device_property: Failed to get device with the address {address}"
+            )
+        return prop_val
 
     def SetTrustedByRemoteAddress(self, remote_address, trusted=True):
         device = self.GetDeviceWithAddress(remote_address)

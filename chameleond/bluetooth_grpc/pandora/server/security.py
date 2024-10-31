@@ -333,15 +333,15 @@ class SecurityStorageService(security_grpc_aio.SecurityStorageServicer):
         request: security_pb2.IsBondedRequest,
         context: grpc.ServicerContext,
     ) -> wrappers_pb2.BoolValue:
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        address = utils.address_from(request.address)
+        is_bonded = self.ctx.btd.get_device_property(address, "")
+        return wrappers_pb2.BoolValue(value=bool(is_bonded))
 
     async def DeleteBond(
         self,
         request: security_pb2.DeleteBondRequest,
         context: grpc.ServicerContext,
     ) -> empty_pb2.Empty:
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        address = utils.address_from(request.address)
+        self.ctx.btd.RemoveDevice(address)
+        return empty_pb2.Empty()
