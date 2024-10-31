@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option java_outer_classname = "AudioProto";
 
-package pandora;
+package blueship;
 
 import "google/protobuf/empty.proto";
 
