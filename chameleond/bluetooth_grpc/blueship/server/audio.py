@@ -37,7 +37,7 @@ class AudioService(audio_grpc_aio.AudioServicer):
             "format": "S16_LE",
         }
         if request.profile == audio_pb2.Audio_Profile_A2DP:
-            audio_profile = "A2DP"
+            audio_profile = "a2dp"
             # Audio test data for a2dp
             test_data["rate"] = 48000
             test_data["channels"] = 2
