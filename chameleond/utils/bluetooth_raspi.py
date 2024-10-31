@@ -1392,7 +1392,7 @@ class BluezPeripheral(PeripheralKit):
           report: scan code representing state of HID device
         """
         # Passing with empty handlers allows operation to run async
-        self._bluez_service.SendHIDReport(
+        self.get_service_iface().SendHIDReport(
             report,
             reply_handler=self.KeysSentHandler,
             error_handler=self.KeysErrorHandler,
