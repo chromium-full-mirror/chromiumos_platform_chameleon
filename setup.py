@@ -36,6 +36,7 @@ if "--grpc" in sys.argv:
         "chameleond.bluetooth_grpc.pandora.server",
         "chameleond.bluetooth_grpc.client.sanity_checker",
     ]
+    sys.argv.remove("--grpc")
 
 setup(
     name="chameleond",

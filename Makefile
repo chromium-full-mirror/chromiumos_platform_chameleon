@@ -220,6 +220,9 @@ ifdef CHAMELEON_HOST
 	@scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
 	    $(DISTDIR)/$(BUNDLE) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
+else
+	$(error CHAMELEON_HOST is undefined)
+endif
 
 ifeq ($(INSTALL_GRPC), true)
 #	Recreate the caching directory to ensure a fresh start.
@@ -265,7 +268,7 @@ ifeq ($(INSTALL_GRPC), true)
 	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
 	        "PY_VERSION=$(PY_VERSION)"\
 	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"\
-		"INSTALL_GRPC=$(INSTALL_GRPC)"
+		"INSTALL_GRPC=$(INSTALL_GRPC)"\
 		"BLUETOOTH_GRPC_ROOT_DIR=${BLUETOOTH_GRPC_ROOT_DIR}"\
 		"PANDORA_TMP_DIR=$(PANDORA_TMP_DIR)"\
 		"PANDORA_EXPERIMENTAL_TMP_DIR=${PANDORA_EXPERIMENTAL_TMP_DIR}"\
@@ -283,9 +286,6 @@ else
 	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
 	        "PY_VERSION=$(PY_VERSION)"\
 	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"
-endif
-else
-	$(error CHAMELEON_HOST is undefined)
 endif
 
 .PHONY: setup-usb-audio-testbed
