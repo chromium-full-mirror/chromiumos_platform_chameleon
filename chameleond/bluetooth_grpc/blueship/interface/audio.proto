@@ -19,8 +19,9 @@ service Audio {
 
 // Bluetooth Audio Profile
 enum Profile {
-  Audio_Profile_A2DP = 0x0;
-  Audio_Profile_HFP = 0x1;
+  AUDIO_PROFILE_UNKNOWN = 0;
+  AUDIO_PROFILE_A2DP = 1;
+  AUDIO_PROFILE_HFP = 2;
 }
 
 // Request for the `StartRecordAudio` method.

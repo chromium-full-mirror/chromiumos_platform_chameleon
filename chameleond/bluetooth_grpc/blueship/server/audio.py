@@ -36,12 +36,12 @@ class AudioService(audio_grpc_aio.AudioServicer):
             "recorded_by_peer": request.path,
             "format": "S16_LE",
         }
-        if request.profile == audio_pb2.Audio_Profile_A2DP:
+        if request.profile == audio_pb2.AUDIO_PROFILE_A2DP:
             audio_profile = "a2dp"
             # Audio test data for a2dp
             test_data["rate"] = 48000
             test_data["channels"] = 2
-        elif request.profile == audio_pb2.Audio_Profile_HFP:
+        elif request.profile == audio_pb2.AUDIO_PROFILE_HFP:
             # This is assuming that WBS is in used.
             # TODO: Get the selected codec from configuration
             audio_profile = "hfp_wbs"
