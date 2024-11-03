@@ -4,6 +4,47 @@
 
 """Bluez utils functions."""
 
+import enum
+
+from google.protobuf import any_pb2
+from pandora import host_pb2
+from pandora_experimental import os_pb2
+
+
+class BtTransport(enum.IntEnum):
+    """Bluetooth transport type."""
+
+    AUTO = 0
+    BREDR = 1
+    LE = 2
+
+
+class Connection:
+    """A Bluetooth connection."""
+
+    def __init__(self, address: str, transport: BtTransport):
+        self.address = address
+        self.transport = transport
+
+
+def connection_to(connection: Connection):
+    """Converts Connection from Bluetooth test server format to gRPC format."""
+    internal_connection_ref = os_pb2.InternalConnectionRef(
+        address=address_to(connection.address), transport=connection.transport
+    )
+    cookie = any_pb2.Any(value=internal_connection_ref.SerializeToString())
+    return host_pb2.Connection(cookie=cookie)
+
+
+def connection_from(connection: host_pb2.Connection):
+    """Converts Connection from gRPC format to Bluetooth test server format."""
+    internal_connection_ref = os_pb2.InternalConnectionRef()
+    internal_connection_ref.ParseFromString(connection.cookie.value)
+    return Connection(
+        address=address_from(internal_connection_ref.address),
+        transport=internal_connection_ref.transport,
+    )
+
 
 def address_from(request_address: bytes):
     """Converts Bluetooth MAC address from bytes to string.

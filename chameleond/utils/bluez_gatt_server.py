@@ -103,7 +103,7 @@ class GATTServer(object):
         # Add a handler for changes in state, specifically requesting caller's
         # device_path in the callback
         bus.add_signal_receiver(
-            self._PropertyChanged,
+            self.OnPropertyChanged,
             signal_name="PropertiesChanged",
             bus_name="org.bluez",
             path_keyword="device_path",
@@ -283,7 +283,7 @@ class GATTServer(object):
     def GetAdvLocalName(self):
         return self._adv_local_name
 
-    def _PropertyChanged(self, *args, **kwargs):
+    def OnPropertyChanged(self, *args, **kwargs):
         """Called when a property changes on the bluez d-bus interface
 
         Useful for tracking the peer's connection and discovery status
