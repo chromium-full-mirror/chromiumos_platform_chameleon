@@ -190,6 +190,24 @@ class BluezPeripheral(PeripheralKit):
         """Quit the mainloop when done."""
         self._loop.quit()
 
+    def cleanup(self):
+        logging.info("BluezPeripheral: cleanup")
+
+        self._dbus_system_bus.remove_signal_receiver(
+            self._DeviceFound,
+            signal_name="PropertiesChanged",
+            bus_name="org.bluez",
+            path_keyword="device_path",
+        )
+
+        if self._gatt_server:
+            self._gatt_server.cleanup()
+
+        if self._bluez_service:
+            self._bluez_service.cleanup()
+
+        self._loop.quit()
+
     def get_service_iface(self):
         if not self._service_iface:
             self._service = self._dbus_system_bus.get_object(
@@ -590,6 +608,8 @@ class BluezPeripheral(PeripheralKit):
 
     def ResetStack(self, next_device_type=None):
         """Restores BT stack to pristine state by restarting running services"""
+
+        logging.info("ResetStack")
         reset_cmds = [
             "systemctl daemon-reload",
             "service bluetooth restart",

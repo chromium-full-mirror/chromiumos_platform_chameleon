@@ -88,14 +88,23 @@ class BluezServiceProfile(dbus.service.Object):
     def __init__(self, bus, path):
         dbus.service.Object.__init__(self, bus, path)
 
+    def cleanup(self):
+        logging.info("BluezServiceProfile: cleanup")
+        self.remove_from_connection()
+
 
 class BluezService(dbus.service.Object):
     """Bluez Service implementation."""
 
     def __init__(self, device_type, adapter_address):
+        self._profile = None
+
         self._cinterrupt = None
         self._ccontrol = None
         self._connected = False
+
+        self._scontrol = None
+        self._sinterrupt = None
         self._scch_watch_id = None
         self._sich_watch_id = None
 
@@ -125,6 +134,30 @@ class BluezService(dbus.service.Object):
             bus_name="org.bluez",
             path_keyword="device_path",
         )
+
+    def cleanup(self):
+        logging.info("BluezService: cleanup")
+
+        if self._profile:
+            self._profile.cleanup()
+
+        if self._scontrol:
+            self._scontrol.close()
+        if self._sinterrupt:
+            self._sinterrupt.close()
+        if self._scch_watch_id:
+            GLib.source_remove(self._scch_watch_id)
+        if self._sich_watch_id:
+            GLib.source_remove(self._sich_watch_id)
+
+        self._bus.remove_signal_receiver(
+            self.PropertyChanged,
+            signal_name="PropertiesChanged",
+            bus_name="org.bluez",
+            path_keyword="device_path",
+        )
+
+        self.remove_from_connection()
 
     def PropertyChanged(self, *args, **kwargs):
         """Called when a property changes on the bluez d-bus interface

@@ -109,6 +109,19 @@ class GATTServer(object):
             path_keyword="device_path",
         )
 
+    def cleanup(self):
+        logging.info("GATTServer: cleanup")
+        if self.app:
+            self.app.cleanup()
+
+        bus = dbus.SystemBus()
+        bus.remove_signal_receiver(
+            self.OnPropertyChanged,
+            signal_name="PropertiesChanged",
+            bus_name="org.bluez",
+            path_keyword="device_path",
+        )
+
     def _RegisterAppCB(self):
         """Callback for app registration"""
 

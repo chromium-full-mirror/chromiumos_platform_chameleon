@@ -74,6 +74,11 @@ class Application(dbus.service.Object):
         self.add_service(BatteryService(bus, 1))
         self.add_service(TestService(bus, 2))
 
+    def cleanup(self):
+        for service in self.services:
+            service.cleanup()
+        self.remove_from_connection()
+
     def get_path(self):
         return dbus.ObjectPath(self.path)
 
@@ -111,6 +116,11 @@ class Service(dbus.service.Object):
         self.primary = primary
         self.characteristics = []
         dbus.service.Object.__init__(self, bus, self.path)
+
+    def cleanup(self):
+        for char in self.characteristics:
+            char.cleanup()
+        self.remove_from_connection()
 
     def get_properties(self):
         return {
@@ -161,6 +171,12 @@ class Characteristic(dbus.service.Object):
         self.flags = flags
         self.descriptors = []
         dbus.service.Object.__init__(self, bus, self.path)
+
+    def cleanup(self):
+        for desc in self.descriptors:
+            desc.cleanup()
+
+        self.remove_from_connection()
 
     def get_properties(self):
         return {
@@ -237,6 +253,9 @@ class Descriptor(dbus.service.Object):
         self.flags = flags
         self.chrc = characteristic
         dbus.service.Object.__init__(self, bus, self.path)
+
+    def cleanup(self):
+        self.remove_from_connection()
 
     def get_properties(self):
         return {

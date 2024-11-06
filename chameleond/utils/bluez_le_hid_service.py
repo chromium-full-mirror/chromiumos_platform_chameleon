@@ -34,6 +34,13 @@ class LEApplication(dbus.service.Object):
         self.services = []
         dbus.service.Object.__init__(self, bus, self.path)
 
+    def cleanup(self):
+        logging.info("LEApplication: cleanup")
+        for service in self.services:
+            service.cleanup()
+
+        self.remove_from_connection()
+
     def GetPath(self):
         return dbus.ObjectPath(self.path)
 
@@ -94,6 +101,9 @@ class ReportListener(dbus.service.Object):
 
         self._handle = handle
 
+    def cleanup(self):
+        self.remove_from_connection()
+
     @dbus.service.method(BLUEZ_SERVICE_NAME, in_signature="ay")
     def SendHIDReport(self, report):
         """Sends HID report across socket"""
@@ -146,6 +156,10 @@ class HIDReportChrc(Characteristic):
                 0x00,
                 0x00,
             ]
+
+    def cleanup(self):
+        super().cleanup()
+        self._service.cleanup()
 
     def UpdateReport(self, report):
         """Called by listener when new report is available

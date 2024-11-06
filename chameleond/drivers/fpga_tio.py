@@ -237,6 +237,17 @@ class ChameleondDriver(ChameleondInterface):
 
         self._ready = True
 
+    def cleanup(self):
+        logging.info("ChameleondDriver: cleanup")
+        self.bluetooth_audio.cleanup()
+        self.bluetooth_mouse.cleanup()
+        self.bluetooth_keyboard.cleanup()
+        self.bluetooth_gamepad.cleanup()
+        self.ble_mouse.cleanup()
+        self.ble_keyboard.cleanup()
+        self.ble_phone.cleanup()
+        self.ble_fast_pair.cleanup()
+
     def _dispatch(self, method, params):
         try:
             logging.info("Receive method %s", method)
