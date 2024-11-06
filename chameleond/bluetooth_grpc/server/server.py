@@ -33,13 +33,11 @@ from pandora import security_grpc_aio
 class TestServerContext:
     """The context of the test server."""
 
-    def __init__(self, chameleon, config):
-        self.chameleon = chameleon
+    def __init__(self, config):
+        self.chameleon = fpga_tio.ChameleondDriver()
         self.config = config
         self.default_config = config_pb2.Configuration()
         self.default_config.CopyFrom(config)
-
-        self.reset_bluetooth_device()
 
     @property
     def io_capability(self):
@@ -79,22 +77,27 @@ class TestServerContext:
                 return "BLE_PHONE"
         return None
 
-    def reset_bluetooth_device(self):
+    @property
+    def btd(self):
         if self.device_type == "BLUETOOTH_AUDIO":
-            self.btd = self.chameleon.bluetooth_audio
+            return self.chameleon.bluetooth_audio
         elif self.device_type == "BLE_KEYBOARD":
-            self.btd = self.chameleon.ble_keyboard
+            return self.chameleon.ble_keyboard
         elif self.device_type == "KEYBOARD":
-            self.btd = self.chameleon.bluetooth_keyboard
+            return self.chameleon.bluetooth_keyboard
         elif self.device_type == "BLE_MOUSE":
-            self.btd = self.chameleon.ble_mouse
+            return self.chameleon.ble_mouse
         elif self.device_type == "MOUSE":
-            self.btd = self.chameleon.bluetooth_mouse
+            return self.chameleon.bluetooth_mouse
         elif self.device_type == "BLE_PHONE":
-            self.btd = self.chameleon.ble_phone
+            return self.chameleon.ble_phone
+
+    def reset_bluetooth_device(self):
+        logging.info("reset_bluetooth_device")
+        self.chameleon.cleanup()
+        self.chameleon = fpga_tio.ChameleondDriver()
 
         self.btd.ResetStack(next_device_type=self.device_type)
-        self.btd.SpecifyDeviceType(self.device_type)
 
         if self.device_type == "BLUETOOTH_AUDIO":
             # Use the specialized audio server to enable WBS.
@@ -105,6 +108,7 @@ class TestServerContext:
             # therefore, we use the specialized audio server as default here
             self.btd.StartAudioServer("hfp_wbs")
 
+        self.btd.SpecifyDeviceType(self.device_type)
         self.btd.SetIOCapability(self.io_capability)
 
 
@@ -113,14 +117,13 @@ async def start_bluetooth_test_server(port):
 
     try:
         server = None
-        chameleon = None
-        while True:
-            chameleon = fpga_tio.ChameleondDriver()
-            shared_context = TestServerContext(
-                chameleon, DEFAULT_CHAMELEON_CONFIG
-            )
+        shared_context = TestServerContext(DEFAULT_CHAMELEON_CONFIG)
 
+        while True:
             server = grpc.aio.server()
+
+            shared_context.reset_bluetooth_device()
+
             security_service = security.SecurityService(
                 shared_context,
             )
@@ -153,15 +156,9 @@ async def start_bluetooth_test_server(port):
             logging.info("Bluetooth test server started.")
 
             await server.wait_for_termination()
-
-            del chameleon
-            chameleon = None
     finally:
         if server is not None:
             await server.stop(None)
-
-        del chameleon
-        chameleon = None
 
 
 if __name__ == "__main__":
