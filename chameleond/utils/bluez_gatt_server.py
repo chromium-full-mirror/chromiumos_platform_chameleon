@@ -130,7 +130,8 @@ class GATTServer(object):
     def _RegisterAppErrCB(self, error):
         """Callback for app registration error"""
         logging.error("Failed to register application: " + str(error))
-        mainloop.quit()
+        if mainloop is not None:
+            mainloop.quit()
 
     def _FindAdapter(self, bus):
         """Finds adapter within dbus tree"""
