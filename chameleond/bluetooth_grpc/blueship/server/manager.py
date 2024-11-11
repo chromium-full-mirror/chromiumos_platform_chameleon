@@ -5,6 +5,7 @@
 """Manager grpc interface."""
 
 import asyncio
+import logging
 
 from blueship import manager_grpc_aio
 from blueship import manager_pb2
@@ -40,6 +41,8 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
         req_config_dict = MessageToDict(request.next_config)
         cur_config_dict = MessageToDict(self.ctx.config)
 
+        logging.info("Request config: %s", req_config_dict)
+
         for section_name, section_dict in req_config_dict.items():
             for entry_name, entry_variant in section_dict.items():
                 cur_entry = cur_config_dict[section_name][entry_name]
@@ -61,13 +64,30 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
 
                 cur_entry[req_entry_value_type] = req_entry_value
 
+        # Check if the entry value is supported on chameleon
+        try:
+            # AAC is not supported yet
+            if (
+                "CODEC_AAC"
+                in req_config_dict["audio"]["supportedCodecs"]["codecList"][
+                    "codecList"
+                ]
+            ):
+                success = False
+        except KeyError:
+            # The entries checking above might not be included in the request.
+            # Ignore the key error for easier implementation.
+            pass
+        except Exception as e:
+            logging.error("Exception on getting supported codec: %s", str(e))
+
         if success:
             ParseDict(cur_config_dict, self.ctx.config)
             # Stop the server and rely on the |start_bluetooth_test_server|
             # to restart.
             asyncio.create_task(self.server.stop(None))
 
-        return empty_pb2.Empty()
+        return manager_pb2.RestartServerResponse(success=success)
 
     async def ReadConfig(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext

@@ -203,6 +203,30 @@ class ConfigGrpcTests(unittest.TestCase):
             [manager_pb2.CODEC_MSBC],
         )
 
+    def test_write_audio_fail(self):
+        """Test AAC codec is not supported"""
+        write_config = manager_pb2.Configuration(
+            audio=manager_pb2.AudioConfig(
+                supported_codecs=manager_pb2.ConfigVariant(
+                    codec_list=manager_pb2.RepeatedCodec(
+                        codec_list=[manager_pb2.CODEC_AAC]
+                    )
+                )
+            )
+        )
+        resp = self.manager_proxy.RestartServer(write_config)
+        self.assertEqual(resp.success, False)
+
+        # Wait for the server to be restarted
+        self.connect_to_server()
+
+        # Codec should not be changed.
+        resp = self.manager_proxy.ReadConfig()
+        self.assertEqual(
+            resp.config.audio.supported_codecs.codec_list.codec_list,
+            self.DEFAULT_CODEC_LIST,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
