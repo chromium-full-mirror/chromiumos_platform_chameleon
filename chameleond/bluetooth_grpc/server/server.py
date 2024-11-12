@@ -122,6 +122,7 @@ class TestServerContext:
             # `au_hfp_wbs_to_a2dp_dut_as_source_test` is quite stable,
             # therefore, we use the specialized audio server as default here
             self.btd.StartAudioServer("hfp_wbs")
+            self.btd.StartOfono()
 
         self.btd.SpecifyDeviceType(self.device_type)
         self.btd.SetIOCapability(self.io_capability)
