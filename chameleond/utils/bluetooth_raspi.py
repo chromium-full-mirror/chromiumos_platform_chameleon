@@ -202,9 +202,11 @@ class BluezPeripheral(PeripheralKit):
 
         if self._gatt_server:
             self._gatt_server.cleanup()
+            self._gatt_server = None
 
         if self._bluez_service:
             self._bluez_service.cleanup()
+            self._bluez_service = None
 
         self._loop.quit()
 

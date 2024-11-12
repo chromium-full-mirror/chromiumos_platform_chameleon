@@ -14,6 +14,7 @@ from __future__ import print_function
 
 import logging
 import os
+import socket
 import time
 
 from bluetooth import BluetoothSocket
@@ -128,7 +129,7 @@ class BluezService(dbus.service.Object):
 
         # Add a handler for changes in state, specifically requesting caller's
         # device_path in the callback
-        self._bus.add_signal_receiver(
+        self.property_changed_match = self._bus.add_signal_receiver(
             self.PropertyChanged,
             signal_name="PropertiesChanged",
             bus_name="org.bluez",
@@ -140,22 +141,27 @@ class BluezService(dbus.service.Object):
 
         if self._profile:
             self._profile.cleanup()
+            self._profile = None
 
         if self._scontrol:
+            self._scontrol.shutdown(socket.SHUT_RDWR)
             self._scontrol.close()
+            self._scontrol = None
         if self._sinterrupt:
+            self._sinterrupt.shutdown(socket.SHUT_RDWR)
             self._sinterrupt.close()
+            self._sinterrupt = None
+
         if self._scch_watch_id:
             GLib.source_remove(self._scch_watch_id)
+            self._scch_watch_id = None
         if self._sich_watch_id:
             GLib.source_remove(self._sich_watch_id)
+            self._sich_watch_id = None
 
-        self._bus.remove_signal_receiver(
-            self.PropertyChanged,
-            signal_name="PropertiesChanged",
-            bus_name="org.bluez",
-            path_keyword="device_path",
-        )
+        if self.property_changed_match:
+            self.property_changed_match.remove()
+            self.property_changed_match = None
 
         self.remove_from_connection()
 
@@ -291,6 +297,12 @@ class BluezService(dbus.service.Object):
             GLib.source_remove(self._scch_watch_id)
         if self._sich_watch_id:
             GLib.source_remove(self._sich_watch_id)
+        if self._scontrol:
+            self._scontrol.shutdown(socket.SHUT_RDWR)
+            self._scontrol.close()
+        if self._sinterrupt:
+            self._sinterrupt.shutdown(socket.SHUT_RDWR)
+            self._sinterrupt.close()
 
         self._scontrol = BluetoothSocket(L2CAP)
         self._sinterrupt = BluetoothSocket(L2CAP)
