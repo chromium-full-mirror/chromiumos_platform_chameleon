@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_outer_classname = "SecurityProto";
+
+package blueship;
+
+import "google/protobuf/empty.proto";
+
+service Security {
+  // Initiates pairing request to the remote address. Pairing events
+  // should be handled by pandora.security.OnPairing.
+  rpc Pair(PairRequest) returns (google.protobuf.Empty);
+}
+
+message PairRequest {
+  // Peer Bluetooth device address as array of 6 bytes.
+  bytes address = 1;
+}

@@ -16,6 +16,10 @@ import logging
 from blueship import audio_grpc_aio
 from blueship import manager_grpc_aio
 from blueship import manager_pb2
+from blueship import security_grpc_aio as blueship_security_grpc_aio
+from chameleond.bluetooth_grpc.blueship.server import (
+    security as blueship_security,
+)
 from chameleond.bluetooth_grpc.blueship.server import audio
 from chameleond.bluetooth_grpc.blueship.server import manager
 from chameleond.bluetooth_grpc.pandora.server import host
@@ -146,15 +150,13 @@ async def start_bluetooth_test_server(port):
 
             shared_context.reset_bluetooth_device()
 
+            # Pandora services
             security_service = security.SecurityService(
                 shared_context,
             )
             security_grpc_aio.add_SecurityServicer_to_server(
                 security_service, server
             )
-
-            audio_service = audio.AudioService(shared_context)
-            audio_grpc_aio.add_AudioServicer_to_server(audio_service, server)
 
             host_service = host.HostService(
                 server, shared_context, security_service
@@ -167,6 +169,17 @@ async def start_bluetooth_test_server(port):
             security_grpc_aio.add_SecurityStorageServicer_to_server(
                 security_storage_service, server
             )
+
+            # BlueShip services
+            blueship_security_service = blueship_security.SecurityService(
+                shared_context,
+            )
+            blueship_security_grpc_aio.add_SecurityServicer_to_server(
+                blueship_security_service, server
+            )
+
+            audio_service = audio.AudioService(shared_context)
+            audio_grpc_aio.add_AudioServicer_to_server(audio_service, server)
 
             manager_service = manager.ManagerService(shared_context, server)
             manager_grpc_aio.add_ManagerServicer_to_server(

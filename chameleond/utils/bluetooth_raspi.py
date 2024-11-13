@@ -1048,6 +1048,48 @@ class BluezPeripheral(PeripheralKit):
         self.remote_address = remote_address
         return True
 
+    def _PairSuccessHandler(self):
+        """Called when pairing request completes"""
+
+    def _PairErrorHandler(self, err):
+        """Called in case of error on pairing request"""
+        logging.error("Failed to pair: %s", err)
+
+    def Pair(self):
+        """Attempts to pair to the address specified with SetRemoteAddress()
+
+        Returns:
+          True if success to issue the pairing request, False otherwise
+        """
+        if self.remote_address is None:
+            logging.error("Pair called with no remote address supplied")
+            return False
+
+        device = self.GetDeviceWithAddress(self.remote_address)
+        device_iface = dbus.Interface(device, DBUS_PROP_IFACE)
+        is_paired = bool(device_iface.Get(DBUS_BLUEZ_DEVICE_IFACE, "Paired"))
+
+        if not device:
+            logging.error(
+                "Device %s is None, can not pair", self.remote_address
+            )
+            return False
+
+        if is_paired:
+            logging.warning(
+                "Device %s has already paired. Skip to pair",
+                self.remote_address,
+            )
+            return False
+
+        logging.info("Attempting to pair to %s", self.remote_address)
+
+        device.Pair(
+            reply_handler=self._PairSuccessHandler,
+            error_handler=self._PairErrorHandler
+        )
+        return True
+
     def Connect(self):
         """Attempts to connect to the address specified with SetRemoteAddress()
 
