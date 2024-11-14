@@ -1086,7 +1086,7 @@ class BluezPeripheral(PeripheralKit):
 
         device.Pair(
             reply_handler=self._PairSuccessHandler,
-            error_handler=self._PairErrorHandler
+            error_handler=self._PairErrorHandler,
         )
         return True
 
@@ -1200,6 +1200,19 @@ class BluezPeripheral(PeripheralKit):
             logging.info(
                 "Failed to remove device {}: {}".format(remote_address, e)
             )
+
+    def SetDiscoveryFilter(self, discovery_filter):
+        """Sets the discovery filter.
+
+        Returns:
+            True if the request was sent without error, False otherwise.
+        """
+        try:
+            self._GetAdapterIface().SetDiscoveryFilter(discovery_filter)
+        except Exception as e:
+            logging.error("Failed to set discovery filter: %s", e)
+            return False
+        return True
 
     def StartDiscovery(self):
         """Tries to start discovery on the adapter

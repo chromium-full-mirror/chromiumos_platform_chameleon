@@ -262,18 +262,99 @@ class HostService(host_grpc_aio.HostServicer):
     async def Scan(
         self, request: host_pb2.ScanRequest, context: grpc.ServicerContext
     ) -> AsyncGenerator[host_pb2.ScanningResponse, None]:
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
-        yield host_pb2.ScanningResponse()
+        receiver = None
+        try:
+            discovered_devices = asyncio.Queue()
+            loop = asyncio.get_running_loop()
+
+            def on_device_found(*args, **kwargs):
+                changed_prop = args
+                caller_details = kwargs
+                caller = str(changed_prop[0])
+
+                if "Device1" in caller:
+                    device_path = caller_details.get("device_path")
+
+                    # Determine the device type
+                    resolved_address = self.ctx.btd._GetAddressFromPath(
+                        device_path
+                    )
+
+                    asyncio.run_coroutine_threadsafe(
+                        discovered_devices.put(resolved_address), loop
+                    )
+
+            discovery_filter = {"Transport": "le"}
+            self.ctx.btd.SetDiscoveryFilter(discovery_filter)
+
+            bus = dbus.SystemBus()
+            receiver = bus.add_signal_receiver(
+                on_device_found,
+                signal_name="PropertiesChanged",
+                bus_name="org.bluez",
+                path_keyword="device_path",
+            )
+
+            self.ctx.btd.StartDiscovery()
+
+            while True:
+                resolved_address = await discovered_devices.get()
+
+                # TODO(johnlai) This address will always be resolved address.
+                # Fix this once we know how to differentiate bluez address type.
+                yield host_pb2.ScanningResponse(
+                    public=utils.address_to(resolved_address)
+                )
+
+        finally:
+            if receiver:
+                receiver.remove()
+            self.ctx.btd.SetDiscoveryFilter({})
+            self.ctx.btd.StopDiscovery()
 
     async def Inquiry(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> AsyncGenerator[host_pb2.InquiryResponse, None]:
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
-        yield host_pb2.InquiryResponse()
+        receiver = None
+        try:
+            discovered_devices = asyncio.Queue()
+            loop = asyncio.get_running_loop()
+
+            def on_device_found(*args, **kwargs):
+                changed_prop = args
+                caller_details = kwargs
+                caller = str(changed_prop[0])
+
+                if "Device1" in caller:
+                    device_path = caller_details.get("device_path")
+                    address = utils.address_from_bluez_device_path(device_path)
+                    asyncio.run_coroutine_threadsafe(
+                        discovered_devices.put(address), loop
+                    )
+
+            discovery_filter = {"Transport": "bredr"}
+            self.ctx.btd.SetDiscoveryFilter(discovery_filter)
+
+            bus = dbus.SystemBus()
+            receiver = bus.add_signal_receiver(
+                on_device_found,
+                signal_name="PropertiesChanged",
+                bus_name="org.bluez",
+                path_keyword="device_path",
+            )
+
+            self.ctx.btd.StartDiscovery()
+
+            while True:
+                address = await discovered_devices.get()
+                yield host_pb2.InquiryResponse(
+                    address=utils.address_to(address)
+                )
+        finally:
+            if receiver:
+                receiver.remove()
+            self.ctx.btd.SetDiscoveryFilter({})
+            self.ctx.btd.StopDiscovery()
 
     async def SetDiscoverabilityMode(
         self,
