@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from blueship import audio_pb2
 from blueship import manager_pb2
 
 
@@ -39,6 +40,18 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
             codec_list=manager_pb2.RepeatedCodec(
                 codec_list=[manager_pb2.CODEC_CVSD]
             ),
-        )
+        ),
+        supported_player_commands=manager_pb2.ConfigVariant(
+            writable=False,
+            player_cmd_list=manager_pb2.RepeatedPlayerCommands(
+                player_cmd_list=[
+                    audio_pb2.AUDIO_PLAYER_PLAY,
+                    audio_pb2.AUDIO_PLAYER_PAUSE,
+                    audio_pb2.AUDIO_PLAYER_STOP,
+                    audio_pb2.AUDIO_PLAYER_NEXT,
+                    audio_pb2.AUDIO_PLAYER_PREV,
+                ]
+            ),
+        ),
     ),
 )

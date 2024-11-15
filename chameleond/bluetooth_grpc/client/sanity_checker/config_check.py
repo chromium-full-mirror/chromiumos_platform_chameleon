@@ -5,6 +5,7 @@
 import time
 import unittest
 
+from blueship import audio_pb2
 from blueship import manager_pb2
 from blueship.manager_grpc import Manager
 import grpc
@@ -23,6 +24,13 @@ class ConfigGrpcTests(unittest.TestCase):
     DEFAULT_SUPPORT_LE = True
     DEFAULT_PIN = "0000"
     DEFAULT_CODEC_LIST = [manager_pb2.CODEC_CVSD]
+    DEFAULT_AUDIO_PLAYER_LIST = [
+        audio_pb2.AUDIO_PLAYER_PLAY,
+        audio_pb2.AUDIO_PLAYER_PAUSE,
+        audio_pb2.AUDIO_PLAYER_STOP,
+        audio_pb2.AUDIO_PLAYER_NEXT,
+        audio_pb2.AUDIO_PLAYER_PREV,
+    ]
 
     def setUp(self):
         """Setup the testing environment"""
@@ -179,9 +187,13 @@ class ConfigGrpcTests(unittest.TestCase):
             resp.config.audio.supported_codecs.codec_list.codec_list,
             self.DEFAULT_CODEC_LIST,
         )
+        self.assertEqual(
+            resp.config.audio.supported_player_commands.player_cmd_list.player_cmd_list,
+            self.DEFAULT_AUDIO_PLAYER_LIST,
+        )
 
-    def test_write_audio(self):
-        """Test audio can be written"""
+    def test_write_audio_codec(self):
+        """Test audio codec can be written"""
         write_config = manager_pb2.Configuration(
             audio=manager_pb2.AudioConfig(
                 supported_codecs=manager_pb2.ConfigVariant(
@@ -203,7 +215,7 @@ class ConfigGrpcTests(unittest.TestCase):
             [manager_pb2.CODEC_MSBC],
         )
 
-    def test_write_audio_fail(self):
+    def test_write_audio_codec_fail(self):
         """Test AAC codec is not supported"""
         write_config = manager_pb2.Configuration(
             audio=manager_pb2.AudioConfig(
@@ -225,6 +237,30 @@ class ConfigGrpcTests(unittest.TestCase):
         self.assertEqual(
             resp.config.audio.supported_codecs.codec_list.codec_list,
             self.DEFAULT_CODEC_LIST,
+        )
+
+    def test_write_audio_supported_player_commands_fail(self):
+        """Test audio supported player commands can't be written"""
+        write_config = manager_pb2.Configuration(
+            audio=manager_pb2.AudioConfig(
+                supported_player_commands=manager_pb2.ConfigVariant(
+                    player_cmd_list=manager_pb2.RepeatedPlayerCommands(
+                        player_cmd_list=self.DEFAULT_AUDIO_PLAYER_LIST
+                        + [audio_pb2.AUDIO_PLAYER_VOL_UP]
+                    )
+                ),
+            )
+        )
+        resp = self.manager_proxy.RestartServer(write_config)
+
+        # Wait for the server to be restarted
+        self.connect_to_server()
+
+        # Codec should not be changed.
+        resp = self.manager_proxy.ReadConfig()
+        self.assertEqual(
+            resp.config.audio.supported_player_commands.player_cmd_list.player_cmd_list,
+            self.DEFAULT_AUDIO_PLAYER_LIST,
         )
 
 

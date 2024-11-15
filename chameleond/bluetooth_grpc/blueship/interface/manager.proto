@@ -5,6 +5,7 @@ option java_outer_classname = "ManagerProto";
 package blueship;
 
 import "google/protobuf/empty.proto";
+import "blueship/audio.proto";
 
 service Manager {
   // Reset the gRPC server to the default state.
@@ -51,7 +52,10 @@ message ControllerConfig {
 
 message SecurityConfig { ConfigVariant pin = 1; }
 
-message AudioConfig { ConfigVariant supported_codecs = 1; }
+message AudioConfig {
+  ConfigVariant supported_codecs = 1;
+  ConfigVariant supported_player_commands = 2;
+}
 
 enum Codec {
   /* A2DP Codec */
@@ -65,6 +69,8 @@ enum Codec {
 message RepeatedString { repeated string string_list = 1; }
 
 message RepeatedCodec { repeated Codec codec_list = 1; }
+
+message RepeatedPlayerCommands { repeated PlayerCmd player_cmd_list = 1; }
 
 message ConfigVariant {
   bool writable = 1;
@@ -81,6 +87,7 @@ message ConfigVariant {
     // Message
     RepeatedString string_list = 201;
     RepeatedCodec codec_list = 202;
+    RepeatedPlayerCommands player_cmd_list = 203;
   }
 }
 
