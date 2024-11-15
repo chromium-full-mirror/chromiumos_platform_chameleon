@@ -46,8 +46,6 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
         for section_name, section_dict in req_config_dict.items():
             for entry_name, entry_variant in section_dict.items():
                 cur_entry = cur_config_dict[section_name][entry_name]
-                if not cur_entry.get("writable", False):
-                    continue
                 # Remove the writable field as we don't update it.
                 entry_variant.pop("writable", None)
                 # The entry must have another field, this is secured by proto definition
@@ -57,10 +55,15 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
 
                 if req_entry_value_type not in cur_entry:
                     success = False
-                    continue
+                    break
 
                 if cur_entry[req_entry_value_type] == req_entry_value:
                     continue
+
+                # Needs to update the current config
+                if not cur_entry.get("writable", False):
+                    success = False
+                    break
 
                 cur_entry[req_entry_value_type] = req_entry_value
 
