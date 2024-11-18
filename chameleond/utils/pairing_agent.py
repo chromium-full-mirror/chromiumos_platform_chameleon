@@ -161,7 +161,7 @@ def SetupAgent(capability):
 def StopAgent():
     global agent  # pylint: disable=global-statement
 
-    agent.Release()
+    agent.remove_from_connection()
     agent = None
 
 

@@ -216,6 +216,9 @@ class SecurityService(security_grpc_aio.SecurityServicer):
         agent_manager = None
         streaming_answers_task = None
         try:
+            # Stop the current default agent
+            self.ctx.btd.StopPairingAgent()
+
             agent = Agent(
                 AGENT_PATH,
                 asyncio.get_running_loop(),
@@ -304,6 +307,8 @@ class SecurityService(security_grpc_aio.SecurityServicer):
             pairing_answers = None
             pairing_events = None
             self.manually_confirm = False
+
+            self.btd.StartPairingAgent(self.io_capability)
 
     async def Secure(
         self, request: security_pb2.SecureRequest, context: grpc.ServicerContext

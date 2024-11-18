@@ -130,6 +130,9 @@ class TestServerContext:
         self.btd.SpecifyDeviceType(self.device_type)
         self.btd.SetIOCapability(self.io_capability)
 
+        # Start a default agent to automatically authorize profile connections
+        self.btd.StartPairingAgent(self.io_capability)
+
 
 async def start_bluetooth_test_server(port):
     """Start serving the bluetooth test server."""

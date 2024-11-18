@@ -208,6 +208,8 @@ class BluezPeripheral(PeripheralKit):
             self._bluez_service.cleanup()
             self._bluez_service = None
 
+        self.StopPairingAgent()
+
         self._loop.quit()
 
     def get_service_iface(self):
