@@ -20,18 +20,20 @@ service Manager {
 message APIConfig { ConfigVariant support_api_version = 1; }
 
 enum IOCapability {
-  IO_CAPABILITY_DISPLAY_ONLY = 0;
-  IO_CAPABILITY_DISPLAY_YES_NO = 1;
-  IO_CAPABILITY_KEYBOARD_ONLY = 2;
-  IO_CAPABILITY_NO_INPUT_NO_OUTPUT = 3;
-  IO_CAPABILITY_KEYBOARD_DISPLAY = 4;
+  IO_CAPABILITY_UNKNOWN = 0;
+  IO_CAPABILITY_DISPLAY_ONLY = 1;
+  IO_CAPABILITY_DISPLAY_YES_NO = 2;
+  IO_CAPABILITY_KEYBOARD_ONLY = 3;
+  IO_CAPABILITY_NO_INPUT_NO_OUTPUT = 4;
+  IO_CAPABILITY_KEYBOARD_DISPLAY = 5;
 }
 
 enum DeviceCategory {
-  DEVICE_CATEGORY_AUDIO = 0;
-  DEVICE_CATEGORY_KEYBOARD = 1;
-  DEVICE_CATEGORY_MOUSE = 2;
-  DEVICE_CATEGORY_PHONE = 3;
+  DEVICE_CATEGORY_UNKNOWN = 0;
+  DEVICE_CATEGORY_AUDIO = 1;
+  DEVICE_CATEGORY_KEYBOARD = 2;
+  DEVICE_CATEGORY_MOUSE = 3;
+  DEVICE_CATEGORY_PHONE = 4;
 }
 
 message SupportedProfiles { ConfigVariant uuid = 1; }
@@ -58,12 +60,13 @@ message AudioConfig {
 }
 
 enum Codec {
+  CODEC_UNKNOWN = 0;
   /* A2DP Codec */
-  CODEC_SBC = 0;
-  CODEC_AAC = 1;
+  CODEC_SBC = 1;
+  CODEC_AAC = 2;
   /* HFP Codec */
-  CODEC_MSBC = 100;
-  CODEC_CVSD = 101;
+  CODEC_MSBC = 101;
+  CODEC_CVSD = 102;
 }
 
 message RepeatedString { repeated string string_list = 1; }
