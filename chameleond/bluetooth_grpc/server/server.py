@@ -114,10 +114,11 @@ class TestServerContext:
 
     def reset_bluetooth_device(self):
         logging.info("reset_bluetooth_device")
+        # This should be done before restarting the chameleon.
+        self.btd.ResetStack(next_device_type=self.device_type)
+
         self.chameleon.cleanup()
         self.chameleon = fpga_tio.ChameleondDriver()
-
-        self.btd.ResetStack(next_device_type=self.device_type)
 
         if self.device_type == "BLUETOOTH_AUDIO":
             # Use the specialized audio server to enable WBS.
