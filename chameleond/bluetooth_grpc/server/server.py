@@ -17,12 +17,14 @@ import time
 from blueship import audio_grpc_aio
 from blueship import manager_grpc_aio
 from blueship import manager_pb2
+from blueship import power_grpc_aio
 from blueship import security_grpc_aio as blueship_security_grpc_aio
 from chameleond.bluetooth_grpc.blueship.server import (
     security as blueship_security,
 )
 from chameleond.bluetooth_grpc.blueship.server import audio
 from chameleond.bluetooth_grpc.blueship.server import manager
+from chameleond.bluetooth_grpc.blueship.server import power
 from chameleond.bluetooth_grpc.pandora.server import host
 from chameleond.bluetooth_grpc.pandora.server import security
 from chameleond.bluetooth_grpc.pandora.server import utils
@@ -48,6 +50,16 @@ class TestServerContext:
         self.config = config
         self.default_config = manager_pb2.Configuration()
         self.default_config.CopyFrom(config)
+
+    @property
+    def support_classic(self):
+        """Helper function to convert support Classic from proto to bool"""
+        return self.config.controller.support_classic.bool_value
+
+    @property
+    def support_le(self):
+        """Helper function to convert support LE from proto to bool"""
+        return self.config.controller.support_le.bool_value
 
     @property
     def io_capability(self):
@@ -81,25 +93,23 @@ class TestServerContext:
     def device_type(self):
         """Helper function to convert Device Category from proto to String"""
         device_type = self.config.device.category.device_category
-        support_le = self.config.controller.support_le.bool_value
-        support_classic = self.config.controller.support_classic.bool_value
 
         if device_type == manager_pb2.DEVICE_CATEGORY_AUDIO:
-            if support_classic:
+            if self.support_classic:
                 return "BLUETOOTH_AUDIO"
             # LE Audio is not implemented yet
         elif device_type == manager_pb2.DEVICE_CATEGORY_KEYBOARD:
-            if support_le:
+            if self.support_le:
                 return "BLE_KEYBOARD"
-            elif support_classic:
+            elif self.support_classic:
                 return "KEYBOARD"
         elif device_type == manager_pb2.DEVICE_CATEGORY_MOUSE:
-            if support_le:
+            if self.support_le:
                 return "BLE_MOUSE"
-            elif support_classic:
+            elif self.support_classic:
                 return "MOUSE"
         elif device_type == manager_pb2.DEVICE_CATEGORY_PHONE:
-            if support_le:
+            if self.support_le:
                 return "BLE_PHONE"
             # Classic phone is not implemented
         return None
@@ -216,6 +226,11 @@ async def start_bluetooth_test_server(port):
             manager_grpc_aio.add_ManagerServicer_to_server(
                 manager_service, server
             )
+
+            power_service = power.PowerService(
+                shared_context,
+            )
+            power_grpc_aio.add_PowerServicer_to_server(power_service, server)
 
             server.add_insecure_port(f"[::]:{port}")
 

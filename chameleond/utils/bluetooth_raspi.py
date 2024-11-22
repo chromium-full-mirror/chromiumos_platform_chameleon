@@ -1027,7 +1027,7 @@ class BluezPeripheral(PeripheralKit):
 
         Returns:
           None if no connection can be found
-          Mac address of connected device i
+          Mac address of connected device
         """
 
         # Grab ObjectManager and its objects
@@ -1130,33 +1130,22 @@ class BluezPeripheral(PeripheralKit):
 
         logging.info("Attempting to connect to %s", self.remote_address)
 
-        if "BLE" in self.device_type:
-            # Call connect directly through bluez device object
+        # Call connect directly through bluez device object
 
-            if not device:
-                logging.error(
-                    "Device {} is None, can not connect".format(
-                        self.remote_address
-                    )
-                )
-                return False
-
-            try:
-                device.Connect()
-
-            except Exception as e:
-                logging.error(
-                    "Failed to connect to {}: {}".format(self.remote_address, e)
-                )
-                return False
-
-        else:
-            # Request Bluez service to connect to address
-            self.get_service_iface().Connect(
-                self.remote_address,
-                reply_handler=self.ConnectDoneHandler,
-                error_handler=self.ConnectErrorHandler,
+        if not device:
+            logging.error(
+                "Device {} is None, can not connect".format(self.remote_address)
             )
+            return False
+
+        try:
+            device.Connect()
+
+        except Exception as e:
+            logging.error(
+                "Failed to connect to {}: {}".format(self.remote_address, e)
+            )
+            return False
 
         start_time = time.time()
 
@@ -1170,14 +1159,6 @@ class BluezPeripheral(PeripheralKit):
             )
 
         return is_connected
-
-    def ConnectDoneHandler(self):
-        """Called when connect completes"""
-        pass
-
-    def ConnectErrorHandler(self, err):
-        """Called in case of error on connect"""
-        logging.error("ConnectErrorHandler: %s", err)
 
     def _GetAdapterIface(self):
         """Returns handle to bluez adapter interface

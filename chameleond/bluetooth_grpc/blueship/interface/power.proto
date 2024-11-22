@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option java_outer_classname = "PowerProto";
+
+package blueship;
+
+import "google/protobuf/empty.proto";
+
+service Power {
+  // For BR/EDR:
+  //  Power on controller and initiate a connection to the previous
+  //  connected device if any. At the same time, put itself
+  //  connectable.
+  // For LE:
+  //   Power on controller and start connectable advertising.
+  rpc PowerOn(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Power off controller and initiate a disconnection to all
+  // connected/connecting devices.
+  rpc PowerOff(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
