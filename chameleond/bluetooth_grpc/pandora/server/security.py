@@ -308,7 +308,7 @@ class SecurityService(security_grpc_aio.SecurityServicer):
             pairing_events = None
             self.manually_confirm = False
 
-            self.btd.StartPairingAgent(self.io_capability)
+            self.ctx.btd.StartPairingAgent("NoInputNoOutput")
 
     async def Secure(
         self, request: security_pb2.SecureRequest, context: grpc.ServicerContext
