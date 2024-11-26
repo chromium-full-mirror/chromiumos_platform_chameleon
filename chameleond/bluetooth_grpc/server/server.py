@@ -12,6 +12,7 @@ os.environ["PLATFORM"] = "RASPI"
 import argparse
 import asyncio
 import logging
+import time
 
 from blueship import audio_grpc_aio
 from blueship import manager_grpc_aio
@@ -33,6 +34,10 @@ from chameleond.utils import ids
 import grpc
 from pandora import host_grpc_aio
 from pandora import security_grpc_aio
+
+
+CHAMELEON_CLEANUP_TIME = 1
+BLUEZ_RESTART_TIME = 3
 
 
 class TestServerContext:
@@ -114,10 +119,20 @@ class TestServerContext:
 
     def reset_bluetooth_device(self):
         logging.info("reset_bluetooth_device")
-        # This should be done before restarting the chameleon.
-        self.btd.ResetStack(next_device_type=self.device_type)
 
+        # The correct sequence of resetting a Chameleond-based Bluetooth device:
+        # 1. Clean up Chameleond.
+        # 2. Reset Bluetooth stack (BlueZ).
+        # 3. Reset Chameleond.
         self.chameleon.cleanup()
+        time.sleep(CHAMELEON_CLEANUP_TIME)
+
+        # Restart the Bluetooth stack (BlueZ). Wait a while to ensure it is
+        # restarted.
+        self.btd.ResetStack(next_device_type=self.device_type)
+        time.sleep(BLUEZ_RESTART_TIME)
+
+        # Restart Chameleond
         self.chameleon = fpga_tio.ChameleondDriver()
 
         if self.device_type == "BLUETOOTH_AUDIO":
