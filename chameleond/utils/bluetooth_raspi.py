@@ -192,14 +192,6 @@ class BluezPeripheral(PeripheralKit):
 
     def cleanup(self):
         logging.info("BluezPeripheral: cleanup")
-
-        self._dbus_system_bus.remove_signal_receiver(
-            self._DeviceFound,
-            signal_name="PropertiesChanged",
-            bus_name="org.bluez",
-            path_keyword="device_path",
-        )
-
         if self._gatt_server:
             self._gatt_server.cleanup()
             self._gatt_server = None
@@ -208,7 +200,8 @@ class BluezPeripheral(PeripheralKit):
             self._bluez_service.cleanup()
             self._bluez_service = None
 
-        self.StopPairingAgent()
+        if self._agent:
+            self.StopPairingAgent()
 
         self._loop.quit()
 
@@ -236,13 +229,17 @@ class BluezPeripheral(PeripheralKit):
         if self._agent:
             self.StopPairingAgent()
 
+        agent_registered_event = threading.Event()
+
         self._agent = threading.Thread(
-            target=pairing_agent.SetupAgent, args=(capability,)
+            target=pairing_agent.SetupAgent,
+            args=(capability, agent_registered_event),
         )
+        self._agent.start()
+        agent_registered_event.wait()
         logging.info(
             "The pairing agent is started with capability %s", capability
         )
-        self._agent.start()
 
     def StopPairingAgent(self):
         """Stop the pairing agent."""

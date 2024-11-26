@@ -30,9 +30,10 @@ PROP_INTERFACE = "org.freedesktop.DBus.Properties"
 BLUEZ_OBJECT_PATH = dbus.ObjectPath("/org/bluez")
 AGENT_PATH = dbus.ObjectPath("/test/agent")
 
-agent = None
-bus = None
-mainloop = None
+# To minimize extensive code modifications, maintain the pairing agent variable
+# as a global variable. This approach eliminates the need to alter code that
+# utilizes the functions within the module.
+_unique_pairing_agent = None
 
 
 class Agent(dbus.service.Object):
@@ -44,8 +45,10 @@ class Agent(dbus.service.Object):
 
     _passkey_event = threading.Event()
 
-    def __init__(self, *args, **kwargs):
-        super(Agent, self).__init__(*args, **kwargs)
+    def __init__(self, bus, path, main_loop):
+        super(Agent, self).__init__(bus, path)
+        self.bus = bus
+        self.loop = main_loop
         self.passkey = None
         self._pin = None
 
@@ -69,17 +72,20 @@ class Agent(dbus.service.Object):
         return self.passkey is not None and self.passkey == other_passkey
 
     def SetTrusted(self, path):
-        props = dbus.Interface(bus.get_object(BUS_NAME, path), PROP_INTERFACE)
+        props = dbus.Interface(
+            self.bus.get_object(BUS_NAME, path), PROP_INTERFACE
+        )
         props.Set(DEVICE_INTERFACE, "Trusted", True)
 
     @dbus.service.method(AGENT_INTERFACE, in_signature="", out_signature="")
     def Release(self):
-        global mainloop  # pylint: disable=global-statement
+        """Release the agent.
 
+        It is called when Bluetooth stack is closed. However, we'd like to
+        centralize the clean-up of the agent in StopAgent(). Hence this is nop
+        for now.
+        """
         logging.info("Release")
-        mainloop.quit()
-        mainloop = None
-        logging.debug("mainloop quit")
 
     @dbus.service.method(AGENT_INTERFACE, in_signature="os", out_signature="")
     def AuthorizeService(self, device, uuid):
@@ -129,40 +135,62 @@ class Agent(dbus.service.Object):
         logging.info("Cancel")
 
 
-def SetupAgent(capability):
-    """Setup a pairing agent.
+def SetupAgent(capability, agent_registered_event):
+    """Sets up a pairing agent and runs it.
+
+    It sets up and registers the pairing agent, and runs the main loop. It is a
+    blocking call.
 
     Args:
       capability: the capability of the device. The capability parameter can
                   have the values: DisplayOnly, DisplayYesNo, KeyboardOnly,
                   NoInputNoOutput and KeyboardDisplay.
+      agent_registered_event: A threading.Event to signal after the pairing
+                              agent is registered.
     """
-    global agent  # pylint: disable=global-statement
-    global bus  # pylint: disable=global-statement
-    global mainloop  # pylint: disable=global-statement
+    global _unique_pairing_agent  # pylint: disable=global-statement
+
+    if _unique_pairing_agent is not None:
+        logging.error(
+            "Cannot call SetupAgent while another pairing agent is active."
+        )
+        return
 
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
     bus = dbus.SystemBus()
-    agent = Agent(bus, AGENT_PATH)
-    mainloop = GObject.MainLoop()
+    main_loop = GObject.MainLoop()
+    _unique_pairing_agent = Agent(bus, AGENT_PATH, main_loop)
 
     bluez_obj = bus.get_object(BUS_NAME, BLUEZ_OBJECT_PATH)
     agent_manager = dbus.Interface(bluez_obj, AGENT_MANAGER_INTERFACE)
     agent_manager.RegisterAgent(AGENT_PATH, dbus.String(capability))
-    logging.info("Agent registered")
-
     agent_manager.RequestDefaultAgent(AGENT_PATH)
-    mainloop.run()
 
-    agent_manager.UnregisterAgent(AGENT_PATH)
-    logging.info("Agent unregistered")
+    agent_registered_event.set()
+
+    main_loop.run()
 
 
 def StopAgent():
-    global agent  # pylint: disable=global-statement
+    """Stops the pairing agent.
 
-    agent.remove_from_connection()
-    agent = None
+    Stops and unregisters the pairing agent from the D-Bus main loop.
+    """
+    global _unique_pairing_agent  # pylint: disable=global-statement
+
+    if _unique_pairing_agent:
+        bluez_obj = _unique_pairing_agent.bus.get_object(
+            BUS_NAME, BLUEZ_OBJECT_PATH
+        )
+        agent_manager = dbus.Interface(bluez_obj, AGENT_MANAGER_INTERFACE)
+        agent_manager.UnregisterAgent(AGENT_PATH)
+
+        _unique_pairing_agent.remove_from_connection()
+
+        _unique_pairing_agent.loop.quit()
+        _unique_pairing_agent = None
+        logging.info("Agent unregistered")
 
 
 if __name__ == "__main__":
