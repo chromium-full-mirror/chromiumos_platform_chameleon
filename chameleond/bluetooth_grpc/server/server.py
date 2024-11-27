@@ -66,6 +66,18 @@ class TestServerContext:
         return None
 
     @property
+    def secure_connections(self):
+        """Helper function to convert SecureConnections from proto to String"""
+        sc = self.config.security.secure_connections.secure_connections
+        if sc == manager_pb2.SECURE_CONNECTIONS_OFF:
+            return "off"
+        elif sc == manager_pb2.SECURE_CONNECTIONS_ON:
+            return "on"
+        elif sc == manager_pb2.SECURE_CONNECTIONS_ONLY:
+            return "only"
+        return None
+
+    @property
     def device_type(self):
         """Helper function to convert Device Category from proto to String"""
         device_type = self.config.device.category.device_category
@@ -149,6 +161,7 @@ class TestServerContext:
 
         self.btd.SpecifyDeviceType(self.device_type)
         self.btd.SetIOCapability(self.io_capability)
+        self.btd.SetSecureConnections(self.secure_connections)
 
         # Start a default agent to automatically authorize profile connections
         self.btd.StartPairingAgent("NoInputNoOutput")

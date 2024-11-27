@@ -969,6 +969,20 @@ class BluezPeripheral(PeripheralKit):
             return False
         return True
 
+    def SetSecureConnections(self, secure_conn):
+        """Sets whether a controller supports secure connections.
+
+        @param secure_conn: "off" or "on" or "only".
+
+        @return True on success, False otherwise.
+        """
+        logging.info("Setting Secure Connection to %s", secure_conn)
+        _control = bluetooth_socket.BluetoothControlSocket()
+        if not _control.set_secure_connections(0, secure_conn):
+            logging.error("Failed to set Secure Connection")
+            return False
+        return True
+
     def SetRPATimeout(self, timeout):
         """Set the timeout value for random private address
 

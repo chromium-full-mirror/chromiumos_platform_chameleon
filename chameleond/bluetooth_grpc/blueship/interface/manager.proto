@@ -36,6 +36,12 @@ enum DeviceCategory {
   DEVICE_CATEGORY_PHONE = 4;
 }
 
+enum SecureConnections {
+  SECURE_CONNECTIONS_OFF = 0;
+  SECURE_CONNECTIONS_ON = 1;
+  SECURE_CONNECTIONS_ONLY = 2;
+}
+
 message SupportedProfiles { ConfigVariant uuid = 1; }
 
 message DeviceInfoConfig {
@@ -52,7 +58,10 @@ message ControllerConfig {
   ConfigVariant support_le = 2;
 }
 
-message SecurityConfig { ConfigVariant pin = 1; }
+message SecurityConfig {
+  ConfigVariant pin = 1;
+  ConfigVariant secure_connections = 2;
+}
 
 message AudioConfig {
   ConfigVariant supported_codecs = 1;
@@ -87,6 +96,7 @@ message ConfigVariant {
     // Enum
     IOCapability io_capability = 101;
     DeviceCategory device_category = 102;
+    SecureConnections secure_connections = 103;
     // Message
     RepeatedString string_list = 201;
     RepeatedCodec codec_list = 202;

@@ -33,6 +33,10 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
     ),
     security=manager_pb2.SecurityConfig(
         pin=manager_pb2.ConfigVariant(writable=True, string_value="0000"),
+        secure_connections=manager_pb2.ConfigVariant(
+            writable=True,
+            secure_connections=manager_pb2.SECURE_CONNECTIONS_OFF,
+        ),
     ),
     audio=manager_pb2.AudioConfig(
         supported_codecs=manager_pb2.ConfigVariant(

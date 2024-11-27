@@ -1182,13 +1182,15 @@ class BluetoothControlSocket(BluetoothSocket):
         """Set whether a controller supports secure connections.
 
         @param index: Controller index.
-        @param secure_conn: Whether controller should support secure connections
+        @param secure_conn: "off" or "on" or "only".
 
         @return New controller settings on success, 0 if the feature is not
                 supported and the parameter was False, None otherwise.
 
         """
-        msg_data = struct.pack("<B", bool(secure_conn))
+        btmgmt_sc = ["off", "on", "only"]
+
+        msg_data = struct.pack("<B", btmgmt_sc.index(secure_conn))
         (status, data) = self.send_command_and_wait(
             MGMT_OP_SET_SECURE_CONN, index, msg_data, expected_length=4
         )

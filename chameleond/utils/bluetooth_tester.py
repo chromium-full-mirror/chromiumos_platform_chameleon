@@ -202,7 +202,7 @@ class BluetoothTester(BluetoothVirtualDevice, VirtualFlow):
                 logging.warning("Failed to disable LE")
                 return False
         if turn_off & bluetooth_socket.MGMT_SETTING_SECURE_CONNECTIONS:
-            if _control.set_secure_connections(self.index, False) is None:
+            if _control.set_secure_connections(self.index, "off") is None:
                 logging.warning("Failed to disable secure connections")
                 return False
 
