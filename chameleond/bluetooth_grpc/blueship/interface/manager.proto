@@ -73,6 +73,9 @@ enum Codec {
   /* A2DP Codec */
   CODEC_SBC = 1;
   CODEC_AAC = 2;
+  CODEC_APTX = 3;
+  CODEC_LDAC = 4;
+  CODEC_LC3 = 5;
   /* HFP Codec */
   CODEC_MSBC = 101;
   CODEC_CVSD = 102;

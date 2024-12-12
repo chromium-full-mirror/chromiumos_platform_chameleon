@@ -69,14 +69,21 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
 
         # Check if the entry value is supported on chameleon
         try:
-            # AAC is not supported yet
-            if (
-                "CODEC_AAC"
-                in req_config_dict["audio"]["supportedCodecs"]["codecList"][
-                    "codecList"
-                ]
-            ):
-                success = False
+            unsupported_codec = [
+                "CODEC_AAC",
+                "CODEC_APTX",
+                "CODEC_LDAC",
+                "CODEC_LC3",
+            ]
+            for codec in unsupported_codec:
+                if (
+                    codec
+                    in req_config_dict["audio"]["supportedCodecs"]["codecList"][
+                        "codecList"
+                    ]
+                ):
+                    success = False
+                    break
         except KeyError:
             # The entries checking above might not be included in the request.
             # Ignore the key error for easier implementation.
