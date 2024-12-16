@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 from blueship.audio_grpc import Audio
+from blueship.hid_grpc import HID
 from blueship.manager_grpc import Manager
 from blueship.security_grpc import Security as BlueShipSecurity
 import grpc
@@ -17,6 +18,7 @@ host_proxy = Host(proxy)
 security_proxy = Security(proxy)
 
 audio_proxy = Audio(proxy)
+hid_proxy = HID(proxy)
 manager_proxy = Manager(proxy)
 blueship_security_proxy = BlueShipSecurity(proxy)
 
@@ -35,6 +37,7 @@ print(
     f"\thost_proxy ({type(host_proxy)})\n"
     f"\tsecurity_proxy ({type(security_proxy)})\n"
     f"\taudio_proxy ({type(audio_proxy)})\n"
+    f"\thid_proxy ({type(hid_proxy)})\n"
     f"\tmanager_proxy ({type(manager_proxy)})\n"
     f"\tblueship_security_proxy ({type(blueship_security_proxy)})\n"
 )

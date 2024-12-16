@@ -85,6 +85,36 @@ class BluezKeyboardClient(object):
             error_handler=self.keys_error_handler,
         )
 
+    def set_report_from_key(self, key):
+        """Sets the press-down report given the key"""
+
+        self._report[2] = modmap["MOD_NONE"]
+        if key in self._char_to_key_map:
+            keymapkey = self._char_to_key_map[key][0]
+            self._report[2] = modmap[self._char_to_key_map[key][1]]
+        else:
+            # Set SHIFT key if uppercase
+            if key.upper() == key:
+                self._report[2] = modmap["MOD_SHIFT_LEFT"]
+            keymapkey = "KEY_" + key.upper()
+        self._report[4] = keymap[keymapkey]
+
+    def send_single_key_press(self, key):
+        """sends a single key down event to the server"""
+
+        self.set_report_from_key(key)
+        self.send_report()
+
+    def send_all_key_release(self):
+        """sends a event with all key released to the server"""
+
+        # Clear the mod key
+        self._report[2] = 0
+        # Clear all the pressed key
+        self._report[4:] = [0] * 6
+
+        self.send_report()
+
     def send_key_down(self, scancode):
         """sends a key down event to the server"""
 
@@ -118,15 +148,7 @@ class BluezKeyboardClient(object):
         time.sleep(1)
 
         for c in string_to_send:
-            self._report[2] = modmap["MOD_NONE"]
-            if c in self._char_to_key_map:
-                keymapkey = self._char_to_key_map[c][0]
-                self._report[2] = modmap[self._char_to_key_map[c][1]]
-            else:
-                # Set SHIFT key if uppercase
-                if c.upper() == c:
-                    self._report[2] = modmap["MOD_SHIFT_LEFT"]
-                keymapkey = "KEY_" + c.upper()
+            self.set_report_from_key(c)
 
             scancode = keymap[keymapkey]
             self.send_key_down(scancode)

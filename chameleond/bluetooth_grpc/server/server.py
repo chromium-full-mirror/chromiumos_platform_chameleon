@@ -15,6 +15,7 @@ import logging
 import time
 
 from blueship import audio_grpc_aio
+from blueship import hid_grpc_aio
 from blueship import manager_grpc_aio
 from blueship import manager_pb2
 from blueship import power_grpc_aio
@@ -23,6 +24,7 @@ from chameleond.bluetooth_grpc.blueship.server import (
     security as blueship_security,
 )
 from chameleond.bluetooth_grpc.blueship.server import audio
+from chameleond.bluetooth_grpc.blueship.server import hid
 from chameleond.bluetooth_grpc.blueship.server import manager
 from chameleond.bluetooth_grpc.blueship.server import power
 from chameleond.bluetooth_grpc.pandora.server import host
@@ -221,6 +223,9 @@ async def start_bluetooth_test_server(port):
 
             audio_service = audio.AudioService(shared_context)
             audio_grpc_aio.add_AudioServicer_to_server(audio_service, server)
+
+            hid_service = hid.HIDService(shared_context)
+            hid_grpc_aio.add_HIDServicer_to_server(hid_service, server)
 
             manager_service = manager.ManagerService(shared_context, server)
             manager_grpc_aio.add_ManagerServicer_to_server(

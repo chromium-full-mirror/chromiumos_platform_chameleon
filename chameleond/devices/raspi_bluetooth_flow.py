@@ -151,6 +151,26 @@ class RaspiHIDKeyboard(RaspiFlow, BluezPeripheral):
 
         self._client.send_string(string_to_send, delay)
 
+    def KeyboardPressSingleKey(self, key):
+        """Simulate a key pressed event.
+
+        Args:
+          key: the code of the pressed key
+        """
+
+        if self._client is None:
+            self._client = BluezKeyboardClient()
+
+        self._client.send_single_key_press(key)
+
+    def KeyboardReleaseAllKey(self):
+        """Simulate a all-key released event."""
+
+        if self._client is None:
+            self._client = BluezKeyboardClient()
+
+        self._client.send_all_key_release()
+
 
 class RaspiHIDMouse(RaspiFlow, BluezPeripheral):
     """This is the class loaded from fpga_tio.

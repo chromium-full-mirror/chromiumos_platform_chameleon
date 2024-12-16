@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option java_outer_classname = "HIDProto";
+
+package blueship;
+
+import "google/protobuf/empty.proto";
+
+service HID {
+  // Simulates a keyboard press
+  rpc PressKey(KeyPressRequest) returns (google.protobuf.Empty);
+  // Simulates a keyboard release
+  rpc ReleaseKey(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Simulates a mouse movement
+  rpc MouseMove(MouseMoveRequest) returns (google.protobuf.Empty);
+}
+
+// Request for the `PressKey` method.
+message KeyPressRequest { string key = 1; }
+
+// Request for the `MouseMove` method.
+message MouseMoveRequest {
+  int32 delta_x = 1;
+  int32 delta_y = 2;
+}
