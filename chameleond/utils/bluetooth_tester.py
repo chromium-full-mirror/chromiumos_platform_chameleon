@@ -83,7 +83,7 @@ class BluetoothTester(BluetoothVirtualDevice, VirtualFlow):
         _control = bluetooth_socket.BluetoothControlSocket()
         return _control.set_powered(self.index, True)
 
-    def ResetStack(self, next_device_type=None):
+    def ResetStack(self, next_device_type=None, restart_chameleond=True):
         """Restores BT stack to pristine state by restarting running services"""
         # Restart bluetooth adapter
         self.AdapterPowerOff()
@@ -91,6 +91,9 @@ class BluetoothTester(BluetoothVirtualDevice, VirtualFlow):
         reset_cmds = [
             "service bluetooth restart",
         ]
+
+        if restart_chameleond:
+            reset_cmds.append("service chameleond restart")
 
         # Restart chameleon and bluetooth service
         os.system(" && ".join(reset_cmds))

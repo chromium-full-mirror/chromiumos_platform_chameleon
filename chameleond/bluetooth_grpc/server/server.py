@@ -141,7 +141,9 @@ class TestServerContext:
 
         # Restart the Bluetooth stack (BlueZ). Wait a while to ensure it is
         # restarted.
-        self.btd.ResetStack(next_device_type=self.device_type)
+        self.btd.ResetStack(
+            next_device_type=self.device_type, restart_chameleond=False
+        )
         time.sleep(BLUEZ_RESTART_TIME)
 
         # Restart Chameleond

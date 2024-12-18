@@ -607,7 +607,7 @@ class BluezPeripheral(PeripheralKit):
         with open(BTD_CONF_FILE, "w") as mf:
             mf.write("".join(file_contents))
 
-    def ResetStack(self, next_device_type=None):
+    def ResetStack(self, next_device_type=None, restart_chameleond=True):
         """Restores BT stack to pristine state by restarting running services"""
 
         logging.info("ResetStack")
@@ -615,6 +615,9 @@ class BluezPeripheral(PeripheralKit):
             "systemctl daemon-reload",
             "service bluetooth restart",
         ]
+
+        if restart_chameleond:
+            reset_cmds.append("service chameleond restart")
 
         # If we know what device type is used next, we can specify which plugins
         # bluetoothd should be loaded with before the service is restarted
