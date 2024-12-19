@@ -37,9 +37,10 @@ enum DeviceCategory {
 }
 
 enum SecureConnections {
-  SECURE_CONNECTIONS_OFF = 0;
-  SECURE_CONNECTIONS_ON = 1;
-  SECURE_CONNECTIONS_ONLY = 2;
+  SECURE_CONNECTIONS_UNKNOWN = 0;
+  SECURE_CONNECTIONS_OFF = 1;
+  SECURE_CONNECTIONS_ON = 2;
+  SECURE_CONNECTIONS_ONLY = 3;
 }
 
 message SupportedProfiles { ConfigVariant uuid = 1; }
