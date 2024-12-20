@@ -11,7 +11,7 @@ service Manager {
   // Reset the gRPC server to the default state.
   rpc ResetServer(google.protobuf.Empty) returns (google.protobuf.Empty);
   // Restart the gRPC server with the specified configurations
-  // after clearing existing states.
+  // after clearing existing states and configurations.
   rpc RestartServer(RestartServerRequest) returns (RestartServerResponse);
   // Read the current applied configurations
   rpc ReadConfig(google.protobuf.Empty) returns (ReadConfigResponse);

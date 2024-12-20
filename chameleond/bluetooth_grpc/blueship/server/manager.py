@@ -38,6 +38,9 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
     ) -> manager_pb2.RestartServerResponse:
         success = True
 
+        # Reset the config to the default.
+        self.ctx.config.CopyFrom(self.ctx.default_config)
+
         req_config_dict = MessageToDict(request.next_config)
         cur_config_dict = MessageToDict(self.ctx.config)
 

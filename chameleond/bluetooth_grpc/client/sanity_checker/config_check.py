@@ -40,7 +40,6 @@ class ConfigGrpcTests(unittest.TestCase):
 
     def tearDown(self):
         """Clear the testing environment"""
-        self.manager_proxy.ResetServer()
         self.connect_to_server()
 
     def connect_to_server(self):
