@@ -1160,6 +1160,23 @@ class BluezPeripheral(PeripheralKit):
 
         return is_connected
 
+    def ConnectHIDDoneHandler(self):
+        """Called when connect HID completes"""
+        logging.info("Connect HID succeeded")
+
+    def ConnectHIDErrorHandler(self, err):
+        """Called in case of error on connect HID"""
+        logging.error("Connect HID failed: %s", err)
+
+    def ConnectHID(self):
+        """Attempt to connect to HID to the remote address."""
+
+        self.get_service_iface().Connect(
+            self.remote_address,
+            reply_handler=self.ConnectHIDDoneHandler,
+            error_handler=self.ConnectHIDErrorHandler,
+        )
+
     def _GetAdapterIface(self):
         """Returns handle to bluez adapter interface
 

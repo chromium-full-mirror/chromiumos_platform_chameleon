@@ -41,6 +41,12 @@ class PowerService(power_grpc_aio.PowerServicer):
             logging.info("Reconnect to %s", self.connected_device)
             self.ctx.btd.Connect()
 
+            # If it's classic HID, it's expected the peripheral to connect the
+            # HID profile.
+            if self.ctx.device_type in ["KEYBOARD", "MOUSE"]:
+                logging.info("Reconnect to HID")
+                self.ctx.btd.ConnectHID()
+
         return empty_pb2.Empty()
 
     async def PowerOff(
