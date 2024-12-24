@@ -240,7 +240,7 @@ class BluetoothHIDMouse(BluetoothHID):
             logging.error(error)
             raise BluetoothHIDException(error)
 
-    def Move(self, delta_x=0, delta_y=0):
+    def Move(self, delta_x=0, delta_y=0, delay=None):
         """Move the mouse (delta_x, delta_y) steps.
 
         If buttons are being pressed, they will stay pressed during this operation.
@@ -252,6 +252,7 @@ class BluetoothHIDMouse(BluetoothHID):
                    Negative values move left, positive values move right.
           delta_y: The number of steps to move vertically.
                    Negative values move up, positive values move down.
+          delay:   The time delay after mouse move in seconds. None means to use default.
 
         Raises:
           BluetoothHIDException if a given delta is not in [-127,127].
@@ -259,7 +260,8 @@ class BluetoothHIDMouse(BluetoothHID):
         self._EnsureHIDValueInRange(delta_x)
         self._EnsureHIDValueInRange(delta_y)
         self._kit.MouseMove(delta_x, delta_y)
-        time.sleep(self.send_delay)
+        send_delay = delay if delay is not None else self.send_delay
+        time.sleep(send_delay)
 
     def _PressLeftButton(self):
         """Press the left button"""

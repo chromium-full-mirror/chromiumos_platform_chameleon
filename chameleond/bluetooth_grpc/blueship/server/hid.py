@@ -15,8 +15,11 @@ import grpc
 class HIDService(hid_grpc_aio.HIDServicer):
     """Service to trigger Chameleon HID procedures."""
 
-    # Delay after each Keyboard traffic in seconds
+    # Delay after each keyboard traffic in seconds
     KEYBOARD_DELAY = 0.01
+
+    # Delay after each mouse traffic in seconds
+    MOUSE_DELAY = 0.01
 
     def __init__(self, shared_context):
         """Initialize the struct
@@ -51,5 +54,7 @@ class HIDService(hid_grpc_aio.HIDServicer):
         request: hid_pb2.MouseMoveRequest,
         context: grpc.ServicerContext,
     ) -> empty_pb2.Empty:
-        self.ctx.btd.Move(request.delta_x, request.delta_y)
+        self.ctx.btd.Move(
+            request.delta_x, request.delta_y, delay=self.MOUSE_DELAY
+        )
         return empty_pb2.Empty()
