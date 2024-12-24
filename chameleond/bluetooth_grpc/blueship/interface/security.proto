@@ -10,9 +10,65 @@ service Security {
   // Initiates pairing request to the remote address. Pairing events
   // should be handled by pandora.security.OnPairing.
   rpc Pair(PairRequest) returns (google.protobuf.Empty);
+  // When starting pairing mode:
+  // - put itself connectable and discoverable
+  // - start listening pairing event
+  // It is expected that the pairing mode should be stopped when the
+  // device successfully bonds to one device during the pairing mode.
+  rpc StartPairingMode(stream PairingEventAnswer) returns (stream PairingEvent);
 }
 
 message PairRequest {
   // Peer Bluetooth device address as array of 6 bytes.
   bytes address = 1;
+}
+
+// Copied and reducted from Pandora
+message PairingEvent {
+  // Pairing event remote device.
+  bytes address = 1;
+  // Pairing method used for this pairing event.
+  oneof method {
+    // "Just Works" SSP / LE pairing association
+    // model. Confirmation is automatic.
+    google.protobuf.Empty just_works = 3;
+    // Numeric Comparison SSP / LE pairing association
+    // model. Confirmation is required.
+    uint32 numeric_comparison = 4;
+    // Passkey Entry SSP / LE pairing association model.
+    // Passkey is typed by the user.
+    // Only for LE legacy pairing or on devices without a display.
+    google.protobuf.Empty passkey_entry_request = 5;
+    // Passkey Entry SSP / LE pairing association model.
+    // Passkey is shown to the user.
+    // The peer device receives a Passkey Entry request.
+    uint32 passkey_entry_notification = 6;
+    // Legacy PIN Pairing.
+    // A PIN Code is typed by the user on IUT.
+    google.protobuf.Empty pin_code_request = 7;
+    // Legacy PIN Pairing.
+    // We generate a PIN code, and the user enters it in the peer
+    // device. While this is not part of the specification, some display
+    // devices automatically generate their PIN Code, instead of asking the
+    // user to type it.
+    bytes pin_code_notification = 8;
+  }
+}
+
+// Copied from Pandora
+message PairingEventAnswer {
+  // Received pairing event.
+  PairingEvent event = 1;
+  // Answer when needed to the pairing event method.
+  oneof answer {
+    // Numeric Comparison confirmation.
+    // Used when pairing event method is `numeric_comparison` or `just_works`.
+    bool confirm = 2;
+    // Passkey typed by the user.
+    // Used when pairing event method is `passkey_entry_request`.
+    uint32 passkey = 3;
+    // Pin typed by the user.
+    // Used when pairing event method is `pin_code_request`.
+    bytes pin = 4;
+  };
 }
