@@ -144,6 +144,8 @@ class HostService(host_grpc_aio.HostServicer):
         # TODO(johnlai): Configure advertisement data.
 
         connections = None
+        properties_changed_receiver = None
+        default_gatt_server_removed = False
         if request.connectable:
             connections = asyncio.Queue()
             loop = asyncio.get_running_loop()
@@ -218,14 +220,12 @@ class HostService(host_grpc_aio.HostServicer):
                             )
 
             bus = dbus.SystemBus()
-            bus.remove_signal_receiver(
-                self.ctx.btd._gatt_server.OnPropertyChanged,
-                signal_name="PropertiesChanged",
-                bus_name="org.bluez",
-                path_keyword="device_path",
-            )
+            if self.ctx.btd._gatt_server.receiver:
+                self.ctx.btd._gatt_server.receiver.remove()
+                self.ctx.btd._gatt_server.receiver = None
+                default_gatt_server_removed = True
 
-            bus.add_signal_receiver(
+            properties_changed_receiver = bus.add_signal_receiver(
                 on_property_changed,
                 signal_name="PropertiesChanged",
                 bus_name="org.bluez",
@@ -250,49 +250,97 @@ class HostService(host_grpc_aio.HostServicer):
 
                 await asyncio.sleep(1)
         finally:
-            bus.remove_signal_receiver(
-                on_property_changed,
-                signal_name="PropertiesChanged",
-                bus_name="org.bluez",
-                path_keyword="device_path",
-            )
-
             self.ctx.btd.SetDiscoverable(False)
+
+            if properties_changed_receiver:
+                properties_changed_receiver.remove()
+
+            if (
+                not self.ctx.btd._gatt_server.receiver
+                and default_gatt_server_removed
+            ):
+                bus = dbus.SystemBus()
+
+                self.ctx.btd._gatt_server.receiver = bus.add_signal_receiver(
+                    self.ctx.btd._gatt_server.OnPropertyChanged,
+                    signal_name="PropertiesChanged",
+                    bus_name="org.bluez",
+                    path_keyword="device_path",
+                )
 
     async def Scan(
         self, request: host_pb2.ScanRequest, context: grpc.ServicerContext
     ) -> AsyncGenerator[host_pb2.ScanningResponse, None]:
-        receiver = None
+        properties_changed_receiver = None
+        interfaces_added_receiver = None
+        cache_address_list = []
+
         try:
             discovered_devices = asyncio.Queue()
             loop = asyncio.get_running_loop()
 
-            def on_device_found(*args, **kwargs):
+            def on_properties_changed(*args, **kwargs):
                 changed_prop = args
                 caller_details = kwargs
                 caller = str(changed_prop[0])
 
                 if "Device1" in caller:
                     device_path = caller_details.get("device_path")
+                    device_address = device_path[-17:].replace("_", ":")
 
-                    # Determine the device type
-                    resolved_address = self.ctx.btd._GetAddressFromPath(
-                        device_path
-                    )
+                    if device_address not in cache_address_list:
+                        logging.info("New device %s found", device_address)
+                        cache_address_list.append(device_address)
+                        resolved_address = self._GetAddressFromPath(device_path)
+                        if (
+                            resolved_address is not None
+                            and resolved_address not in cache_address_list
+                        ):
+                            logging.info(
+                                "New device with resolved address %s found",
+                                resolved_address,
+                            )
+                            cache_address_list.append(resolved_address)
 
-                    asyncio.run_coroutine_threadsafe(
-                        discovered_devices.put(resolved_address), loop
-                    )
+                            asyncio.run_coroutine_threadsafe(
+                                discovered_devices.put(resolved_address), loop
+                            )
+
+            def on_interfaces_added(device_path, interfaces_and_properties):
+                if "org.bluez.Device1" in interfaces_and_properties:
+                    resolved_address = interfaces_and_properties[
+                        "org.bluez.Device1"
+                    ]["Address"]
+                    if (
+                        resolved_address is not None
+                        and resolved_address not in cache_address_list
+                    ):
+                        logging.info(
+                            "New device with resolved address %s found",
+                            resolved_address,
+                        )
+                        cache_address_list.append(resolved_address)
+
+                        asyncio.run_coroutine_threadsafe(
+                            discovered_devices.put(resolved_address), loop
+                        )
 
             discovery_filter = {"Transport": "le"}
             self.ctx.btd.SetDiscoveryFilter(discovery_filter)
 
             bus = dbus.SystemBus()
-            receiver = bus.add_signal_receiver(
-                on_device_found,
+            properties_changed_receiver = bus.add_signal_receiver(
+                on_properties_changed,
                 signal_name="PropertiesChanged",
                 bus_name="org.bluez",
                 path_keyword="device_path",
+            )
+
+            interfaces_added_receiver = bus.add_signal_receiver(
+                on_interfaces_added,
+                signal_name="InterfacesAdded",
+                bus_name="org.bluez",
+                dbus_interface="org.freedesktop.DBus.ObjectManager",
             )
 
             self.ctx.btd.StartDiscovery()
@@ -307,8 +355,11 @@ class HostService(host_grpc_aio.HostServicer):
                 )
 
         finally:
-            if receiver:
-                receiver.remove()
+            if properties_changed_receiver:
+                properties_changed_receiver.remove()
+            if interfaces_added_receiver:
+                interfaces_added_receiver.remove()
+
             self.ctx.btd.SetDiscoveryFilter({})
             self.ctx.btd.StopDiscovery()
 

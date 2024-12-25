@@ -102,7 +102,7 @@ class GATTServer(object):
 
         # Add a handler for changes in state, specifically requesting caller's
         # device_path in the callback
-        bus.add_signal_receiver(
+        self.receiver = bus.add_signal_receiver(
             self.OnPropertyChanged,
             signal_name="PropertiesChanged",
             bus_name="org.bluez",
@@ -114,13 +114,9 @@ class GATTServer(object):
         if self.app:
             self.app.cleanup()
 
-        bus = dbus.SystemBus()
-        bus.remove_signal_receiver(
-            self.OnPropertyChanged,
-            signal_name="PropertiesChanged",
-            bus_name="org.bluez",
-            path_keyword="device_path",
-        )
+        if self.receiver:
+            self.receiver.remove()
+            self.receiver = None
 
     def _RegisterAppCB(self):
         """Callback for app registration"""
