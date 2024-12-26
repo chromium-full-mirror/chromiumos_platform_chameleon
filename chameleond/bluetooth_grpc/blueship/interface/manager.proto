@@ -17,7 +17,9 @@ service Manager {
   rpc ReadConfig(google.protobuf.Empty) returns (ReadConfigResponse);
 }
 
-message APIConfig { ConfigVariant support_api_version = 1; }
+message APIConfig {
+  ConfigVariant support_api_version = 1; // string
+}
 
 enum IOCapability {
   IO_CAPABILITY_UNKNOWN = 0;
@@ -43,20 +45,18 @@ enum SecureConnections {
   SECURE_CONNECTIONS_ONLY = 3;
 }
 
-message SupportedProfiles { ConfigVariant uuid = 1; }
-
 message DeviceInfoConfig {
-  ConfigVariant mac_address = 1;
-  ConfigVariant name = 2;
-  ConfigVariant io_capability = 3;
-  ConfigVariant class_of_device = 4;
-  ConfigVariant category = 5;
-  ConfigVariant supported_profiles = 6;
+  ConfigVariant mac_address = 1;        // string
+  ConfigVariant name = 2;               // string
+  ConfigVariant io_capability = 3;      // IOCapability
+  ConfigVariant class_of_device = 4;    // int32
+  ConfigVariant category = 5;           // DeviceCategory
+  ConfigVariant supported_profiles = 6; // RepeatedString
 }
 
 message ControllerConfig {
-  ConfigVariant support_classic = 1;
-  ConfigVariant support_le = 2;
+  ConfigVariant support_classic = 1; // bool
+  ConfigVariant support_le = 2;      // bool
 }
 
 message SecurityConfig {
@@ -65,8 +65,8 @@ message SecurityConfig {
 }
 
 message AudioConfig {
-  ConfigVariant supported_codecs = 1;
-  ConfigVariant supported_player_commands = 2;
+  ConfigVariant supported_codecs = 1;          // RepeatedCodec
+  ConfigVariant supported_player_commands = 2; // RepeatedPlayerCommands
 }
 
 enum Codec {
