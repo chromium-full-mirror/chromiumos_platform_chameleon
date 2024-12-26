@@ -35,6 +35,7 @@ except ImportError:
 
 from chameleond.utils import pairing_agent
 from chameleond.utils import system_tools
+from chameleond.utils.bluez_observer import BlueZObserver
 from chameleond.utils.raspi_bluez_service import BluezService
 from six.moves import range
 
@@ -182,6 +183,8 @@ class BluezPeripheral(PeripheralKit):
         # pressed buttons.
         self.gamepad_report = [0x00] * 16
 
+        self.bluez_observer = BlueZObserver(self._dbus_system_bus)
+
         logging.debug(
             "Bluetooth peripheral powered and waiting for bind to device"
         )
@@ -202,6 +205,9 @@ class BluezPeripheral(PeripheralKit):
 
         if self._agent:
             self.StopPairingAgent()
+
+        if self.bluez_observer:
+            self.bluez_observer.cleanup()
 
         self._loop.quit()
 
@@ -1430,6 +1436,7 @@ class BluezPeripheral(PeripheralKit):
 
         self.discovered_devices = []
         # Register callback on PropertiesChanged signal
+        # TODO: Replace with CallbackManager
         receiver = self._dbus_system_bus.add_signal_receiver(
             self._DeviceFound,
             signal_name="PropertiesChanged",
