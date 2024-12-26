@@ -60,8 +60,9 @@ message ControllerConfig {
 }
 
 message SecurityConfig {
-  ConfigVariant pin = 1;
-  ConfigVariant secure_connections = 2;
+  ConfigVariant pin = 1;                   // string
+  ConfigVariant secure_connections = 2;    // SecureConnections
+  ConfigVariant secure_simple_pairing = 3; // bool
 }
 
 message AudioConfig {

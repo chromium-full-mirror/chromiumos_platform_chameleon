@@ -176,6 +176,9 @@ class TestServerContext:
         self.btd.SpecifyDeviceType(self.device_type)
         self.btd.SetIOCapability(self.io_capability)
         self.btd.SetSecureConnections(self.secure_connections)
+        self.btd.SetSecureSimplePairing(
+            self.config.security.secure_simple_pairing.bool_value
+        )
 
         # Start a default agent to automatically authorize profile connections
         self.btd.StartPairingAgent("NoInputNoOutput")

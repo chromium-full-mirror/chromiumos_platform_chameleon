@@ -986,6 +986,20 @@ class BluezPeripheral(PeripheralKit):
             return False
         return True
 
+    def SetSecureSimplePairing(self, enable):
+        """Sets Secure Simple Pairing to enable / disable.
+
+        @param enable: Whether controller should support SSP.
+
+        @return True on success, False otherwise.
+        """
+        logging.info("Setting Secure Simple Pairing to %s", enable)
+        _control = bluetooth_socket.BluetoothControlSocket()
+        if _control.set_ssp(0, enable) is None:
+            logging.error("Failed to set Secure Connection")
+            return False
+        return True
+
     def SetRPATimeout(self, timeout):
         """Set the timeout value for random private address
 
