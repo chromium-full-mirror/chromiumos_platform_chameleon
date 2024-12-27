@@ -79,6 +79,21 @@ def address_from_bluez_device_path(device_path: str):
     return device_path.split("/")[-1].replace("_", ":")[4:]
 
 
+def service_data_to(service_data):
+    """Converts service data from dict[str,list[int]] to dict[str,bytes]."""
+
+    return {uuid: bytes(data) for uuid, data in service_data.items()}
+
+
+def service_data_from(service_data):
+    """Converts service data from dict[str,bytes] to dict[str,list[int]]."""
+
+    return {
+        uuid: [val for val in data_bytes]
+        for uuid, data_bytes in service_data.items()
+    }
+
+
 # anext build-in is new in python3.10. Deprecate this function
 # when we are able to use it.
 async def anext(ait):

@@ -31,6 +31,57 @@ class HostService(host_grpc_aio.HostServicer):
         self.ctx = shared_context
         self.security = security
 
+        # Context for Scan
+        self.scan_async_loop = None
+        self.scan_rsp_queue = None
+        self.service_data_callback_handle = (
+            self.ctx.btd.bluez_observer.RegisterServiceDataChangedCallback(
+                self._service_data_callback
+            )
+        )
+
+        self.on_device_found_callback_handle = (
+            self.ctx.btd.bluez_observer.RegisterDeviceFoundCallback(
+                self._on_device_found_callback
+            )
+        )
+
+    def _service_data_callback(self, *args):
+        address, service_data = args
+
+        if self.scan_rsp_queue is not None and self.scan_async_loop is not None:
+            asyncio.run_coroutine_threadsafe(
+                self.scan_rsp_queue.put(
+                    host_pb2.ScanningResponse(
+                        public=utils.address_to(address),
+                        data=host_pb2.DataTypes(
+                            service_data_uuid128=utils.service_data_to(
+                                service_data
+                            )
+                        ),
+                    )
+                ),
+                self.scan_async_loop,
+            )
+
+    def _on_device_found_callback(self, *args):
+        address, props = args
+
+        if self.scan_rsp_queue is not None and self.scan_async_loop is not None:
+            scan_rsp = host_pb2.ScanningResponse(
+                public=utils.address_to(address)
+            )
+            service_data = props.get("ServiceData", None)
+
+            if service_data:
+                scan_rsp.data.service_data_uuid128.update(
+                    utils.service_data_to(service_data)
+                )
+            asyncio.run_coroutine_threadsafe(
+                self.scan_rsp_queue.put(scan_rsp),
+                self.scan_async_loop,
+            )
+
     async def FactoryReset(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
@@ -273,95 +324,25 @@ class HostService(host_grpc_aio.HostServicer):
     ) -> AsyncGenerator[host_pb2.ScanningResponse, None]:
         properties_changed_receiver = None
         interfaces_added_receiver = None
-        cache_address_list = []
 
         try:
-            discovered_devices = asyncio.Queue()
-            loop = asyncio.get_running_loop()
-
-            def on_properties_changed(*args, **kwargs):
-                changed_prop = args
-                caller_details = kwargs
-                caller = str(changed_prop[0])
-
-                if "Device1" in caller:
-                    device_path = caller_details.get("device_path")
-                    device_address = device_path[-17:].replace("_", ":")
-
-                    if device_address not in cache_address_list:
-                        logging.info("New device %s found", device_address)
-                        cache_address_list.append(device_address)
-                        resolved_address = self._GetAddressFromPath(device_path)
-                        if (
-                            resolved_address is not None
-                            and resolved_address not in cache_address_list
-                        ):
-                            logging.info(
-                                "New device with resolved address %s found",
-                                resolved_address,
-                            )
-                            cache_address_list.append(resolved_address)
-
-                            asyncio.run_coroutine_threadsafe(
-                                discovered_devices.put(resolved_address), loop
-                            )
-
-            def on_interfaces_added(device_path, interfaces_and_properties):
-                if "org.bluez.Device1" in interfaces_and_properties:
-                    resolved_address = interfaces_and_properties[
-                        "org.bluez.Device1"
-                    ]["Address"]
-                    if (
-                        resolved_address is not None
-                        and resolved_address not in cache_address_list
-                    ):
-                        logging.info(
-                            "New device with resolved address %s found",
-                            resolved_address,
-                        )
-                        cache_address_list.append(resolved_address)
-
-                        asyncio.run_coroutine_threadsafe(
-                            discovered_devices.put(resolved_address), loop
-                        )
+            self.scan_rsp_queue = asyncio.Queue()
+            self.scan_async_loop = asyncio.get_running_loop()
 
             discovery_filter = {"Transport": "le"}
             self.ctx.btd.SetDiscoveryFilter(discovery_filter)
-
-            bus = dbus.SystemBus()
-            properties_changed_receiver = bus.add_signal_receiver(
-                on_properties_changed,
-                signal_name="PropertiesChanged",
-                bus_name="org.bluez",
-                path_keyword="device_path",
-            )
-
-            interfaces_added_receiver = bus.add_signal_receiver(
-                on_interfaces_added,
-                signal_name="InterfacesAdded",
-                bus_name="org.bluez",
-                dbus_interface="org.freedesktop.DBus.ObjectManager",
-            )
-
             self.ctx.btd.StartDiscovery()
 
             while True:
-                resolved_address = await discovered_devices.get()
-
                 # TODO(johnlai) This address will always be resolved address.
                 # Fix this once we know how to differentiate bluez address type.
-                yield host_pb2.ScanningResponse(
-                    public=utils.address_to(resolved_address)
-                )
+                yield await self.scan_rsp_queue.get()
 
         finally:
-            if properties_changed_receiver:
-                properties_changed_receiver.remove()
-            if interfaces_added_receiver:
-                interfaces_added_receiver.remove()
-
             self.ctx.btd.SetDiscoveryFilter({})
             self.ctx.btd.StopDiscovery()
+            self.scan_rsp_queue = None
+            self.scan_async_loop = None
 
     async def Inquiry(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
