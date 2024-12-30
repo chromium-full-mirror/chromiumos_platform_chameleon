@@ -1144,22 +1144,29 @@ class BluezPeripheral(PeripheralKit):
 
         logging.info("Attempting to connect to %s", self.remote_address)
 
-        # Call connect directly through bluez device object
+        if self.device_type in (
+            "MOUSE",
+            "KEYBOARD",
+            "GAMEPAD",
+        ):
+            self.ConnectHID()
+        else:
+            # Call connect directly through bluez device object
+            if not device:
+                logging.error(
+                    "Device {} is None, can not connect".format(
+                        self.remote_address
+                    )
+                )
+                return False
 
-        if not device:
-            logging.error(
-                "Device {} is None, can not connect".format(self.remote_address)
-            )
-            return False
-
-        try:
-            device.Connect()
-
-        except Exception as e:
-            logging.error(
-                "Failed to connect to {}: {}".format(self.remote_address, e)
-            )
-            return False
+            try:
+                device.Connect()
+            except Exception as e:
+                logging.error(
+                    "Failed to connect to {}: {}".format(self.remote_address, e)
+                )
+                return False
 
         start_time = time.time()
 
