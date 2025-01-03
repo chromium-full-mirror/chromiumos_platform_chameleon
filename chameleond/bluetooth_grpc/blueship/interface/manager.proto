@@ -55,8 +55,9 @@ message DeviceInfoConfig {
 }
 
 message ControllerConfig {
-  ConfigVariant support_classic = 1; // bool
-  ConfigVariant support_le = 2;      // bool
+  ConfigVariant support_classic = 1;      // bool
+  ConfigVariant support_le = 2;           // bool
+  ConfigVariant support_le_ext_scan = 10; // bool
 }
 
 message SecurityConfig {

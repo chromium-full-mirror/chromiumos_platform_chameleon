@@ -30,6 +30,12 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
             writable=True,
             bool_value=True,
         ),
+        # CYW43455 doesn't support BLE Extended scan.
+        # Reference: https://community.infineon.com/t5/AIROC-Wi-Fi-and-Wi-Fi-Bluetooth/CYW43455-Bluetooth-LE-Extended-Scan-Support/td-p/340045
+        support_le_ext_scan=manager_pb2.ConfigVariant(
+            writable=False,
+            bool_value=False,
+        ),
     ),
     security=manager_pb2.SecurityConfig(
         pin=manager_pb2.ConfigVariant(writable=True, string_value="0000"),
