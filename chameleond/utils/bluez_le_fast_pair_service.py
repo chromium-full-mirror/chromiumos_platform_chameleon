@@ -509,7 +509,9 @@ class PasskeyChrc(Characteristic):
         response_bytes = bytes([self.PROVIDERS_MESSAGE_TYPE])
 
         # Bytes 1-3 are this devices passkey.
-        response_bytes += pairing_agent.agent.passkey.to_bytes(3, "big")
+        response_bytes += pairing_agent._unique_pairing_agent.passkey.to_bytes(
+            3, "big"
+        )
 
         # Bytes 4-15 are the salt value (random bytes)
         response_bytes += urandom(self.SALT_BYTES_LENGTH)
@@ -533,12 +535,12 @@ class PasskeyChrc(Characteristic):
 
         passkey = int.from_bytes(decrypted_bytes[1:4], "big")
 
-        if pairing_agent.agent.DoesPasskeyMatch(passkey):
+        if pairing_agent._unique_pairing_agent.DoesPasskeyMatch(passkey):
             logging.info("Passkey matches.")
         else:
             logging.warning(
                 "Passkeys didn't match. Expected: %06d Actual: %06d",
-                pairing_agent.agent.passkey,
+                pairing_agent._unique_pairing_agent.passkey,
                 passkey,
             )
             return

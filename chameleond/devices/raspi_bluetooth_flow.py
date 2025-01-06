@@ -815,4 +815,4 @@ class RaspiBLEFastPair(RaspiFlow, BluezPeripheral):
             logging.warn("Failed to set passkey.")
             return
 
-        pairing_agent.agent.SetPasskey(passkey)
+        pairing_agent._unique_pairing_agent.SetPasskey(passkey)
