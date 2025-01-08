@@ -36,19 +36,40 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
         request: manager_pb2.RestartServerRequest,
         context: grpc.ServicerContext,
     ) -> manager_pb2.RestartServerResponse:
-        success = True
+        config_dict = self._to_config_dict_or_none(request.next_config)
+        success = config_dict is not None
 
-        # Reset the config to the default.
-        self.ctx.config.CopyFrom(self.ctx.default_config)
+        if success:
+            ParseDict(config_dict, self.ctx.config)
+            # Stop the server and rely on the |start_bluetooth_test_server|
+            # to restart.
+            asyncio.create_task(self.server.stop(None))
 
-        req_config_dict = MessageToDict(request.next_config)
-        cur_config_dict = MessageToDict(self.ctx.config)
+        return manager_pb2.RestartServerResponse(success=success)
+
+    async def ReadConfig(
+        self, request: empty_pb2.Empty, context: grpc.ServicerContext
+    ) -> manager_pb2.ReadConfigResponse:
+        return manager_pb2.ReadConfigResponse(config=self.ctx.config)
+
+    async def IsConfigOK(
+        self,
+        request: manager_pb2.IsConfigOKRequest,
+        context: grpc.ServicerContext,
+    ) -> bool:
+        return manager_pb2.IsConfigOKResonse(
+            ok=self._to_config_dict_or_none(request.config) is not None
+        )
+
+    def _to_config_dict_or_none(self, config):
+        req_config_dict = MessageToDict(config)
+        res_config_dict = MessageToDict(self.ctx.default_config)
 
         logging.info("Request config: %s", req_config_dict)
 
         for section_name, section_dict in req_config_dict.items():
             for entry_name, entry_variant in section_dict.items():
-                cur_entry = cur_config_dict[section_name][entry_name]
+                res_entry = res_config_dict[section_name][entry_name]
                 # Remove the writable field as we don't update it.
                 entry_variant.pop("writable", None)
                 # The entry must have another field, this is secured by proto definition
@@ -56,19 +77,17 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
                     entry_variant.items()
                 )[0]
 
-                if req_entry_value_type not in cur_entry:
-                    success = False
-                    break
+                if req_entry_value_type not in res_entry:
+                    return None
 
-                if cur_entry[req_entry_value_type] == req_entry_value:
+                if res_entry[req_entry_value_type] == req_entry_value:
                     continue
 
                 # Needs to update the current config
-                if not cur_entry.get("writable", False):
-                    success = False
-                    break
+                if not res_entry.get("writable", False):
+                    return None
 
-                cur_entry[req_entry_value_type] = req_entry_value
+                res_entry[req_entry_value_type] = req_entry_value
 
         # Check if the entry value is supported on chameleon
         try:
@@ -85,8 +104,7 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
                         "codecList"
                     ]
                 ):
-                    success = False
-                    break
+                    return None
         except KeyError:
             # The entries checking above might not be included in the request.
             # Ignore the key error for easier implementation.
@@ -94,15 +112,4 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
         except Exception as e:
             logging.error("Exception on getting supported codec: %s", str(e))
 
-        if success:
-            ParseDict(cur_config_dict, self.ctx.config)
-            # Stop the server and rely on the |start_bluetooth_test_server|
-            # to restart.
-            asyncio.create_task(self.server.stop(None))
-
-        return manager_pb2.RestartServerResponse(success=success)
-
-    async def ReadConfig(
-        self, request: empty_pb2.Empty, context: grpc.ServicerContext
-    ) -> manager_pb2.ReadConfigResponse:
-        return manager_pb2.ReadConfigResponse(config=self.ctx.config)
+        return res_config_dict
