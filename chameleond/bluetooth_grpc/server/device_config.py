@@ -56,7 +56,7 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
             ),
         ),
         supported_player_commands=manager_pb2.ConfigVariant(
-            writable=False,
+            writable=True,
             player_cmd_list=manager_pb2.RepeatedPlayerCommands(
                 player_cmd_list=[
                     audio_pb2.AUDIO_PLAYER_PLAY,

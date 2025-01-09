@@ -225,18 +225,8 @@ class ConfigGrpcTests(unittest.TestCase):
                 )
             )
         )
-        resp = self.manager_proxy.RestartServer(write_config)
-        self.assertEqual(resp.success, False)
-
-        # Wait for the server to be restarted
-        self.connect_to_server()
-
-        # Codec should not be changed.
-        resp = self.manager_proxy.ReadConfig()
-        self.assertEqual(
-            resp.config.audio.supported_codecs.codec_list.codec_list,
-            self.DEFAULT_CODEC_LIST,
-        )
+        resp = self.manager_proxy.IsConfigOK(write_config)
+        self.assertEqual(resp.ok, False)
 
     def test_write_audio_supported_player_commands_fail(self):
         """Test audio supported player commands can't be written"""
@@ -250,17 +240,8 @@ class ConfigGrpcTests(unittest.TestCase):
                 ),
             )
         )
-        resp = self.manager_proxy.RestartServer(write_config)
-
-        # Wait for the server to be restarted
-        self.connect_to_server()
-
-        # Codec should not be changed.
-        resp = self.manager_proxy.ReadConfig()
-        self.assertEqual(
-            resp.config.audio.supported_player_commands.player_cmd_list.player_cmd_list,
-            self.DEFAULT_AUDIO_PLAYER_LIST,
-        )
+        resp = self.manager_proxy.IsConfigOK(write_config)
+        self.assertEqual(resp.ok, False)
 
 
 if __name__ == "__main__":

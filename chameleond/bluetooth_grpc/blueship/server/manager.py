@@ -89,27 +89,51 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
 
                 res_entry[req_entry_value_type] = req_entry_value
 
-        # Check if the entry value is supported on chameleon
-        try:
-            unsupported_codec = [
+        def _check_codec_supported():
+            UNSUPPORTERD_CODEC = [
                 "CODEC_AAC",
                 "CODEC_APTX",
                 "CODEC_LDAC",
                 "CODEC_LC3",
             ]
-            for codec in unsupported_codec:
+            for codec in UNSUPPORTERD_CODEC:
                 if (
                     codec
                     in req_config_dict["audio"]["supportedCodecs"]["codecList"][
                         "codecList"
                     ]
                 ):
+                    logging.warning("codec %s is not supported.", codec)
+                    return False
+
+            return True
+
+        def _check_player_cmd_supported():
+            UNSUPPORTED_PLAYER_CMDS = [
+                "AUDIO_PLAYER_VOL_UP",
+                "AUDIO_PLAYER_VOL_DOWN",
+            ]
+            for cmd in UNSUPPORTED_PLAYER_CMDS:
+                if (
+                    cmd
+                    in req_config_dict["audio"]["supportedPlayerCommands"][
+                        "playerCmdList"
+                    ]["playerCmdList"]
+                ):
+                    logging.warning("cmd %s is not supported.", cmd)
+                    return False
+
+        check_funcs = [_check_codec_supported, _check_player_cmd_supported]
+
+        for func in check_funcs:
+            try:
+                if not func():
                     return None
-        except KeyError:
-            # The entries checking above might not be included in the request.
-            # Ignore the key error for easier implementation.
-            pass
-        except Exception as e:
-            logging.error("Exception on getting supported codec: %s", str(e))
+            except KeyError:
+                # The entries checking above might not be included in the
+                # request. Ignore the key error for easier implementation.
+                pass
+            except Exception as e:
+                logging.error("Exception: %s", str(e))
 
         return res_config_dict
