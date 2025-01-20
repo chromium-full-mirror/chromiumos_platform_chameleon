@@ -9,6 +9,7 @@
 import argparse
 import atexit
 import code
+import ipaddress
 import logging
 import os
 import readline
@@ -262,9 +263,30 @@ def Main():
         atexit.register(cleanup)
         address = "http://localhost:%d" % options.local_port
     else:
-        address = "http://%s:%s" % (options.host, options.port)
+        is_ipv6 = False
+        try:
+            is_ipv6 = isinstance(
+                ipaddress.ip_address(options.host), ipaddress.IPv6Address
+            )
+        except ValueError:  # happens when we are provided with string hostname
+            is_ipv6 = False
+
+        if is_ipv6:
+            address = "http://[%s]:%s" % (options.host, options.port)
+        else:
+            address = "http://%s:%s" % (options.host, options.port)
 
     proxy = xmlrpc.client.ServerProxy(address)
+    try:
+        proxy.GetMacAddress()
+    except ConnectionRefusedError:
+        logging.error("Fail to connect to %s", address)
+        return
+    except OSError as e:
+        if e.errno != 113:  # no route to host
+            raise
+        logging.error("Fail to connect to %s", address)
+        return
     logging.info(
         "Connected to %s with MAC address %s", address, proxy.GetMacAddress()
     )
