@@ -340,9 +340,9 @@ class BatteryLevelCharacteristic(Characteristic):
         )
         self.notifying = False
         self.battery_lvl = 100
-        GObject.timeout_add(10000, self._DrainBattery)
+        self.drain_battery_event = None
 
-    def _NotifyBatteryLevel(self):
+    def notify_battery_level(self):
         """Notifies of new battery level"""
 
         if not self.notifying:
@@ -352,7 +352,7 @@ class BatteryLevelCharacteristic(Characteristic):
             GATT_CHRC_IFACE, {"Value": [dbus.Byte(self.battery_lvl)]}, []
         )
 
-    def _DrainBattery(self):
+    def drain_battery(self):
         """Drains the battery"""
 
         if not self.notifying:
@@ -362,24 +362,48 @@ class BatteryLevelCharacteristic(Characteristic):
             if self.battery_lvl < 0:
                 self.battery_lvl = 0
 
-        logging.debug("Battery Level drained: " + repr(self.battery_lvl))
-        self._NotifyBatteryLevel()
+        logging.debug("Battery Level drained: %s", repr(self.battery_lvl))
+        self.notify_battery_level()
         return True
+
+    def set_battery_level(self, level):
+        """Sets the device battery level"""
+        logging.info("Set battery to level %s", level)
+
+        self.battery_lvl = max(level, 0)
+        if self.notifying:
+            self.notify_battery_level()
+
+    def start_drain_battery(self):
+        """Start to drain the device battery."""
+        logging.info("Start to drain the device battery")
+        self.drain_battery_event = GObject.timeout_add(
+            10000, self.drain_battery
+        )
+
+    def stop_drain_battery(self):
+        """ "Stops to drain the device battery."""
+        logging.info("Stio to drain the device battery")
+        if self.drain_battery_event:
+            GObject.source_remove(self.drain_battery_event)
+            self.drain_battery_event = None
 
     def ReadValue(self, options):
         """Called by dbus - Reads current value of characteristic"""
 
-        logging.debug("Battery Level read: " + repr(self.battery_lvl))
+        logging.debug("Battery Level read: %s", repr(self.battery_lvl))
         return [dbus.Byte(self.battery_lvl)]
 
     def StartNotify(self):
         """Called by dbus - requests notifications"""
 
+        logging.info("BatteryLevelChar: StartNotify")
+
         if self.notifying:
             return
 
         self.notifying = True
-        self._NotifyBatteryLevel()
+        self.notify_battery_level()
 
     def StopNotify(self):
         """Called by dbus - requests stop to notifications"""

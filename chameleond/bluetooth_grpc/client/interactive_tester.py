@@ -5,6 +5,7 @@
 from blueship.audio_grpc import Audio
 from blueship.hid_grpc import HID
 from blueship.manager_grpc import Manager
+from blueship.power_grpc import Power
 from blueship.security_grpc import Security as BlueShipSecurity
 import grpc
 from pandora.host_grpc import Host
@@ -21,6 +22,7 @@ audio_proxy = Audio(proxy)
 hid_proxy = HID(proxy)
 manager_proxy = Manager(proxy)
 blueship_security_proxy = BlueShipSecurity(proxy)
+power_proxy = Power(proxy)
 
 print(
     "Example usage:\n"
@@ -40,6 +42,7 @@ print(
     f"\thid_proxy ({type(hid_proxy)})\n"
     f"\tmanager_proxy ({type(manager_proxy)})\n"
     f"\tblueship_security_proxy ({type(blueship_security_proxy)})\n"
+    f"\tpower_proxy ({type(power_proxy)})\n"
 )
 
 while True:

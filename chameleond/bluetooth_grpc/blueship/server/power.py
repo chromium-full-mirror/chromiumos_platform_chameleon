@@ -8,6 +8,7 @@ import logging
 import time
 
 from blueship import power_grpc_aio
+from blueship import power_pb2
 from google.protobuf import empty_pb2
 import grpc
 
@@ -65,5 +66,14 @@ class PowerService(power_grpc_aio.PowerServicer):
 
         # Wait until power off procedure completes
         time.sleep(1)
+
+        return empty_pb2.Empty()
+
+    async def SetBatteryLevel(
+        self,
+        request: power_pb2.SetBatteryLevelRequest,
+        context: grpc.ServicerContext,
+    ) -> empty_pb2.Empty:
+        self.ctx.btd.SetBatteryLevel(request.battery_level)
 
         return empty_pb2.Empty()

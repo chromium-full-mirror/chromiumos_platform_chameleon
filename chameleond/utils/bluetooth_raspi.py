@@ -765,6 +765,12 @@ class BluezPeripheral(PeripheralKit):
     def SetAdapterAlias(self, name):
         self._set_hci_prop("org.bluez.Adapter1", "Alias", dbus.String(name))
 
+    def SetBatteryLevel(self, level):
+        """Sets device battery level."""
+        logging.info("bluetooth_raspi.SetBatteryLevel")
+        if self._gatt_server:
+            self._gatt_server.SetBatteryLevel(level)
+
     def SetDiscoverable(self, discoverable):
         self._set_hci_prop(
             "org.bluez.Adapter1", "Discoverable", dbus.Boolean(discoverable)

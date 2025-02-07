@@ -17,4 +17,12 @@ service Power {
   // Power off controller and initiate a disconnection to all
   // connected/connecting devices.
   rpc PowerOff(google.protobuf.Empty) returns (google.protobuf.Empty);
+  // Sets device battery level.
+  rpc SetBatteryLevel(SetBatteryLevelRequest) returns (google.protobuf.Empty);
+}
+
+// Request of the `SetBatteryLevel` method.
+message SetBatteryLevelRequest {
+  // battery percentage to set.
+  uint32 battery_level = 1;
 }

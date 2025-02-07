@@ -25,6 +25,8 @@ except ImportError:
 from .bluetooth_peripheral_kit import PeripheralKit
 from .bluez_le_better_together_service import PhoneLEBetterTogetherApplication
 from .bluez_le_fast_pair_service import FastPairLEApplication
+from .bluez_le_hid_service import BatteryLevelCharacteristic
+from .bluez_le_hid_service import BatteryService
 from .bluez_le_hid_service import HIDApplication
 from .bluez_service_consts import PERIPHERAL_DEVICE_APPEARANCE
 from .bluez_service_consts import PERIPHERAL_DEVICE_NAME
@@ -289,6 +291,19 @@ class GATTServer(object):
     def SetAdvertiseNameAndHID(self, enabled):
         self._advertise_name_and_hid = enabled
         self._ConfigureAdvertisements()
+
+    def SetBatteryLevel(self, level):
+        """Sets the device battery level.
+
+        Args:
+          level: battery level to set, from 0 to 100.
+        """
+        for service in self.app.services:
+            if service.uuid == BatteryService.BATTERY_SERVICE_UUID:
+                for char in service.characteristics:
+                    if char.uuid == BatteryLevelCharacteristic.BATTERY_LVL_UUID:
+                        if getattr(char, "set_battery_level", None):
+                            char.set_battery_level(level)
 
     def GetAdvLocalName(self):
         return self._adv_local_name
