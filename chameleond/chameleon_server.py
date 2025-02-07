@@ -7,6 +7,7 @@
 
 import logging
 import signal
+import socket
 import sys
 
 
@@ -81,7 +82,7 @@ class ChameleonServer(object):
         module = getattr(package, module_name)
         return getattr(module, "ChameleondDriver")
 
-    def RunServer(self, host="0.0.0.0", port=9992):
+    def RunServer(self, host="::", port=9992):
         """Runs Chameleon RPC server.
 
         Args:
@@ -89,7 +90,11 @@ class ChameleonServer(object):
           port: port number of RPC server.
         """
         caching = CachingServer(port + 1)
-        server = SimpleXMLRPCServer(
+
+        class SimpleXMLRPCServerV6(SimpleXMLRPCServer):
+            address_family = socket.AF_INET6
+
+        server = SimpleXMLRPCServerV6(
             (host, port),
             allow_none=True,
             requestHandler=ChameleonXMLRPCRequestHandler,
