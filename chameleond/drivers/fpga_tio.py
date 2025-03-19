@@ -1294,9 +1294,16 @@ class ChameleondDriver(ChameleondInterface):
             This happens if user has used API related to input operation on
             other port. The API includes CaptureVideo, StartCapturingVideo,
             DetectResolution, StartCapturingAudio, StartPlayingEcho.
+          xmlrpc.client.Fault: Audio file being empty, there is no audio
+            recorded.
         """
         logging.info("Stop Capturing Audio: %d", port_id)
         path, fmt = self._flow_manager.StopCapturingAudio(port_id)
+
+        file_size = os.stat(path).st_size
+        if file_size == 0:
+            raise xmlrpc.client.Fault(500, "File is empty, no audio recorded.")
+
         prefix = "/tmp/"
         filename = path[len(prefix) :] if path.startswith(prefix) else path
         token = uuid.uuid5(uuid.NAMESPACE_DNS, filename).hex
