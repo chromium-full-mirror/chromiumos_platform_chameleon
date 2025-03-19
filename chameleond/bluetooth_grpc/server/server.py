@@ -52,6 +52,7 @@ class TestServerContext:
         self.config = config
         self.default_config = manager_pb2.Configuration()
         self.default_config.CopyFrom(config)
+        self.is_server_ready = False
 
     @property
     def support_classic(self):
@@ -245,6 +246,7 @@ async def start_bluetooth_test_server(port):
             logging.info("Starting Bluetooth test server.")
             await server.start()
             logging.info("Bluetooth test server started.")
+            shared_context.is_server_ready = True
 
             await server.wait_for_termination()
             logging.info("Bluetooth test server stopped, restarting...")

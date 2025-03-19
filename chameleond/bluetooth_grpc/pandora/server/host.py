@@ -85,6 +85,8 @@ class HostService(host_grpc_aio.HostServicer):
     async def FactoryReset(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
+        self.ctx.is_server_ready = False
+
         # Restart the grpc server
         logging.info("FactoryReset")
         asyncio.create_task(self.server.stop(None))

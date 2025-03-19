@@ -15,8 +15,11 @@ service Manager {
   rpc RestartServer(RestartServerRequest) returns (RestartServerResponse);
   // Read the current applied configurations
   rpc ReadConfig(google.protobuf.Empty) returns (ReadConfigResponse);
-  // Returns True/False if the given config is supported by the bluetooth device.
+  // Returns True/False if the given config is supported by the bluetooth
+  // device.
   rpc IsConfigOK(IsConfigOKRequest) returns (IsConfigOKResonse);
+  // Returns true or false, which indicates server readiness.
+  rpc IsServerReady(google.protobuf.Empty) returns (IsServerReadyResponse);
 }
 
 message APIConfig {
@@ -132,3 +135,5 @@ message ReadConfigResponse { Configuration config = 1; }
 message IsConfigOKRequest { Configuration config = 1; }
 
 message IsConfigOKResonse { bool ok = 1; }
+
+message IsServerReadyResponse { bool value = 1; }

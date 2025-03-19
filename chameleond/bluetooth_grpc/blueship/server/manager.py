@@ -22,11 +22,20 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
         self.ctx = shared_context
         self.server = server
 
+    async def IsServerReady(
+        self,
+        request: empty_pb2.Empty,
+        context: grpc.ServicerContext,
+    ) -> manager_pb2.IsServerReadyResponse:
+        return manager_pb2.IsServerReadyResponse(value=self.ctx.is_server_ready)
+
     async def ResetServer(
         self,
         request: empty_pb2.Empty,
         context: grpc.ServicerContext,
     ) -> empty_pb2.Empty:
+        self.ctx.is_server_ready = False
+
         self.ctx.config.CopyFrom(self.ctx.default_config)
         asyncio.create_task(self.server.stop(None))
         return empty_pb2.Empty()
@@ -40,6 +49,19 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
         success = config_dict is not None
 
         if success:
+            if self.ctx.is_server_ready:
+                self.ctx.is_server_ready = False
+                logging.info(
+                    "RestartServer: Sets server readiness to False and"
+                    "initiates server restart."
+                )
+            else:
+                logging.warning(
+                    "RestartServer: Calling RestartServer when the"
+                    "server is not ready may cause unexpected behavior"
+                    "."
+                )
+
             ParseDict(config_dict, self.ctx.config)
             # Stop the server and rely on the |start_bluetooth_test_server|
             # to restart.
