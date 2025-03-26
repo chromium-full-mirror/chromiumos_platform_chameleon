@@ -544,18 +544,18 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     fi
 
     # Create new dbus service conf if it doesn't exist
-    DEST_KBD_CONF="/etc/dbus-1/system.d/org.chromium.autotest.btkbservice.conf"
-    if [ ! -e DEST_KBD_CONF ]; then
-        SRC_KBD_CONF=$(eval "find . -name *btkbservice.conf | head -n 1")
+    DEST_SERVICE_CONF="/etc/dbus-1/system.d/org.chromium.autotest.btservice.conf"
+    if [ ! -e DEST_SERVICE_CONF ]; then
+        SRC_SERVICE_CONF=$(eval "find . -name *btservice.conf | head -n 1")
 
         # Fail early if we couldn't find source conf file
-        if [ -z ${SRC_KBD_CONF} ]; then
-            echo "Failed to install btkbservice conf file, quitting early"
+        if [ -z ${SRC_SERVICE_CONF} ]; then
+            echo "Failed to install btservice conf file, quitting early"
             exit
         fi
 
-        eval "cp ${SRC_KBD_CONF} ${DEST_KBD_CONF}"
-        eval "chmod +r ${DEST_KBD_CONF}"
+        eval "cp ${SRC_SERVICE_CONF} ${DEST_SERVICE_CONF}"
+        eval "chmod +r ${DEST_SERVICE_CONF}"
     fi
 
     # No need to install servo packages as servo is not fully supported

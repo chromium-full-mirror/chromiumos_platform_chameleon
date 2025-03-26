@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<record>
+        <attribute id="0x0001">
+                <sequence>
+                        <uuid value="0xeecc1700" />
+                </sequence>
+        </attribute>
+        <attribute id="0x0004">
+                <sequence>
+                        <sequence>
+                                <uuid value="0x0003" />
+                                <uint8 value="0x1e" />
+                        </sequence>
+                </sequence>
+        </attribute>
+        <attribute id="0x0005">
+                <sequence>
+                        <uuid value="0x1002" />
+                </sequence>
+        </attribute>

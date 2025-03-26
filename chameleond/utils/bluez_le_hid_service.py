@@ -17,8 +17,8 @@ try:
 except ImportError:
     import gobject as GObject
 
-from .bluez_service_consts import BLUEZ_SERVICE_NAME
-from .bluez_service_consts import BLUEZ_SERVICE_PATH
+from .bluez_service_consts import BLUEZ_HID_SERVICE_NAME
+from .bluez_service_consts import BLUEZ_HID_SERVICE_PATH
 from .example_gatt_server import Characteristic
 from .example_gatt_server import DBUS_OM_IFACE
 from .example_gatt_server import Descriptor
@@ -96,15 +96,19 @@ class ReportListener(dbus.service.Object):
 
     def __init__(self, handle):
         self._bus = dbus.SystemBus()
-        self._bus_name = dbus.service.BusName(BLUEZ_SERVICE_NAME, bus=self._bus)
-        super(ReportListener, self).__init__(self._bus_name, BLUEZ_SERVICE_PATH)
+        self._bus_name = dbus.service.BusName(
+            BLUEZ_HID_SERVICE_NAME, bus=self._bus
+        )
+        super(ReportListener, self).__init__(
+            self._bus_name, BLUEZ_HID_SERVICE_PATH
+        )
 
         self._handle = handle
 
     def cleanup(self):
         self.remove_from_connection()
 
-    @dbus.service.method(BLUEZ_SERVICE_NAME, in_signature="ay")
+    @dbus.service.method(BLUEZ_HID_SERVICE_NAME, in_signature="ay")
     def SendHIDReport(self, report):
         """Sends HID report across socket"""
 
@@ -112,7 +116,7 @@ class ReportListener(dbus.service.Object):
         # device type), as with gatt these are provided by report map characteristic
         self._handle(report[2:])
 
-    @dbus.service.method(BLUEZ_SERVICE_NAME, in_signature="yay")
+    @dbus.service.method(BLUEZ_HID_SERVICE_NAME, in_signature="yay")
     def SendKeys(self, modifier, keys):
         """Sends keys across socket."""
 

@@ -6,7 +6,7 @@
 # found in the LICENSE file.
 
 """This module implements the PeripheralKit instance for a bluez peripheral
-   on Raspberry Pi.
+on Raspberry Pi.
 """
 
 from __future__ import absolute_import
@@ -36,7 +36,8 @@ except ImportError:
 from chameleond.utils import pairing_agent
 from chameleond.utils import system_tools
 from chameleond.utils.bluez_observer import BlueZObserver
-from chameleond.utils.raspi_bluez_service import BluezService
+from chameleond.utils.raspi_bluez_service import BluezHIDService
+from chameleond.utils.raspi_bluez_service import BluezRfcommEchoService
 from six.moves import range
 
 from . import bluetooth_socket
@@ -45,8 +46,8 @@ from .bluetooth_peripheral_kit import PeripheralKitException
 from .bluez_gatt_server import GATTServer
 from .bluez_gatt_server import PUBLIC_DEVICE_ADDRESS
 from .bluez_gatt_server import RANDOM_DEVICE_ADDRESS
-from .bluez_service_consts import BLUEZ_SERVICE_NAME
-from .bluez_service_consts import BLUEZ_SERVICE_PATH
+from .bluez_service_consts import BLUEZ_HID_SERVICE_NAME
+from .bluez_service_consts import BLUEZ_HID_SERVICE_PATH
 from .bluez_service_consts import BTD_CONF_FILE
 from .bluez_service_consts import PERIPHERAL_BTD_FLAGS
 from .bluez_service_consts import PERIPHERAL_DEVICE_CLASS
@@ -214,10 +215,10 @@ class BluezPeripheral(PeripheralKit):
     def get_service_iface(self):
         if not self._service_iface:
             self._service = self._dbus_system_bus.get_object(
-                BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH
+                BLUEZ_HID_SERVICE_NAME, BLUEZ_HID_SERVICE_PATH
             )
             self._service_iface = dbus.Interface(
-                self._service, BLUEZ_SERVICE_NAME
+                self._service, BLUEZ_HID_SERVICE_NAME
             )
 
         return self._service_iface
@@ -543,9 +544,14 @@ class BluezPeripheral(PeripheralKit):
             self.EnableBLE(False)
 
             # Set device type and initiate service based on it
-            self._bluez_service = BluezService(
-                self.device_type, self.GetLocalBluetoothAddress()
-            )
+            if "DEV_KIT" in device_type:
+                self._bluez_service = BluezRfcommEchoService(
+                    self.device_type, self.GetLocalBluetoothAddress()
+                )
+            else:
+                self._bluez_service = BluezHIDService(
+                    self.device_type, self.GetLocalBluetoothAddress()
+                )
 
             self.Init()
 
@@ -572,7 +578,8 @@ class BluezPeripheral(PeripheralKit):
         # Define regex to separate executable from flags. Example contents:
         # ExecStart=/usr/libexec/bluetooth/bluetoothd -d -P input
         PLUGIN_RE = re.compile(
-            r"^(?P<prefix>\s*ExecStart=.*?)" r"(?P<flags>\s*-.*)?$"  # pre-flags
+            r"^(?P<prefix>\s*ExecStart=.*?)"
+            r"(?P<flags>\s*-.*)?$"  # pre-flags
         )  # optional flags block
 
         desired_btd_flags = PERIPHERAL_BTD_FLAGS[

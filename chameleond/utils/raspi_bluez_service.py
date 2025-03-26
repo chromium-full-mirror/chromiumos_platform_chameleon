@@ -6,7 +6,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Bluez Service Classes (for Bluetooth/BLE HID)"""
+"""Bluez Service Classes (for Bluetooth Classic HID and RFCOMM)"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -25,9 +25,12 @@ import dbus.service
 from gi.repository import GLib
 from six.moves import range
 
-from .bluez_service_consts import BLUEZ_PROFILE_PATH
-from .bluez_service_consts import BLUEZ_SERVICE_NAME
-from .bluez_service_consts import BLUEZ_SERVICE_PATH
+from .bluez_service_consts import BLUEZ_HID_PERIPHERAL_PROFILE_PATH
+from .bluez_service_consts import BLUEZ_HID_SERVICE_NAME
+from .bluez_service_consts import BLUEZ_HID_SERVICE_PATH
+from .bluez_service_consts import BLUEZ_RFCOMM_ECHO_PROFILE_PATH
+from .bluez_service_consts import BLUEZ_RFCOMM_SERVICE_NAME
+from .bluez_service_consts import BLUEZ_RFCOMM_SERVICE_PATH
 from .bluez_service_consts import PERIPHERAL_PROFILE_UUID
 from .bluez_service_consts import SERVICE_PROFILE_SDP_PATH
 
@@ -37,6 +40,8 @@ P_INTR = 19
 
 MAX_DBUS_RETRY_ATTEMPTS = 3
 MAX_CONNECT_RETRY_ATTEMPTS = 3
+
+ECHO_SERVICE_CHANNEL = 30
 
 
 class BluezServiceException(Exception):
@@ -94,8 +99,65 @@ class BluezServiceProfile(dbus.service.Object):
         self.remove_from_connection()
 
 
-class BluezService(dbus.service.Object):
-    """Bluez Service implementation."""
+class EchoProfile(dbus.service.Object):
+    def __init__(self, bus, path):
+        dbus.service.Object.__init__(self, bus, path)
+        self.fd = None
+        self.path = path
+
+    @dbus.service.method(
+        "org.bluez.Profile1", in_signature="", out_signature=""
+    )
+    def Release(self):
+        logging.info("EchoProfile: Release")
+        if self.fd:
+            self.fd.close()
+            self.fd = None
+
+    @dbus.service.method(
+        "org.bluez.Profile1", in_signature="oha{sv}", out_signature=""
+    )
+    def NewConnection(self, path, fd, properties):
+        logging.info(
+            "EchoProfile: New Connection from {} {} {}".format(
+                properties, path, fd
+            )
+        )
+        self.fd = os.fdopen(fd.take(), "r+b", 0)
+        try:
+            while True:
+                data = self.fd.read(1024)
+                if not data:
+                    time.sleep(0.1)
+                    continue
+                self.fd.write(data)  # Echo back the received data
+        except OSError as e:
+            logging.warn(f"EchoProfile: Connection closed or error: {e}")
+        finally:
+            logging.info(
+                "EchoProfile: Closing Connection from {} {} {}".format(
+                    properties, path, fd
+                )
+            )
+            self.fd.close()
+            self.fd = None
+
+    @dbus.service.method(
+        "org.bluez.Profile1", in_signature="", out_signature=""
+    )
+    def RequestDisconnection(self):
+        logging.info("EchoProfile: Request Disconnection")
+        if self.fd:
+            self.fd.close()
+            self.fd = None
+
+    def cleanup(self):
+        logging.info("EchoProfile: cleanup")
+        self.remove_from_connection()
+
+
+class BluezHIDService(dbus.service.Object):
+    """Bluez Service implementation for HID."""
 
     def __init__(self, device_type, adapter_address):
         self._profile = None
@@ -110,8 +172,12 @@ class BluezService(dbus.service.Object):
         self._sich_watch_id = None
 
         self._bus = dbus.SystemBus()
-        self._bus_name = dbus.service.BusName(BLUEZ_SERVICE_NAME, bus=self._bus)
-        super(BluezService, self).__init__(self._bus_name, BLUEZ_SERVICE_PATH)
+        self._bus_name = dbus.service.BusName(
+            BLUEZ_HID_SERVICE_NAME, bus=self._bus
+        )
+        super(BluezHIDService, self).__init__(
+            self._bus_name, BLUEZ_HID_SERVICE_PATH
+        )
 
         self._address = adapter_address
         self._device_type = device_type
@@ -121,7 +187,7 @@ class BluezService(dbus.service.Object):
         if profile_uuid:
             self._InitBluezProfile(
                 SERVICE_PROFILE_SDP_PATH.get(self._device_type, None),
-                BLUEZ_PROFILE_PATH,
+                BLUEZ_HID_PERIPHERAL_PROFILE_PATH,
                 profile_uuid,
             )
 
@@ -137,7 +203,7 @@ class BluezService(dbus.service.Object):
         )
 
     def cleanup(self):
-        logging.info("BluezService: cleanup")
+        logging.info("BluezHIDService: cleanup")
 
         if self._profile:
             self._profile.cleanup()
@@ -243,9 +309,13 @@ class BluezService(dbus.service.Object):
     ):
         """Register a Bluetooth profile with bluez.
 
-        profile_sdp_path: Relative path of XML file for profile SDP
-        profile_uuid:     Service Class/ Profile UUID
-        www.bluetooth.com/specifications/assigned-numbers/service-discovery/
+        Args:
+          profile_sdp_path: Relative path of XML file for profile SDP
+          profile_uuid:     Service Class/ Profile UUID
+          www.bluetooth.com/specifications/assigned-numbers/service-discovery/
+
+        Raises:
+          BluezServiceException: If there is an I/O error or an unknown error
         """
 
         logging.debug(
@@ -409,3 +479,91 @@ class BluezService(dbus.service.Object):
         raise BluezServiceException(
             "Bluetooth Socket connection is not established yet"
         )
+
+
+class BluezRfcommEchoService(dbus.service.Object):
+    """Bluez Service implementation for RFCOMM Echo Service."""
+
+    def __init__(self, device_type, adapter_address):
+        self._profile = None
+        self._bus = dbus.SystemBus()
+        self._bus_name = dbus.service.BusName(
+            BLUEZ_RFCOMM_SERVICE_NAME, bus=self._bus
+        )
+        super(BluezRfcommEchoService, self).__init__(
+            self._bus_name, BLUEZ_RFCOMM_SERVICE_PATH
+        )
+
+        # Init profile only if one is declared for this device type
+        profile_uuid = PERIPHERAL_PROFILE_UUID.get(device_type, None)
+        if profile_uuid:
+            self._InitBluezProfile(
+                SERVICE_PROFILE_SDP_PATH.get(device_type, None),
+                BLUEZ_RFCOMM_ECHO_PROFILE_PATH,
+                profile_uuid,
+            )
+
+    def cleanup(self):
+        logging.info("BluezRfcommEchoService: cleanup")
+
+        if self._profile:
+            self._profile.cleanup()
+            self._profile = None
+
+        self.remove_from_connection()
+
+    def _InitBluezProfile(
+        self, profile_sdp_path, profile_dbus_path, profile_uuid
+    ):
+        """Register a Bluetooth profile with bluez.
+
+        Args:
+          profile_sdp_path: Relative path of XML file for profile SDP
+          profile_uuid:     Service Class/ Profile UUID
+          www.bluetooth.com/specifications/assigned-numbers/service-discovery/
+
+        Raises:
+          BluezServiceException: If there is an I/O error or an unknown error
+        """
+
+        logging.debug(
+            "Configuring Bluez Profile from %s",
+            profile_sdp_path,
+        )
+
+        try:
+            with open(profile_sdp_path, "r") as prfd:
+                prf_content = prfd.read()
+        except IOError as e:
+            raise BluezServiceException(
+                "I/O error ({0}): {1}".format(e.errno, e.strerror)
+            )
+        except:
+            raise BluezServiceException("Unknown error in _InitBluezProfile()")
+        else:
+            opts = {
+                "ServiceRecord": prf_content,
+                "Role": "server",
+                "RequireAuthentication": False,
+                "RequireAuthorization": False,
+                "Channel": dbus.UInt16(ECHO_SERVICE_CHANNEL),
+            }
+
+            self._profile = EchoProfile(dbus.SystemBus(), profile_dbus_path)
+
+            manager = dbus.Interface(
+                dbus.SystemBus().get_object("org.bluez", "/org/bluez"),
+                "org.bluez.ProfileManager1",
+            )
+
+            # Occasionally d-bus manager interface won't be ready in time, so we
+            # delay in retry in case of a d-bus failure
+            for _ in range(MAX_DBUS_RETRY_ATTEMPTS):
+                try:
+                    manager.RegisterProfile(
+                        profile_dbus_path, profile_uuid, opts
+                    )
+                    break
+                except (dbus.DBusException, TypeError) as e:
+                    logging.info("Registering profile again... %s", str(e))
+                    time.sleep(0.1)

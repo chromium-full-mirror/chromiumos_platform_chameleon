@@ -5,7 +5,7 @@
 # found in the LICENSE file.
 
 """Bluez Service clients (for Bluetooth/BLE HID) - mainly intended for
-   standalone verification of functionality.
+standalone verification of functionality.
 """
 
 import logging
@@ -16,8 +16,8 @@ import dbus
 import dbus.mainloop.glib
 import dbus.service
 
-from .bluez_service_consts import BLUEZ_SERVICE_NAME
-from .bluez_service_consts import BLUEZ_SERVICE_PATH
+from .bluez_service_consts import BLUEZ_HID_SERVICE_NAME
+from .bluez_service_consts import BLUEZ_HID_SERVICE_PATH
 from .bluez_service_consts import keymap
 from .bluez_service_consts import modmap
 
@@ -59,9 +59,9 @@ class BluezKeyboardClient(object):
         }
         self._bus = dbus.SystemBus()
         self._service = self._bus.get_object(
-            BLUEZ_SERVICE_NAME, BLUEZ_SERVICE_PATH
+            BLUEZ_HID_SERVICE_NAME, BLUEZ_HID_SERVICE_PATH
         )
-        self._iface = dbus.Interface(self._service, BLUEZ_SERVICE_NAME)
+        self._iface = dbus.Interface(self._service, BLUEZ_HID_SERVICE_NAME)
         self._signal = None
 
     def keys_sent_handler(self):

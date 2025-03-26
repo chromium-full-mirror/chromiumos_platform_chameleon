@@ -140,7 +140,7 @@ for HOST in "${BTPEER_HOSTS_TO_UPDATE[@]}"; do
   rsync -av "${BUNDLE_EXTRACT_DIR}/" "${HOST}:${BTPEER_PATH_TO_CHAMELEON_DIR}/"
 
   echo "Copying chameleond bundle config files to system locations on btpeer"
-  ssh -q "${HOST}" "cp '${BTPEER_PATH_TO_CHAMELEON_DIR}/chameleond/utils/btkbservice.conf' '/etc/dbus-1/system.d/org.chromium.autotest.btkbservice.conf'"
+  ssh -q "${HOST}" "cp '${BTPEER_PATH_TO_CHAMELEON_DIR}/chameleond/utils/btservice.conf' '/etc/dbus-1/system.d/org.chromium.autotest.btservice.conf'"
   WIREPLUMBER_BTPEER_CONFIG_DIR="/home/pi/.config/bluetooth.lua.d"
   ssh -q "${HOST}" "cp '${BTPEER_PATH_TO_CHAMELEON_DIR}/updatable/wireplumber/bluetooth.lua.d/'* '${WIREPLUMBER_BTPEER_CONFIG_DIR}'"
   echo "Successfully copied chameleond bundle config files to system locations on btpeer"

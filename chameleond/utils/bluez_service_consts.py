@@ -13,9 +13,13 @@ import os
 from chameleond.utils.bluetooth_peripheral_kit import PeripheralKit
 
 
-BLUEZ_SERVICE_NAME = "org.chromium.autotest.btkbservice"
-BLUEZ_SERVICE_PATH = "/org/chromium/autotest/btkbservice"
-BLUEZ_PROFILE_PATH = "/org/chromium/autotest/btkbprofile"
+BLUEZ_HID_SERVICE_NAME = "org.chromium.autotest.btkbservice"
+BLUEZ_HID_SERVICE_PATH = "/org/chromium/autotest/btkbservice"
+BLUEZ_HID_PERIPHERAL_PROFILE_PATH = "/org/chromium/autotest/btkbprofile"
+BLUEZ_RFCOMM_SERVICE_NAME = "org.chromium.autotest.btrfcommservice"
+BLUEZ_RFCOMM_SERVICE_PATH = "/org/chromium/autotest/btrfcommservice"
+BLUEZ_RFCOMM_PERIPHERAL_PROFILE_PATH = "/org/chromium/autotest/btrfcommprofile"
+BLUEZ_RFCOMM_ECHO_PROFILE_PATH = "/org/chromium/autotest/btrfcommprofile"
 
 CLASS_OF_SERVICE_MASK = 0xFFE000
 CLASS_OF_DEVICE_MASK = 0x001FFF
@@ -34,6 +38,8 @@ PERIPHERAL_DEVICE_CLASS = {
     # Minor Device Class: Headphones
     PeripheralKit.BLUETOOTH_AUDIO: 0x202418,
     PeripheralKit.FAST_PAIR: 0x002540,
+    # Major Device Class: Uncategorized
+    PeripheralKit.DEV_KIT: 0x000000,
 }
 
 PERIPHERAL_DEVICE_NAME = {
@@ -43,13 +49,14 @@ PERIPHERAL_DEVICE_NAME = {
     PeripheralKit.PHONE: "PHONE_REF",
     PeripheralKit.BLUETOOTH_AUDIO: "RASPI_AUDIO",
     PeripheralKit.FAST_PAIR: "FAST_PAIR_REF",
+    PeripheralKit.DEV_KIT: "DEV_KIT_REF",
 }
 
 # https://www.bluetooth.com/wp-content/uploads/Sitecore-Media-Library/Gatt/Xml/Characteristics/org.bluetooth.characteristic.gap.appearance.xml
 PERIPHERAL_DEVICE_APPEARANCE = {
     PeripheralKit.KEYBOARD: [0xC1, 0x03],
     PeripheralKit.MOUSE: [0xC2, 0x03],
-    PeripheralKit.GAMEPAD: [0xc4, 0x03],
+    PeripheralKit.GAMEPAD: [0xC4, 0x03],
     PeripheralKit.PHONE: [0x40, 0x00],
     PeripheralKit.BLUETOOTH_AUDIO: [0x80, 0x02],  # Generic Media Player
     PeripheralKit.FAST_PAIR: [0x00, 0x00],  # Unknown
@@ -69,6 +76,9 @@ SERVICE_PROFILE_SDP_PATH = {
     PeripheralKit.BLUETOOTH_AUDIO: (
         os.path.dirname(os.path.abspath(__file__)) + "/keyboard_sdp_record.xml"
     ),
+    PeripheralKit.DEV_KIT: (
+        os.path.dirname(os.path.abspath(__file__)) + "/echo_sdp_record.xml"
+    ),
 }
 
 """
@@ -81,6 +91,7 @@ The uppercased '-P' flag disables the comma-separated plugins that follow it
 """
 AUDIO_BTD_FLAGS = "-d -P input"
 NON_AUDIO_BTD_FLAGS = "-d -P input,avrcp,a2dp"
+SERIAL_PORT_BTD_FLAGS = "-C -d"
 
 PERIPHERAL_BTD_FLAGS = {
     PeripheralKit.KEYBOARD: NON_AUDIO_BTD_FLAGS,
@@ -89,14 +100,17 @@ PERIPHERAL_BTD_FLAGS = {
     PeripheralKit.PHONE: NON_AUDIO_BTD_FLAGS,
     PeripheralKit.BLUETOOTH_AUDIO: AUDIO_BTD_FLAGS,
     PeripheralKit.FAST_PAIR: NON_AUDIO_BTD_FLAGS,
+    PeripheralKit.DEV_KIT: SERIAL_PORT_BTD_FLAGS,
 }
 
 HID_SERVICE_UUID = "00001124-0000-1000-8000-00805f9b34fb"
+ECHO_SERVICE_UUID = "eecc1700-0000-1000-8000-00805f9b34fb"
 
 PERIPHERAL_PROFILE_UUID = {
     PeripheralKit.KEYBOARD: HID_SERVICE_UUID,
     PeripheralKit.MOUSE: HID_SERVICE_UUID,
     PeripheralKit.GAMEPAD: HID_SERVICE_UUID,
+    PeripheralKit.DEV_KIT: ECHO_SERVICE_UUID,
 }
 
 
