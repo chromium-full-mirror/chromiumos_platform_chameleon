@@ -41,6 +41,7 @@ enum DeviceCategory {
   DEVICE_CATEGORY_KEYBOARD = 2;
   DEVICE_CATEGORY_MOUSE = 3;
   DEVICE_CATEGORY_PHONE = 4;
+  DEVICE_CATEGORY_DEV_KIT = 5;
 }
 
 enum SecureConnections {

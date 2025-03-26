@@ -41,6 +41,7 @@ BLUETOOTH_AUDIO = 32
 BLE_FAST_PAIR = 33
 USB_MFG_AUDIO_IN = 34
 USB_MFG_AUDIO_OUT = 35
+BLUETOOTH_DEV_KIT = 36
 
 # device names
 DEVICE_NAMES = {
@@ -84,6 +85,7 @@ DEVICE_NAMES = {
     # USB multi-functional audio gadget (e.g. Headset with volume control)
     USB_MFG_AUDIO_IN: "usb_mfg_audio_in",
     USB_MFG_AUDIO_OUT: "usb_mfg_audio_out",
+    BLUETOOTH_DEV_KIT: "bluetooth_dev_kit",
 }
 
 

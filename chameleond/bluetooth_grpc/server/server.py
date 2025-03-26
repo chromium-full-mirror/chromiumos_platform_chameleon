@@ -115,6 +115,8 @@ class TestServerContext:
             if self.support_le:
                 return "BLE_PHONE"
             # Classic phone is not implemented
+        elif device_type == manager_pb2.DEVICE_CATEGORY_DEV_KIT:
+            return "DEV_KIT"
         return None
 
     @property
@@ -141,6 +143,8 @@ class TestServerContext:
             return self.chameleon.bluetooth_mouse
         elif self.device_type == "BLE_PHONE":
             return self.chameleon.ble_phone
+        elif self.device_type == "DEV_KIT":
+            return self.chameleon.bluetooth_dev_kit
 
     def reset_bluetooth_device(self):
         logging.info("reset_bluetooth_device")

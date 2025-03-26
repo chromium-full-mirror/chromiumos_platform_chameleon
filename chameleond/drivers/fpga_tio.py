@@ -231,6 +231,9 @@ class ChameleondDriver(ChameleondInterface):
         self.ble_fast_pair = self._device_manager.GetChameleonDevice(
             ids.BLE_FAST_PAIR
         )
+        self.bluetooth_dev_kit = self._device_manager.GetChameleonDevice(
+            ids.BLUETOOTH_DEV_KIT
+        )
         self._flow_manager = flow_manager.FlowManager(self._flows)
 
         self.Reset()
@@ -247,6 +250,7 @@ class ChameleondDriver(ChameleondInterface):
         self.ble_keyboard.cleanup()
         self.ble_phone.cleanup()
         self.ble_fast_pair.cleanup()
+        self.bluetooth_dev_kit.cleanup()
 
     def _dispatch(self, method, params):
         try:
@@ -343,6 +347,7 @@ class ChameleondDriver(ChameleondInterface):
             ids.BLE_PHONE: raspi_bluetooth_flow.RaspiBLEPhone(),
             ids.BLUETOOTH_AUDIO: raspi_bluetooth_flow.RaspiBluetoothAudioFlow(),
             ids.BLE_FAST_PAIR: raspi_bluetooth_flow.RaspiBLEFastPair(),
+            ids.BLUETOOTH_DEV_KIT: raspi_bluetooth_flow.RaspiDevKit(),
             ids.USB_AUDIO_IN: usb_audio_flow.InputUSBAudioFlow(
                 ids.USB_AUDIO_IN, self._usb_audio_ctrl
             ),

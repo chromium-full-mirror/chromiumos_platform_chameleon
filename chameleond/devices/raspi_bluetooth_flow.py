@@ -816,3 +816,58 @@ class RaspiBLEFastPair(RaspiFlow, BluezPeripheral):
             return
 
         pairing_agent._unique_pairing_agent.SetPasskey(passkey)
+
+
+class RaspiDevKit(RaspiFlow, BluezPeripheral):
+    """This is the class loaded from fpga_tio.
+
+    We inherit from both Flow and PeripheralKit, as fpga_tio's interface needs
+    access to methods in both of them
+    """
+
+    def __init__(self):
+        # Instantiate bluez and raspi flow
+        BluezPeripheral.__init__(self)
+        RaspiFlow.__init__(self, self.GetLocalBluetoothAddress())
+
+    def GetDeviceType(self):
+        """Get the peer device type
+
+        Returns:
+          The type of device emulated
+        """
+
+        return PeripheralKit.DEV_KIT
+
+    def GetAdvertisedName(self):
+        """Get the name advertised by the kit.
+
+        Returns:
+          The name that the kit advertises to other Bluetooth devices.
+        """
+
+        return PERIPHERAL_DEVICE_NAME[PeripheralKit.DEV_KIT]
+
+    def GetClassOfDevice(self):
+        """Get the class of device
+
+        Returns:
+          Class of device that is emulated by this peripheral
+        """
+
+        return (
+            PERIPHERAL_DEVICE_CLASS[PeripheralKit.DEV_KIT]
+            & CLASS_OF_DEVICE_MASK
+        )
+
+    def GetClassOfService(self):
+        """Get the class of service
+
+        Returns:
+          Class of service that is emulated by this peripheral
+        """
+
+        return (
+            PERIPHERAL_DEVICE_CLASS[PeripheralKit.DEV_KIT]
+            & CLASS_OF_SERVICE_MASK
+        )
