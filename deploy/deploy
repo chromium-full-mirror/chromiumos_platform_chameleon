@@ -206,6 +206,23 @@ validate_audio_test_data_packages_installation() {
     fi
 }
 
+install_prebuilt_grpc_packages() {
+    # Empirically, gRPC related packages take more than 30 minutes to install.
+    # Use pre-built packages to save some time.
+    for package_name in \
+        'protobuf-4.24.4-cp37-cp37m-linux_armv7l.whl' \
+        'grpcio-1.62.3-cp37-cp37m-linux_armv7l.whl' \
+        'grpcio_tools-1.62.3-cp37-cp37m-linux_armv7l.whl' \
+        'setuptools-68.0.0-py3-none-any.whl'
+    do
+        download_cloud_file "prebuilt_packages/${package_name}" "${DIST_PATH}"
+        validate_python_package_installation "${DIST_PATH}/$package_name"
+    done
+
+    echo "All prebuilt packages installed"
+
+}
+
 initiate_session_for_pi() {
     if loginctl enable-linger pi; then
         echo "Session for pi is initiated"
@@ -476,8 +493,21 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         # Install Pandora packages
         validate_python_package_installation "google-api-python-client"
 
-        ${pip_cmd} install grpcio --no-binary=grpcio
-        validate_python_package_installation "grpcio-tools"
+	os_version=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d'=' -f2 \
+			| tr -d '"')
+	glibc_version=$(ldd --version 2>/dev/null | head -n 1 \
+			| awk '{print $NF}')
+
+	if [ "$os_version" = "buster" ] && [ "$glibc_version" = "2.28" ]; then
+	  echo "OS version is Buster and glibc version is 2.28,"
+	  echo "using prebuilt grpcio packages."
+          install_prebuilt_grpc_packages
+	else
+	  echo "OS version is not Buster or glibc version is not 2.28,"
+	  echo "building grpcio from source"
+	  ${pip_cmd} install grpcio --no-binary=grpcio
+	  validate_python_package_installation "grpcio-tools"
+	fi
 
         # Ensure the python files are readable by all users.
         chmod 0644 ${BLUETOOTH_GRPC_ROOT_DIR}/python/pandora/__init__.py
