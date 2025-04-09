@@ -33,6 +33,10 @@ PANDORA_EXPERIMENTAL_TMP_DIR := ${BLUETOOTH_GRPC_ROOT_DIR}/pandora-experimental-
 BLUESHIP_VERSION := 0.0.0
 BLUESHIP_TMP_DIR := ${BLUETOOTH_GRPC_ROOT_DIR}/blueship-${BLUESHIP_VERSION}
 
+export BLUETOOTH_GRPC_ROOT_DIR
+export PANDORA_TMP_DIR
+export PANDORA_EXPERIMENTAL_TMP_DIR
+export BLUESHIP_TMP_DIR
 
 # Set python3 as default after all teams using chameleon finish switching
 # to python3.
@@ -119,6 +123,7 @@ NEEDS_SYSTEM_UPDATE ?= 'false'
 ifndef INSTALL_GRPC
 	INSTALL_GRPC := false
 endif
+export INSTALL_GRPC
 
 SETUP_SUFFIX =
 ifeq ($(PLATFORM), cyclone5)
@@ -210,7 +215,7 @@ ifeq ($(CHAMELEON_HOSTNAME), raspberrypi)
 endif
 
 .PHONY: remote-install
-remote-install: check_git_tree_clean check_git_commit_HEAD check_pi_make
+remote-install: check_git_tree_clean check_git_commit_HEAD check_pi_make prepare_install
 	@echo "Set bundle version to $(BUNDLE_VERSION)"
 	@echo "Set bundle commit to $(COMMIT)"
 	@echo "Set board to $(CHAMELEON_BOARD)"
@@ -225,6 +230,35 @@ else
 endif
 
 ifeq ($(INSTALL_GRPC), true)
+	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+	    -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
+	    $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
+	    "rm -rf $(BLUETOOTH_GRPC_ROOT_DIR)"
+
+	# Copy the bluetooth grpc root directory to the chameleon host.
+	@scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
+	    $(BLUETOOTH_GRPC_ROOT_DIR) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
+endif
+
+@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+		-i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
+		$(CHAMELEON_USER)@$(CHAMELEON_HOST) \
+		"cd /tmp && rm -rf $(BUNDLEDIR) && tar zxf $(BUNDLE) &&" \
+		"cd $(BUNDLEDIR) && find -exec touch -c {} \; &&" \
+		"make install " \
+				"REMOTE_INSTALL=TRUE" \
+				"HOST_NOW=\"$(HOST_NOW)\"" \
+				"BUNDLE_VERSION=$(BUNDLE_VERSION)" \
+				"CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
+				"PY_VERSION=$(PY_VERSION)"\
+				"NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"\
+				"INSTALL_GRPC=$(INSTALL_GRPC)"
+
+.PHONY: prepare_install
+prepare_install:
+ifeq ($(INSTALL_GRPC), true)
+	@echo "Preparing files for grpc installation"
 #	Recreate the caching directory to ensure a fresh start.
 	rm -rf $(BLUETOOTH_GRPC_ROOT_DIR)
 	mkdir $(BLUETOOTH_GRPC_ROOT_DIR)
@@ -246,47 +280,10 @@ ifeq ($(INSTALL_GRPC), true)
 	cp -r ./chameleond/bluetooth_grpc/python $(BLUETOOTH_GRPC_ROOT_DIR)
 #	Move the python files of stable pandora to the root python directory
 	mv ${PANDORA_TMP_DIR}/python/pandora ${BLUETOOTH_GRPC_ROOT_DIR}/python
-
-	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	    -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
-	    $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
-	    "rm -rf $(BLUETOOTH_GRPC_ROOT_DIR)"
-
-	@scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
-	    $(BLUETOOTH_GRPC_ROOT_DIR) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
-
-	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	    -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
-	    $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
-	    "cd /tmp && rm -rf $(BUNDLEDIR) && tar zxf $(BUNDLE) &&" \
-	    "cd $(BUNDLEDIR) && find -exec touch -c {} \; &&" \
-	    "make install " \
-	        "REMOTE_INSTALL=TRUE" \
-	        "HOST_NOW=\"$(HOST_NOW)\"" \
-	        "BUNDLE_VERSION=$(BUNDLE_VERSION)" \
-	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
-	        "PY_VERSION=$(PY_VERSION)"\
-	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"\
-		"INSTALL_GRPC=$(INSTALL_GRPC)"\
-		"BLUETOOTH_GRPC_ROOT_DIR=${BLUETOOTH_GRPC_ROOT_DIR}"\
-		"PANDORA_TMP_DIR=$(PANDORA_TMP_DIR)"\
-		"PANDORA_EXPERIMENTAL_TMP_DIR=${PANDORA_EXPERIMENTAL_TMP_DIR}"\
-		"BLUESHIP_TMP_DIR=${BLUESHIP_TMP_DIR}"
-else
-	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	    -i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
-	    $(CHAMELEON_USER)@$(CHAMELEON_HOST) \
-	    "cd /tmp && rm -rf $(BUNDLEDIR) && tar zxf $(BUNDLE) &&" \
-	    "cd $(BUNDLEDIR) && find -exec touch -c {} \; &&" \
-	    "make install " \
-	        "REMOTE_INSTALL=TRUE" \
-	        "HOST_NOW=\"$(HOST_NOW)\"" \
-	        "BUNDLE_VERSION=$(BUNDLE_VERSION)" \
-	        "CHAMELEON_BOARD=$(CHAMELEON_BOARD)"\
-	        "PY_VERSION=$(PY_VERSION)"\
-	        "NEEDS_SYSTEM_UPDATE=$(NEEDS_SYSTEM_UPDATE)"
 endif
+
+.PHONY: rpi-local-install
+rpi-local-install: prepare_install install
 
 .PHONY: setup-usb-audio-testbed
 setup-usb-audio-testbed:

@@ -529,6 +529,11 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
             ${BLUESHIP_TMP_DIR}/blueship/*
 
         ${pip_cmd} install --upgrade ${BLUETOOTH_GRPC_ROOT_DIR}
+
+        # Stop and disable the chameleon service to avoid it being started
+        # automatically and interfere with the grpc service.
+        eval systemctl stop ${CHAMELEOND_NAME}
+        eval systemctl disable ${CHAMELEOND_NAME}
     fi
 
     validate_socket_installation
