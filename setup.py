@@ -67,5 +67,6 @@ setup(
         "utils/run_scheduler",
         "utils/run_chameleon_updater",
         "utils/check_audiobox_jackplugger",
+        "utils/run_bluetooth_grpc",
     ],
 )

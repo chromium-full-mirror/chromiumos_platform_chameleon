@@ -240,8 +240,7 @@ ifeq ($(INSTALL_GRPC), true)
 	    -i $(IDENTITY_FILE) -P $(CHAMELEON_SSH_PORT) \
 	    $(BLUETOOTH_GRPC_ROOT_DIR) $(CHAMELEON_USER)@$(CHAMELEON_HOST):/tmp
 endif
-
-@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+	@ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 		-i $(IDENTITY_FILE) -p $(CHAMELEON_SSH_PORT) \
 		$(CHAMELEON_USER)@$(CHAMELEON_HOST) \
 		"cd /tmp && rm -rf $(BUNDLEDIR) && tar zxf $(BUNDLE) &&" \

@@ -21,6 +21,7 @@ STREAM_SERVER_NAME='stream_server'
 SCHEDULER_NAME='scheduler'
 UPDATER_NAME='chameleon-updater'
 LIGHTTPD_NAME='lighttpd'
+BLUETOOTH_GRPC_NAME='bluetooth_grpc'
 TEST_DATA_DIR='/usr/share/autotest'
 PI_CONFIG_DIR="/home/pi/.config"
 
@@ -282,6 +283,7 @@ check_daemon_paths() {
     check_daemon_path "${DISPLAYD_NAME}"
     check_daemon_path "${STREAM_SERVER_NAME}"
     check_daemon_path "${SCHEDULER_NAME}"
+    check_daemon_path "${BLUETOOTH_GRPC_NAME}"
 }
 
 install_daemon_and_config () {
@@ -430,6 +432,7 @@ install_daemon_and_config "${CHAMELEOND_NAME}"
 install_daemon_and_config "${DISPLAYD_NAME}"
 install_daemon_and_config "${STREAM_SERVER_NAME}"
 install_daemon_and_config "${SCHEDULER_NAME}"
+install_daemon_and_config "${BLUETOOTH_GRPC_NAME}"
 
 cp -f "${SCRIPT_DIR}/${CHAMELEOND_NAME}" "${INITD_DIR}"
 update-rc.d "${CHAMELEOND_NAME}" defaults 92 8
@@ -453,6 +456,10 @@ update-rc.d "${SCHEDULER_NAME}" defaults 98 4
 
 cp -f "${SCRIPT_DIR}/${UPDATER_NAME}" "${INITD_DIR}"
 update-rc.d "${UPDATER_NAME}" defaults 90 10
+
+cp -f "${SCRIPT_DIR}/${BLUETOOTH_GRPC_NAME}" "${INITD_DIR}"
+update-rc.d "${BLUETOOTH_GRPC_NAME}" defaults 100 6
+update-rc.d disable ${BLUETOOTH_GRPC_NAME}
 
 # Some custom actions if chameleon is for Bluetooth peer.
 if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
@@ -529,11 +536,6 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
             ${BLUESHIP_TMP_DIR}/blueship/*
 
         ${pip_cmd} install --upgrade ${BLUETOOTH_GRPC_ROOT_DIR}
-
-        # Stop and disable the chameleon service to avoid it being started
-        # automatically and interfere with the grpc service.
-        eval systemctl stop ${CHAMELEOND_NAME}
-        eval systemctl disable ${CHAMELEOND_NAME}
     fi
 
     validate_socket_installation
