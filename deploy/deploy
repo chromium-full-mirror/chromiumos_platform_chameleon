@@ -459,7 +459,7 @@ update-rc.d "${UPDATER_NAME}" defaults 90 10
 
 cp -f "${SCRIPT_DIR}/${BLUETOOTH_GRPC_NAME}" "${INITD_DIR}"
 update-rc.d "${BLUETOOTH_GRPC_NAME}" defaults 100 6
-update-rc.d disable ${BLUETOOTH_GRPC_NAME}
+update-rc.d "${BLUETOOTH_GRPC_NAME}" disable
 
 # Some custom actions if chameleon is for Bluetooth peer.
 if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
