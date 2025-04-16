@@ -11,6 +11,7 @@ include deploy/init.d/networking
 include deploy/init.d/scheduler
 include deploy/init.d/stream_server
 include deploy/init.d/chameleon-updater
+include deploy/init.d/bluetooth_grpc
 graft deploy/network
 include dist/commit
 include updatable/pip/*
