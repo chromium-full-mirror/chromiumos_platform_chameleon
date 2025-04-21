@@ -25,6 +25,9 @@ BLUETOOTH_GRPC_NAME='bluetooth_grpc'
 TEST_DATA_DIR='/usr/share/autotest'
 PI_CONFIG_DIR="/home/pi/.config"
 
+LOGROTATE_SROUCE_DIR="${CWD}/logrotate.d"
+LOGROTATE_DIR="/etc/logrotate.d"
+
 SYSTEMD_USER_WANTS_PATH="/etc/systemd/user"
 
 . "${CWD}/bundle_common"
@@ -636,6 +639,12 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     if [ "${PLATFORM}" = "x86-generic" ]; then
         touch /etc/btpeer
     fi
+
+    # Add config for daemon log rotation.
+    cp "${LOGROTATE_SROUCE_DIR}/${CHAMELEOND_NAME}" \
+        "${LOGROTATE_DIR}/${CHAMELEOND_NAME}"
+    cp "${LOGROTATE_SROUCE_DIR}/${BLUETOOTH_GRPC_NAME}" \
+        "${LOGROTATE_DIR}/${BLUETOOTH_GRPC_NAME}"
 
     if [ -n "${need_reboot}" ]; then
         sleep 3 && reboot &

@@ -1,0 +1,33 @@
+# Copyright 2025 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+/var/log/chameleon_commits {
+    rotate 4
+    size 100M
+    compress
+    delaycompress
+    create
+    missingok
+    notifempty
+}
+
+/var/log/chameleond_init {
+    rotate 4
+    size 100M
+    compress
+    delaycompress
+    create
+    missingok
+    notifempty
+}
+
+/var/log/chameleond {
+    rotate 4
+    size 100M
+    compress
+    delaycompress
+    create
+    missingok
+    notifempty
+}
