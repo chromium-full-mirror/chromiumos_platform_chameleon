@@ -9,7 +9,6 @@ import os
 
 os.environ["PLATFORM"] = "RASPI"
 
-import argparse
 import asyncio
 import logging
 import time

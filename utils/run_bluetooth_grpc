@@ -6,11 +6,22 @@
 
 import argparse
 import logging
-import shlex
 import asyncio
+import sys
 
 from chameleond.bluetooth_grpc.server.server import start_bluetooth_test_server
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """Custom exception handler to log unhandled exceptions."""
+    if issubclass(exc_type, KeyboardInterrupt):
+        # Don't log KeyboardInterrupt
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logging.error(
+        "Unhandled exception caught:",
+        exc_info=(exc_type, exc_value, exc_traceback),  # Log exception info
+    )
 
 def main():
   """The Main program, to run Bluetooth GRPC Daemon."""
@@ -51,6 +62,8 @@ def main():
   if options.log != '-':
     log_config.update({'filename': options.log})
   logging.basicConfig(**log_config)
+  # Set the custom exception hook
+  sys.excepthook = handle_exception
 
   asyncio.run(start_bluetooth_test_server(options.port))
 
