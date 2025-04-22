@@ -388,7 +388,8 @@ class BluetoothAudio(BluezPeripheral):
     START_PIPEWIRE_TIMES = 2
     PIPEWIRE_READY_TIMEOUT_SECS = 5
     INTERVAL_BETWEEN_START_PIPEWIRE_SECS = 1
-    WP_BLUETOOTH_CONF_D_DIR = "/home/pi/.config/wireplumber/wireplumber.conf.d/"
+    PI_CONFIG_DIR = "/home/pi/.config"
+    WP_BLUETOOTH_CONF_D_DIR = PI_CONFIG_DIR + "/wireplumber/wireplumber.conf.d/"
     WP_BLUEZ_AAC_CONFIG = "bluez-aac-properties.conf"
     WP_BLUEZ_SWB_CONFIG = "bluez-swb-properties.conf"
 
@@ -662,6 +663,8 @@ class BluetoothAudio(BluezPeripheral):
         """
         for i in range(self.START_PULSEAUDIO_TIMES):
             logging.info("try to start pulseaudio ... %d", i)
+            # Force .config to be owned by pi, otherwise pulseaudio fails to start
+            SystemTools.OrigCall("chown", "-R", "pi:pi", self.PI_CONFIG_DIR)
             if self._StartPulseaudio(self._UsingLocalVersion(audio_profile)):
                 time.sleep(self.WAIT_PULSEAUDIO_READY_SECS)
                 output = self._PollForCondition(
@@ -1754,9 +1757,9 @@ class BluetoothAudio(BluezPeripheral):
         SystemTools.OrigCall("killall", "-9", self.MPRISPROXY)
 
         if self.DBUS_SESSION_ENV_VAR_NAME not in os.environ:
-            os.environ[
-                self.DBUS_SESSION_ENV_VAR_NAME
-            ] = self.DBUS_SESSION_ENV_VAR_VALUE
+            os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
+                self.DBUS_SESSION_ENV_VAR_VALUE
+            )
 
         return bool(SystemTools.RunInSubprocess(self.MPRISPROXY))
 
@@ -1780,9 +1783,9 @@ class BluetoothAudio(BluezPeripheral):
             return self._media_player
 
         if self.DBUS_SESSION_ENV_VAR_NAME not in os.environ:
-            os.environ[
-                self.DBUS_SESSION_ENV_VAR_NAME
-            ] = self.DBUS_SESSION_ENV_VAR_VALUE
+            os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
+                self.DBUS_SESSION_ENV_VAR_VALUE
+            )
 
         output = SystemTools.Output(self.PLAYERCTL, "--list-all")
         if len(output.splitlines()) != 1 or output == self.NO_PLAYER_FOUND:

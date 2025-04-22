@@ -76,6 +76,7 @@ class _SystemTools(object):
         "uname": "/bin/uname",
         "wget": "/usr/bin/wget",
         "wpctl": "/usr/bin/wpctl",
+        "chown": "/bin/chown",
     }
 
     def __init__(self):
