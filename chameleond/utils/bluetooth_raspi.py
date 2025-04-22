@@ -1086,6 +1086,35 @@ class BluezPeripheral(PeripheralKit):
         cmd = "sudo hciconfig hci0 class {}".format(hex(class_of_service))
         os.system(cmd)
 
+    def SetLinkMode(self, mode):
+        """Sets controller to the specified link mode.
+
+        Args:
+          mode: string in 'NONE', 'ACCEPT', 'MASTER', 'AUTH', 'ENCRYPT',
+                'TRUSTED', 'RELIABLE', 'SECURE'.
+        """
+
+        cmds = []
+        link_mode_cmd = "sudo hciconfig hci0 lm {}".format(mode)
+
+        # link mode only allowed to change when bredr is enabled.
+        if "BLE" in self.device_type:
+            cmds.extend(
+                [
+                    "sudo btmgmt power off",
+                    "sudo btmgmt bredr on",
+                    link_mode_cmd,
+                    "sudo btmgmt bredr off",
+                    "sudo btmgmt power on",
+                ]
+            )
+        else:
+            cmds.append(link_mode_cmd)
+
+        for cmd in cmds:
+            os.system(cmd)
+            time.sleep(0.1)
+
     def SetRemoteAddress(self, remote_address):
         """Sets address later used for connect
 
