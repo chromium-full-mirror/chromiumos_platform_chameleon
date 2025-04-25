@@ -65,12 +65,6 @@ class Agent(dbus.service.Object):
         self.pairing_events = pairing_events
         self.pairing_answers = pairing_answers
 
-    def SetTrusted(self, path):
-        props = dbus.Interface(
-            self.bus.get_object(BUS_NAME, path), PROP_INTERFACE
-        )
-        props.Set(DEVICE_INTERFACE, "Trusted", True)
-
     @dbus.service.method(AGENT_INTERFACE, in_signature="", out_signature="")
     def Release(self):
         logging.info("Release")
@@ -95,7 +89,6 @@ class Agent(dbus.service.Object):
             logging.info("Timeout for waiting pairing answer.")
 
         if pairing_answer and pairing_answer.WhichOneof("answer") == "pin":
-            self.SetTrusted(device)
             logging.info(
                 "Got pin code %s entered by user",
                 pairing_answer.pin.decode("utf-8"),
@@ -121,7 +114,6 @@ class Agent(dbus.service.Object):
             logging.info("Timeout for waiting pairing answer.")
 
         if pairing_answer and pairing_answer.WhichOneof("answer") == "passkey":
-            self.SetTrusted(device)
             logging.info(
                 "Got passkey %s entered by user", pairing_answer.passkey
             )
@@ -173,7 +165,6 @@ class Agent(dbus.service.Object):
         if pairing_answer and pairing_answer.WhichOneof("answer") == "confirm":
             if pairing_answer.confirm:
                 logging.info("RequestConfirmation: user confirmed.")
-                self.SetTrusted(device)
                 return
             else:
                 raise Rejected("RequestConfirmation: rejected by user.")
@@ -216,9 +207,6 @@ class SecurityService(security_grpc_aio.SecurityServicer):
         agent_manager = None
         streaming_answers_task = None
         try:
-            # Stop the current default agent
-            self.ctx.btd.StopPairingAgent()
-
             agent = Agent(
                 AGENT_PATH,
                 asyncio.get_running_loop(),
@@ -307,8 +295,6 @@ class SecurityService(security_grpc_aio.SecurityServicer):
             pairing_answers = None
             pairing_events = None
             self.manually_confirm = False
-
-            self.ctx.btd.StartPairingAgent("NoInputNoOutput")
 
     async def Secure(
         self, request: security_pb2.SecureRequest, context: grpc.ServicerContext

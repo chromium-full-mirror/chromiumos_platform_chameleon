@@ -189,9 +189,6 @@ class TestServerContext:
             self.config.security.secure_simple_pairing.bool_value
         )
 
-        # Start a default agent to automatically authorize profile connections
-        self.btd.StartPairingAgent("NoInputNoOutput")
-
 
 async def start_bluetooth_test_server(port):
     """Start serving the bluetooth test server."""
