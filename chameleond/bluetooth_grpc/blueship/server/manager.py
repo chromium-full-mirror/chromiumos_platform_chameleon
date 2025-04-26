@@ -145,6 +145,8 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
                     logging.warning("cmd %s is not supported.", cmd)
                     return False
 
+            return True
+
         check_funcs = [_check_codec_supported, _check_player_cmd_supported]
 
         for func in check_funcs:
