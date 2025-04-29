@@ -29,6 +29,7 @@ from chameleond.bluetooth_grpc.blueship.server import power
 from chameleond.bluetooth_grpc.pandora.server import host
 from chameleond.bluetooth_grpc.pandora.server import security
 from chameleond.bluetooth_grpc.pandora.server import utils
+from chameleond.bluetooth_grpc.server.btmon_manager import BtmonManager
 from chameleond.bluetooth_grpc.server.device_config import (
     DEFAULT_CHAMELEON_CONFIG,
 )
@@ -196,11 +197,14 @@ async def start_bluetooth_test_server(port):
     try:
         server = None
         shared_context = TestServerContext(DEFAULT_CHAMELEON_CONFIG)
+        btmon_manager = BtmonManager(output_directory="/var/log/btmon")
 
         while True:
             server = grpc.aio.server()
 
             shared_context.reset_bluetooth_device()
+
+            btmon_manager.start()
 
             # Pandora services
             security_service = security.SecurityService(
@@ -254,6 +258,7 @@ async def start_bluetooth_test_server(port):
             shared_context.is_server_ready = True
 
             await server.wait_for_termination()
+            btmon_manager.stop()
             logging.info("Bluetooth test server stopped, restarting...")
     finally:
         if server is not None:
