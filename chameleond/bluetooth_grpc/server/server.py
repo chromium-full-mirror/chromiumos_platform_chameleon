@@ -10,7 +10,9 @@ import os
 os.environ["PLATFORM"] = "RASPI"
 
 import asyncio
+import atexit
 import logging
+import signal
 import time
 
 from blueship import audio_grpc_aio
@@ -34,6 +36,7 @@ from chameleond.bluetooth_grpc.server.device_config import (
     DEFAULT_CHAMELEON_CONFIG,
 )
 from chameleond.drivers import fpga_tio
+from chameleond.utils import common
 from chameleond.utils import ids
 import grpc
 from pandora import host_grpc_aio
@@ -53,6 +56,10 @@ class TestServerContext:
         self.default_config = manager_pb2.Configuration()
         self.default_config.CopyFrom(config)
         self.is_server_ready = False
+        self.signal_handlers = {}
+        self.subprocess_sigterm_handler_name = None
+        self.subprocess_sigint_handler_name = None
+        self.signal_handler_count = 0
 
     @property
     def support_classic(self):
@@ -190,6 +197,100 @@ class TestServerContext:
             self.config.security.secure_simple_pairing.bool_value
         )
 
+    def unregister_signal_handler(self, signum, name):
+        """Unregisters a specific signal handler.
+
+        Removes the signal handler identified by the given `name` for the
+        specified signal `signum`. If a handler with that name exists for the
+        signal, it will be removed from the internal registry.
+
+        Args:
+            signum: The signal number (e.g., signal.SIGTERM, signal.SIGINT).
+            name: The unique name associated with the signal handler
+                  when it was registered.
+        """
+        if signum in self.signal_handlers:
+            if name in self.signal_handlers[signum]:
+                self.signal_handlers[signum].pop(name)
+
+    def register_signal_handler(self, signum, handler):
+        """Registers a handler function for a specific signal.
+
+        Registers a custom handler function for the specified signal. It
+        allows multiple handlers to be registered for the same signal. The
+        registered handlers are stored internally, and when the signal is
+        received, all registered handlers for that signal are executed in the
+        reversed order they were registered.
+
+        Args:
+            signum: The signal number (e.g., signal.SIGTERM, signal.SIGINT).
+            handler: The function to be called when the signal is received.
+                     The handler function should accept two arguments: the
+                     signal number and the current frame.
+
+        Returns:
+            name: A unique name assigned to the registered handler. This name
+                  can be used later to unregister the handler using
+                 `unregister_signal_handler`.
+        """
+        if handler is None:
+            logging.error("Handler is None, return.")
+
+        if signum not in self.signal_handlers:
+            self.signal_handlers[signum] = {}
+
+            def _dispatch_handlers(signum, frame):
+                if signum in self.signal_handlers:
+                    for name in reversed(
+                        list(self.signal_handlers[signum].keys())
+                    ):
+                        self.signal_handlers[signum][name](signum, frame)
+
+            signal.signal(signum, _dispatch_handlers)
+
+        self.signal_handler_count += 1
+        name = str(self.signal_handler_count)
+        self.signal_handlers[signum][name] = handler
+        return name
+
+    def register_subprocess_cleanup(self, process):
+        """Registers cleanup actions for a subprocess on exit and signals.
+
+        Ensures that a given subprocess.Popen object is properly terminated
+        and cleaned up when the main program exits normally or receives a
+        SIGTERM or SIGINT signal.
+
+        Args:
+            process: The subprocess.Popen object to be cleaned up.
+        """
+        if process is None:
+            logging.error("Process is None, return.")
+            return
+
+        atexit.register(common.cleanup_subprocess, process, None, None)
+        self.subprocess_sigterm_handler_name = self.register_signal_handler(
+            signal.SIGTERM,
+            lambda signum, frame: common.cleanup_subprocess(
+                process, signum, frame
+            ),
+        )
+        self.subprocess_sigint_handler_name = self.register_signal_handler(
+            signal.SIGINT,
+            lambda signum, frame: common.cleanup_subprocess(
+                process, signum, frame
+            ),
+        )
+
+    def unregister_subprocess_cleanup(self):
+        """Unregisters the cleanup functions for subprocesses."""
+        atexit.unregister(common.cleanup_subprocess)
+        self.unregister_signal_handler(
+            signal.SIGTERM, self.subprocess_sigterm_handler_name
+        )
+        self.unregister_signal_handler(
+            signal.SIGINT, self.subprocess_sigint_handler_name
+        )
+
 
 async def start_bluetooth_test_server(port):
     """Start serving the bluetooth test server."""
@@ -205,6 +306,9 @@ async def start_bluetooth_test_server(port):
             shared_context.reset_bluetooth_device()
 
             btmon_manager.start()
+            shared_context.register_subprocess_cleanup(
+                btmon_manager.btmon_process
+            )
 
             # Pandora services
             security_service = security.SecurityService(
@@ -259,6 +363,7 @@ async def start_bluetooth_test_server(port):
 
             await server.wait_for_termination()
             btmon_manager.stop()
+            shared_context.unregister_subprocess_cleanup()
             logging.info("Bluetooth test server stopped, restarting...")
     finally:
         if server is not None:

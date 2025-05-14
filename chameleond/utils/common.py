@@ -158,3 +158,24 @@ def lazy(original_class):
             return getattr(self._obj, name)
 
     return LazyInstantiation
+
+
+def cleanup_subprocess(process, signum, frame):
+    """Cleans up the subprocess by terminating it.
+
+    Args:
+        process: The subprocess.Popen object representing the subprocess.
+        signum: The signal number that triggered the cleanup (or None if atexit
+                is calling).
+        frame: The stack frame at the point of signal reception.
+    """
+    pid = getattr(process, "pid", None)
+    logging.info("Received signal %s; cleaning up subprocess %s.", signum, pid)
+    if process.poll() is None:
+        process.terminate()
+        process.wait(timeout=5)
+        if process.poll() is None:
+            process.kill()
+        logging.info("Subprocess terminated.")
+    else:
+        logging.info("Subprocess already exited.")

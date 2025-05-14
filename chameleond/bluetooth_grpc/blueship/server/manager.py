@@ -52,12 +52,12 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
             if self.ctx.is_server_ready:
                 self.ctx.is_server_ready = False
                 logging.info(
-                    "RestartServer: Sets server readiness to False and"
+                    "RestartServer: Sets server readiness to False and "
                     "initiates server restart."
                 )
             else:
                 logging.warning(
-                    "RestartServer: Calling RestartServer when the"
+                    "RestartServer: Calling RestartServer when the "
                     "server is not ready may cause unexpected behavior"
                     "."
                 )
