@@ -65,7 +65,7 @@ class BluezKeyboardClient(object):
         self._signal = None
 
     def keys_sent_handler(self):
-        pass
+        logging.debug("Successfully sent SendKeys")
 
     def keys_error_handler(self, err):
         logging.error("keys_error_handler: %s", err)
@@ -78,6 +78,7 @@ class BluezKeyboardClient(object):
             self._report = report
 
         modifier = self._report[2]
+        logging.debug(f"Sending SendKeys ({modifier},{self._report[4:10]})")
         self._iface.SendKeys(
             modifier,
             self._report[4:10],

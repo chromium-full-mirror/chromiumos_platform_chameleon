@@ -434,10 +434,12 @@ class BluezHIDService(dbus.service.Object):
     def SendKeys(self, modifier, keys):
         # Avoid sending HID report when the Bluetooth socket has not yet accepted a
         # connection.
-        self.wait_for_connected()
 
+        logging.debug("Checking Bluez service is connected")
+        self.wait_for_connected()
         report = bytes([0xA1, 0x01, modifier, 0x00])
         report += bytes(keys[:6])
+        logging.debug(f"Sending HID report {report}")
         self._cinterrupt.send(report)
 
     @dbus.service.method("org.chromium.autotest.btkbservice", in_signature="ay")
@@ -468,7 +470,6 @@ class BluezHIDService(dbus.service.Object):
 
         while time.time() <= end_time:
             if self._connected:
-                logging.info("Bluez service connected")
                 return
             else:
                 if time.time() >= next_log_time:
