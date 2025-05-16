@@ -97,7 +97,10 @@ class ReportListener(dbus.service.Object):
     def __init__(self, handle):
         self._bus = dbus.SystemBus()
         self._bus_name = dbus.service.BusName(
-            BLUEZ_HID_SERVICE_NAME, bus=self._bus
+            BLUEZ_HID_SERVICE_NAME,
+            bus=self._bus,
+            replace_existing=True,
+            allow_replacement=True,
         )
         super(ReportListener, self).__init__(
             self._bus_name, BLUEZ_HID_SERVICE_PATH

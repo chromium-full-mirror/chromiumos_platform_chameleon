@@ -173,7 +173,10 @@ class BluezHIDService(dbus.service.Object):
 
         self._bus = dbus.SystemBus()
         self._bus_name = dbus.service.BusName(
-            BLUEZ_HID_SERVICE_NAME, bus=self._bus
+            BLUEZ_HID_SERVICE_NAME,
+            bus=self._bus,
+            replace_existing=True,
+            allow_replacement=True,
         )
         super(BluezHIDService, self).__init__(
             self._bus_name, BLUEZ_HID_SERVICE_PATH
@@ -489,7 +492,10 @@ class BluezRfcommEchoService(dbus.service.Object):
         self._profile = None
         self._bus = dbus.SystemBus()
         self._bus_name = dbus.service.BusName(
-            BLUEZ_RFCOMM_SERVICE_NAME, bus=self._bus
+            BLUEZ_RFCOMM_SERVICE_NAME,
+            bus=self._bus,
+            replace_existing=True,
+            allow_replacement=True,
         )
         super(BluezRfcommEchoService, self).__init__(
             self._bus_name, BLUEZ_RFCOMM_SERVICE_PATH
