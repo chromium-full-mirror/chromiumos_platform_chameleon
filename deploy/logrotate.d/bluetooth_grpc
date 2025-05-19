@@ -10,6 +10,7 @@
     create
     missingok
     notifempty
+    copytruncate
 }
 
 /var/log/bluetooth_test_server.log {
@@ -20,4 +21,5 @@
     create
     missingok
     notifempty
+    copytruncate
 }

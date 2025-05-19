@@ -13,6 +13,7 @@ import asyncio
 import atexit
 import logging
 import signal
+import subprocess
 import time
 
 from blueship import audio_grpc_aio
@@ -45,6 +46,9 @@ from pandora import security_grpc_aio
 
 CHAMELEON_CLEANUP_TIME = 1
 BLUEZ_RESTART_TIME = 3
+
+RSYS_LOG_CONFIG = "/etc/logrotate.d/rsyslog"
+BLUETOOTH_GRPC_LOG_CONFIG = "/etc/logrotate.d/bluetooth_grpc"
 
 
 class TestServerContext:
@@ -292,6 +296,40 @@ class TestServerContext:
         )
 
 
+def trigger_log_rotate(services_to_rotate):
+    """Triggers logrotate for a list of specified logrotate configuration files.
+
+    Args:
+        services_to_rotate (list): A list of strings, where each string is the
+                                    absolute path to a logrotate configuration
+                                    file (e.g., '/etc/logrotate.d/rsyslog',
+                                    '/etc/logrotate.d/my_custom_app').
+    """
+    for config in services_to_rotate:
+        try:
+            logging.info(
+                f"Attempting to trigger logrotate for config: {config}..."
+            )
+            # Using -f to force rotation
+            command = ["sudo", "logrotate", "-vf", config]
+
+            process = subprocess.Popen(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            stdout, stderr = process.communicate()
+
+            if process.returncode == 0:
+                logging.info(f"Successfully triggered logrotate for {config}.")
+            else:
+                logging.error(f"Error triggering logrotate for {config}")
+                if stdout:
+                    logging.error(f"Stdout:\n{stdout.decode()}\n")
+                if stderr:
+                    logging.error(f"Stderr:\n{stderr.decode()}")
+        except Exception as e:
+            logging.error(f"Failed to log rotate {config}")
+
+
 async def start_bluetooth_test_server(port):
     """Start serving the bluetooth test server."""
 
@@ -301,6 +339,7 @@ async def start_bluetooth_test_server(port):
         btmon_manager = BtmonManager(output_directory="/var/log/btmon")
 
         while True:
+            trigger_log_rotate([RSYS_LOG_CONFIG, BLUETOOTH_GRPC_LOG_CONFIG])
             server = grpc.aio.server()
 
             shared_context.reset_bluetooth_device()
@@ -364,6 +403,7 @@ async def start_bluetooth_test_server(port):
             await server.wait_for_termination()
             btmon_manager.stop()
             shared_context.unregister_subprocess_cleanup()
+
             logging.info("Bluetooth test server stopped, restarting...")
     finally:
         if server is not None:
