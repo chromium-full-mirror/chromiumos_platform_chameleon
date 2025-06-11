@@ -128,6 +128,8 @@ class TestServerContext:
             # Classic phone is not implemented
         elif device_type == manager_pb2.DEVICE_CATEGORY_DEV_KIT:
             return "DEV_KIT"
+        elif device_type == manager_pb2.DEVICE_CATEGORY_NOT_CONFIGURED:
+            return "NOT_CONFIGURED"
         return None
 
     @property
@@ -341,56 +343,62 @@ async def start_bluetooth_test_server(port):
             trigger_log_rotate([RSYS_LOG_CONFIG, BLUETOOTH_GRPC_LOG_CONFIG])
             server = grpc.aio.server()
 
-            shared_context.reset_bluetooth_device()
+            if shared_context.device_type == "NOT_CONFIGURED":
+                logging.info("@@ Skip resetting Bluetooth")
+            else:
+                btmon_manager.start()
+                shared_context.reset_bluetooth_device()
+                shared_context.register_subprocess_cleanup(
+                    btmon_manager.btmon_process
+                )
 
-            btmon_manager.start()
-            shared_context.register_subprocess_cleanup(
-                btmon_manager.btmon_process
-            )
+                # Pandora services
+                security_service = security.SecurityService(
+                    shared_context,
+                )
+                security_grpc_aio.add_SecurityServicer_to_server(
+                    security_service, server
+                )
 
-            # Pandora services
-            security_service = security.SecurityService(
-                shared_context,
-            )
-            security_grpc_aio.add_SecurityServicer_to_server(
-                security_service, server
-            )
+                host_service = host.HostService(
+                    server, shared_context, security_service
+                )
+                host_grpc_aio.add_HostServicer_to_server(host_service, server)
 
-            host_service = host.HostService(
-                server, shared_context, security_service
-            )
-            host_grpc_aio.add_HostServicer_to_server(host_service, server)
+                security_storage_service = security.SecurityStorageService(
+                    shared_context
+                )
+                security_grpc_aio.add_SecurityStorageServicer_to_server(
+                    security_storage_service, server
+                )
 
-            security_storage_service = security.SecurityStorageService(
-                shared_context
-            )
-            security_grpc_aio.add_SecurityStorageServicer_to_server(
-                security_storage_service, server
-            )
+                # BlueShip services
+                blueship_security_service = blueship_security.SecurityService(
+                    shared_context,
+                )
+                blueship_security_grpc_aio.add_SecurityServicer_to_server(
+                    blueship_security_service, server
+                )
 
-            # BlueShip services
-            blueship_security_service = blueship_security.SecurityService(
-                shared_context,
-            )
-            blueship_security_grpc_aio.add_SecurityServicer_to_server(
-                blueship_security_service, server
-            )
+                audio_service = audio.AudioService(shared_context)
+                audio_grpc_aio.add_AudioServicer_to_server(
+                    audio_service, server
+                )
 
-            audio_service = audio.AudioService(shared_context)
-            audio_grpc_aio.add_AudioServicer_to_server(audio_service, server)
+                hid_service = hid.HIDService(shared_context)
+                hid_grpc_aio.add_HIDServicer_to_server(hid_service, server)
 
-            hid_service = hid.HIDService(shared_context)
-            hid_grpc_aio.add_HIDServicer_to_server(hid_service, server)
+                power_service = power.PowerService(
+                    shared_context,
+                )
+                power_grpc_aio.add_PowerServicer_to_server(
+                    power_service, server
+                )
 
             manager_service = manager.ManagerService(shared_context, server)
             manager_grpc_aio.add_ManagerServicer_to_server(
                 manager_service, server
             )
-
-            power_service = power.PowerService(
-                shared_context,
-            )
-            power_grpc_aio.add_PowerServicer_to_server(power_service, server)
 
             server.add_insecure_port(f"[::]:{port}")
 
@@ -400,9 +408,9 @@ async def start_bluetooth_test_server(port):
             shared_context.is_server_ready = True
 
             await server.wait_for_termination()
-            btmon_manager.stop()
-            shared_context.unregister_subprocess_cleanup()
-
+            if shared_context.device_type != "NOT_CONFIGURED":
+                btmon_manager.stop()
+                shared_context.unregister_subprocess_cleanup()
             logging.info("Bluetooth test server stopped, restarting...")
     finally:
         if server is not None:

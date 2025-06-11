@@ -18,7 +18,8 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
             io_capability=manager_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT,
         ),
         category=manager_pb2.ConfigVariant(
-            writable=True, device_category=manager_pb2.DEVICE_CATEGORY_KEYBOARD
+            writable=True,
+            device_category=manager_pb2.DEVICE_CATEGORY_NOT_CONFIGURED,
         ),
     ),
     controller=manager_pb2.ControllerConfig(
