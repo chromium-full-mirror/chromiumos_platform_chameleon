@@ -191,9 +191,8 @@ class TestServerContext:
 
         self.btd.SpecifyDeviceType(self.device_type)
 
-        # Default to enable central mode as a workaround of Intel and Cypress IOP issue.
-        # More details can be found in b/260539322.
-        self.btd.SetLinkMode("MASTER")
+        # Set the link mode to prefer peripheral role.
+        self.btd.SetLinkMode("ACCEPT")
 
         self.btd.SetIOCapability(self.io_capability)
         self.btd.SetSecureConnections(self.secure_connections)
