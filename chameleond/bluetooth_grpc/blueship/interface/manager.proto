@@ -52,6 +52,17 @@ enum SecureConnections {
   SECURE_CONNECTIONS_ONLY = 3;
 }
 
+enum LinkMode {
+  LINK_MODE_NONE = 0;
+  LINK_MODE_ACCEPT = 1;
+  LINK_MODE_MASTER = 2;
+  LINK_MODE_AUTH = 3;
+  LINK_MODE_ENCRYPT = 4;
+  LINK_MODE_TRUSTED = 5;
+  LINK_MODE_RELIABLE = 6;
+  LINK_MODE_SECURE = 7;
+}
+
 message DeviceInfoConfig {
   ConfigVariant mac_address = 1;        // string
   ConfigVariant name = 2;               // string
@@ -71,6 +82,7 @@ message SecurityConfig {
   ConfigVariant pin = 1;                   // string
   ConfigVariant secure_connections = 2;    // SecureConnections
   ConfigVariant secure_simple_pairing = 3; // bool
+  ConfigVariant link_mode = 4;             // LinkMode
 }
 
 message AudioConfig {
@@ -110,6 +122,7 @@ message ConfigVariant {
     IOCapability io_capability = 101;
     DeviceCategory device_category = 102;
     SecureConnections secure_connections = 103;
+    LinkMode link_mode = 104;
     // Message
     RepeatedString string_list = 201;
     RepeatedCodec codec_list = 202;

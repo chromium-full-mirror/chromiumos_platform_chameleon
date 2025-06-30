@@ -1107,6 +1107,8 @@ class BluezPeripheral(PeripheralKit):
                 'TRUSTED', 'RELIABLE', 'SECURE'.
         """
 
+        logging.info("Setting link mode to %s", mode)
+
         cmds = []
         link_mode_cmd = "sudo hciconfig hci0 lm {}".format(mode)
 

@@ -48,6 +48,11 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
             writable=True,
             bool_value=True,
         ),
+        link_mode=manager_pb2.ConfigVariant(
+            writable=True,
+            # Set the link mode to prefer peripheral role.
+            link_mode=manager_pb2.LINK_MODE_ACCEPT,
+        ),
     ),
     audio=manager_pb2.AudioConfig(
         supported_codecs=manager_pb2.ConfigVariant(

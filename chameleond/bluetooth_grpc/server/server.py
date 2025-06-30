@@ -104,6 +104,28 @@ class TestServerContext:
         return None
 
     @property
+    def link_mode(self):
+        """Helper function to convert LinkMode from proto to String"""
+        lm = self.config.security.link_mode.link_mode
+        if lm == manager_pb2.LINK_MODE_NONE:
+            return "NONE"
+        elif lm == manager_pb2.LINK_MODE_ACCEPT:
+            return "ACCEPT"
+        elif lm == manager_pb2.LINK_MODE_MASTER:
+            return "MASTER"
+        elif lm == manager_pb2.LINK_MODE_AUTH:
+            return "AUTH"
+        elif lm == manager_pb2.LINK_MODE_ENCRYPT:
+            return "ENCRYPT"
+        elif lm == manager_pb2.LINK_MODE_TRUSTED:
+            return "TRUSTED"
+        elif lm == manager_pb2.LINK_MODE_RELIABLE:
+            return "RELIABLE"
+        elif lm == manager_pb2.LINK_MODE_SECURE:
+            return "SECURE"
+        return None
+
+    @property
     def device_type(self):
         """Helper function to convert Device Category from proto to String"""
         device_type = self.config.device.category.device_category
@@ -193,8 +215,8 @@ class TestServerContext:
 
         self.btd.SpecifyDeviceType(self.device_type)
 
-        # Set the link mode to prefer peripheral role.
-        self.btd.SetLinkMode("ACCEPT")
+        self.btd.SetLinkMode(self.link_mode)
+
         # Enable fast connectable to reduce the chance of page timeout in test.
         if self.support_classic:
             self.btd.SetFastConnectable(True)
