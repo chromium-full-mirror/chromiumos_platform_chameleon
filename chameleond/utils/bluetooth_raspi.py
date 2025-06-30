@@ -1019,6 +1019,19 @@ class BluezPeripheral(PeripheralKit):
             return False
         return True
 
+    def SetFastConnectable(self, enable):
+        """Sets the controller page scan mode to be fast connectable or not.
+
+        @param enable: Whether to enable fast connectable mode.
+
+        @return: True to set fast connectable.
+        """
+        _control = bluetooth_socket.BluetoothControlSocket()
+        if not _control.set_fast_connectable(0, enable):
+            logging.error("Failed to set fast connectable mode.")
+            return False
+        return True
+
     def SetRPATimeout(self, timeout):
         """Set the timeout value for random private address
 

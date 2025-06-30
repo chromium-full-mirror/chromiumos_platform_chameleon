@@ -195,6 +195,9 @@ class TestServerContext:
 
         # Set the link mode to prefer peripheral role.
         self.btd.SetLinkMode("ACCEPT")
+        # Enable fast connectable to reduce the chance of page timeout in test.
+        if self.support_classic:
+            self.btd.SetFastConnectable(True)
 
         self.btd.SetIOCapability(self.io_capability)
         self.btd.SetSecureConnections(self.secure_connections)
