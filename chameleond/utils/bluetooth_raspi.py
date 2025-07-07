@@ -1302,7 +1302,9 @@ class BluezPeripheral(PeripheralKit):
             True if the request was sent without error, False otherwise.
         """
         try:
-            self._GetAdapterIface().SetDiscoveryFilter(discovery_filter)
+            self._GetAdapterIface().SetDiscoveryFilter(
+                discovery_filter, signature="a{sv}"
+            )
         except Exception as e:
             logging.error("Failed to set discovery filter: %s", e)
             return False
