@@ -39,6 +39,7 @@ from chameleond.bluetooth_grpc.server.device_config import (
 from chameleond.drivers import fpga_tio
 from chameleond.utils import common
 from chameleond.utils import ids
+from chameleond.utils.bluez_service_consts import PERIPHERAL_DEVICE_CLASS
 import grpc
 from pandora import host_grpc_aio
 from pandora import security_grpc_aio
@@ -214,18 +215,49 @@ class TestServerContext:
                 logging.info("Failed to export media player")
 
         self.btd.SpecifyDeviceType(self.device_type)
+        # Delay 1 second to wait for power on.
+        time.sleep(1)
+
+        # Set secure connection. This should be done before configuring link
+        # mode, fast-connectable and the Class of Service, as powering off
+        # BREDR resets these configurations.
+        cmds = [
+            "sudo btmgmt power off",
+            "sudo btmgmt le on",
+            "sudo btmgmt bredr off",
+            f"sudo btmgmt sc {self.secure_connections}",
+        ]
+        if self.support_classic:
+            cmds.extend(
+                [
+                    "sudo btmgmt bredr on",
+                    "sudo btmgmt le off",
+                ]
+            )
+        cmds.extend(["sudo btmgmt power on"])
+
+        for cmd in cmds:
+            os.system(cmd)
+            time.sleep(0.1)
+        # Delay 1 second to wait for power on.
+        time.sleep(1)
 
         self.btd.SetLinkMode(self.link_mode)
 
-        # Enable fast connectable to reduce the chance of page timeout in test.
         if self.support_classic:
+            # Enable fast connectable to reduce the chance of page timeout in test.
             self.btd.SetFastConnectable(True)
 
+            self.btd.SetSecureSimplePairing(
+                self.config.security.secure_simple_pairing.bool_value
+            )
+
         self.btd.SetIOCapability(self.io_capability)
-        self.btd.SetSecureConnections(self.secure_connections)
-        self.btd.SetSecureSimplePairing(
-            self.config.security.secure_simple_pairing.bool_value
-        )
+
+        if self.device_type and "BLE" not in self.device_type:
+            self.btd.SetClassOfService(
+                PERIPHERAL_DEVICE_CLASS[self.device_type]
+            )
 
     def unregister_signal_handler(self, signum, name):
         """Unregisters a specific signal handler.

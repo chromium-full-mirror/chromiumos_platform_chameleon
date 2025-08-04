@@ -1015,7 +1015,7 @@ class BluezPeripheral(PeripheralKit):
         logging.info("Setting Secure Simple Pairing to %s", enable)
         _control = bluetooth_socket.BluetoothControlSocket()
         if _control.set_ssp(0, enable) is None:
-            logging.error("Failed to set Secure Connection")
+            logging.error("Failed to set Secure Simple Pairing")
             return False
         return True
 
