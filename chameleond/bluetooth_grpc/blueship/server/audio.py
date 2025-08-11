@@ -14,6 +14,10 @@ from google.protobuf import empty_pb2
 import grpc
 
 
+# Delta of each volume change
+VOLUME_DELTA = 5
+
+
 class AudioService(audio_grpc_aio.AudioServicer):
     """Service to trigger Chameleon Audio procedures."""
 
@@ -97,7 +101,13 @@ class AudioService(audio_grpc_aio.AudioServicer):
         request: audio_pb2.SendAvrcpCmdRequest,
         context: grpc.ServicerContext,
     ) -> empty_pb2.Empty:
-        if request.cmd == audio_pb2.AUDIO_PLAYER_PLAY:
+        if request.cmd == audio_pb2.AUDIO_PLAYER_VOL_UP:
+            self.ctx.btd.SetVolumeDelta(VOLUME_DELTA)
+            return empty_pb2.Empty()
+        elif request.cmd == audio_pb2.AUDIO_PLAYER_VOL_DOWN:
+            self.ctx.btd.SetVolumeDelta(-VOLUME_DELTA)
+            return empty_pb2.Empty()
+        elif request.cmd == audio_pb2.AUDIO_PLAYER_PLAY:
             cmd = "play"
         elif request.cmd == audio_pb2.AUDIO_PLAYER_PAUSE:
             cmd = "pause"
@@ -107,13 +117,6 @@ class AudioService(audio_grpc_aio.AudioServicer):
             cmd = "next"
         elif request.cmd == audio_pb2.AUDIO_PLAYER_PREV:
             cmd = "prev"
-        # For some reason playerctl volume change is not working
-        #
-        # elif request.cmd == audio_pb2.AUDIO_PLAYER_VOL_UP:
-        #    cmd = 'volume 0.1+'
-        # elif request.cmd == audio_pb2.AUDIO_PLAYER_VOL_DOWN:
-        #    cmd = 'volume 0.1-'
-        #
         else:
             logging.error("Unrecognized command %s", request.cmd)
             return empty_pb2.Empty()

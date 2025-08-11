@@ -38,7 +38,6 @@ class PowerService(power_grpc_aio.PowerServicer):
         time.sleep(1)
 
         if self.bredr_only and self.connected_device is not None:
-            self.ctx.btd.SetRemoteAddress(self.connected_device)
             logging.info("Reconnect to %s", self.connected_device)
             self.ctx.btd.Connect()
 

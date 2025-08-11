@@ -393,6 +393,8 @@ class BluetoothAudio(BluezPeripheral):
     WP_BLUEZ_AAC_CONFIG = "bluez-aac-properties.conf"
     WP_BLUEZ_SWB_CONFIG = "bluez-swb-properties.conf"
 
+    VOLUME_MAX = 127
+
     # The pipewire related processes:
     # - pipewire: the audio server process
     # - wireplumber: an auxiliary process for configuring pipewire
@@ -1809,6 +1811,35 @@ class BluetoothAudio(BluezPeripheral):
             return ""
 
         return SystemTools.Output(self.PLAYERCTL, "-p", player, *args).strip()
+
+    def _GetTransporProperyInterface(self):
+        device_path = self.remote_address.replace(":", "_")
+        path = f"/org/bluez/hci0/dev_{device_path}/fd0"
+
+        obj = self._dbus_system_bus.get_object("org.bluez", path)
+        if obj is None:
+            return None
+        return dbus.Interface(obj, "org.freedesktop.DBus.Properties")
+
+    def SetVolumeDelta(self, volume_delta):
+        """Changes the volume by delta if possible.
+
+        Args:
+            volume_delta: the delta to change.
+        """
+        transport = self._GetTransporProperyInterface()
+        if transport is None:
+            logging.error("Unable to find the audio transport")
+            return
+
+        volume = int(transport.Get("org.bluez.MediaTransport1", "Volume"))
+        new_volume = max(min(volume + volume_delta, self.VOLUME_MAX), 0)
+        logging.debug(f"Setting volume={volume} -> {new_volume}")
+        transport.Set(
+            "org.bluez.MediaTransport1",
+            "Volume",
+            dbus.UInt16(new_volume, variant_level=1),
+        )
 
     def SendMediaPlayerCommand(self, command):
         """Execute command towards the given player.

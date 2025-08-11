@@ -130,24 +130,9 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
 
             return True
 
-        def _check_player_cmd_supported():
-            UNSUPPORTED_PLAYER_CMDS = [
-                "AUDIO_PLAYER_VOL_UP",
-                "AUDIO_PLAYER_VOL_DOWN",
-            ]
-            for cmd in UNSUPPORTED_PLAYER_CMDS:
-                if (
-                    cmd
-                    in req_config_dict["audio"]["supportedPlayerCommands"][
-                        "playerCmdList"
-                    ]["playerCmdList"]
-                ):
-                    logging.warning("cmd %s is not supported.", cmd)
-                    return False
-
-            return True
-
-        check_funcs = [_check_codec_supported, _check_player_cmd_supported]
+        check_funcs = [
+            _check_codec_supported,
+        ]
 
         for func in check_funcs:
             try:
