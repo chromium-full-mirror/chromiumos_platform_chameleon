@@ -149,10 +149,7 @@ class BluezKeyboardClient(object):
         time.sleep(1)
 
         for c in string_to_send:
-            self.set_report_from_key(c)
-
-            scancode = keymap[keymapkey]
-            self.send_key_down(scancode)
+            self.send_single_key_press(c)
             time.sleep(self.KEY_DOWN_TIME)
             self.send_key_up()
             time.sleep(delay if delay != 0 else self.KEY_DELAY)
