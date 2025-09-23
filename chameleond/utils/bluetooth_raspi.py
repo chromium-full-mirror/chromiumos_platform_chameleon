@@ -661,6 +661,7 @@ class BluezPeripheral(PeripheralKit):
     # Override BluetoothHID's implementation of init
     def Init(self, factory_reset=True):
         """Ensures our chip is in the correct state for the tests to be run"""
+        logging.info("Init")
 
         # Make sure device is powered up and discoverable
         if not self._get_hci_prop("org.bluez.Adapter1", "Powered"):
@@ -1095,9 +1096,26 @@ class BluezPeripheral(PeripheralKit):
         return None
 
     def SetClassOfService(self, class_of_service):
+        logging.info("SetClassOfService class_of_service: %s", class_of_service)
+
         # Class is a read-only DBus property, so needs to be set using system calls.
         cmd = "sudo hciconfig hci0 class {}".format(hex(class_of_service))
         os.system(cmd)
+
+    def SetDeviceClass(self, major, minor):
+        """Sets the device class of the controller.
+
+        @param major: Major device class.
+        @param minor: Minor device class.
+
+        @return True if success, False otherwise.
+        """
+        logging.info("SetDeviceClass major: %s minor: %s", major, minor)
+        _control = bluetooth_socket.BluetoothControlSocket()
+        if _control.set_device_class(0, major, minor) is None:
+            logging.error("Failed to set device class.")
+            return False
+        return True
 
     def SetLinkMode(self, mode):
         """Sets controller to the specified link mode.

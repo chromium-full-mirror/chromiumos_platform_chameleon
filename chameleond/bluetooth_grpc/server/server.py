@@ -236,6 +236,10 @@ class TestServerContext:
             )
         cmds.extend(["sudo btmgmt power on"])
 
+        logging.info(
+            "Restart BT to set secure connections to %s",
+            self.secure_connections,
+        )
         for cmd in cmds:
             os.system(cmd)
             time.sleep(0.1)
@@ -255,9 +259,9 @@ class TestServerContext:
         self.btd.SetIOCapability(self.io_capability)
 
         if self.device_type and "BLE" not in self.device_type:
-            self.btd.SetClassOfService(
-                PERIPHERAL_DEVICE_CLASS[self.device_type]
-            )
+            major = (PERIPHERAL_DEVICE_CLASS[self.device_type] & 0x001F00) >> 8
+            minor = PERIPHERAL_DEVICE_CLASS[self.device_type] & 0x0000FC
+            self.btd.SetDeviceClass(major, minor)
 
     def unregister_signal_handler(self, signum, name):
         """Unregisters a specific signal handler.
