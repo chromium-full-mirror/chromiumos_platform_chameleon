@@ -18,8 +18,7 @@ BLUEZ_HID_SERVICE_PATH = "/org/chromium/autotest/btkbservice"
 BLUEZ_HID_PERIPHERAL_PROFILE_PATH = "/org/chromium/autotest/btkbprofile"
 BLUEZ_RFCOMM_SERVICE_NAME = "org.chromium.autotest.btrfcommservice"
 BLUEZ_RFCOMM_SERVICE_PATH = "/org/chromium/autotest/btrfcommservice"
-BLUEZ_RFCOMM_PERIPHERAL_PROFILE_PATH = "/org/chromium/autotest/btrfcommprofile"
-BLUEZ_RFCOMM_ECHO_PROFILE_PATH = "/org/chromium/autotest/btrfcommprofile"
+BLUEZ_RFCOMM_ECHO_PROFILE_PATH = "/org/chromium/autotest/btrfcommechoprofile"
 
 CLASS_OF_SERVICE_MASK = 0xFFE000
 CLASS_OF_DEVICE_MASK = 0x001FFF
@@ -62,25 +61,6 @@ PERIPHERAL_DEVICE_APPEARANCE = {
     PeripheralKit.FAST_PAIR: [0x00, 0x00],  # Unknown
 }
 
-SERVICE_PROFILE_SDP_PATH = {
-    PeripheralKit.KEYBOARD: (
-        os.path.dirname(os.path.abspath(__file__)) + "/keyboard_sdp_record.xml"
-    ),
-    PeripheralKit.MOUSE: (
-        os.path.dirname(os.path.abspath(__file__)) + "/mouse_sdp_record.xml"
-    ),
-    PeripheralKit.GAMEPAD: (
-        os.path.dirname(os.path.abspath(__file__)) + "/gamepad_sdp_record.xml"
-    ),
-    # TODO: find a suitable xml for Bluetooth audio device.
-    PeripheralKit.BLUETOOTH_AUDIO: (
-        os.path.dirname(os.path.abspath(__file__)) + "/keyboard_sdp_record.xml"
-    ),
-    PeripheralKit.DEV_KIT: (
-        os.path.dirname(os.path.abspath(__file__)) + "/echo_sdp_record.xml"
-    ),
-}
-
 """
 Both AVRCP and A2DP profiles will try to role switch into central role on any
 L2CAP connection, which causes unexpected behavior when emulating a HID device.
@@ -91,7 +71,7 @@ The uppercased '-P' flag disables the comma-separated plugins that follow it
 """
 AUDIO_BTD_FLAGS = "-d -P input"
 NON_AUDIO_BTD_FLAGS = "-d -P input,avrcp,a2dp"
-SERIAL_PORT_BTD_FLAGS = "-C -d"
+SERIAL_PORT_BTD_FLAGS = "-C -d -P avrcp,a2dp"
 
 PERIPHERAL_BTD_FLAGS = {
     PeripheralKit.KEYBOARD: NON_AUDIO_BTD_FLAGS,
@@ -110,7 +90,30 @@ PERIPHERAL_PROFILE_UUID = {
     PeripheralKit.KEYBOARD: HID_SERVICE_UUID,
     PeripheralKit.MOUSE: HID_SERVICE_UUID,
     PeripheralKit.GAMEPAD: HID_SERVICE_UUID,
-    PeripheralKit.DEV_KIT: ECHO_SERVICE_UUID,
+    PeripheralKit.DEV_KIT: [
+        ECHO_SERVICE_UUID,
+    ],
+}
+
+SERVICE_PROFILE_SDP_PATH = {
+    PeripheralKit.KEYBOARD: (
+        os.path.dirname(os.path.abspath(__file__)) + "/keyboard_sdp_record.xml"
+    ),
+    PeripheralKit.MOUSE: (
+        os.path.dirname(os.path.abspath(__file__)) + "/mouse_sdp_record.xml"
+    ),
+    PeripheralKit.GAMEPAD: (
+        os.path.dirname(os.path.abspath(__file__)) + "/gamepad_sdp_record.xml"
+    ),
+    # TODO: find a suitable xml for Bluetooth audio device.
+    PeripheralKit.BLUETOOTH_AUDIO: (
+        os.path.dirname(os.path.abspath(__file__)) + "/keyboard_sdp_record.xml"
+    ),
+    PeripheralKit.DEV_KIT: {
+        ECHO_SERVICE_UUID: (
+            os.path.dirname(os.path.abspath(__file__)) + "/echo_sdp_record.xml"
+        ),
+    },
 }
 
 

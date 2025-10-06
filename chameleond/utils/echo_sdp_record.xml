@@ -19,3 +19,7 @@
                         <uuid value="0x1002" />
                 </sequence>
         </attribute>
+        <attribute id="0x0100">
+                <text value="RFCOMM Echo Service" />
+        </attribute>
+</record>

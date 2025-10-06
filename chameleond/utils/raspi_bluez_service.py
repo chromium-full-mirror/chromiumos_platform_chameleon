@@ -31,6 +31,7 @@ from .bluez_service_consts import BLUEZ_HID_SERVICE_PATH
 from .bluez_service_consts import BLUEZ_RFCOMM_ECHO_PROFILE_PATH
 from .bluez_service_consts import BLUEZ_RFCOMM_SERVICE_NAME
 from .bluez_service_consts import BLUEZ_RFCOMM_SERVICE_PATH
+from .bluez_service_consts import ECHO_SERVICE_UUID
 from .bluez_service_consts import PERIPHERAL_PROFILE_UUID
 from .bluez_service_consts import SERVICE_PROFILE_SDP_PATH
 
@@ -485,11 +486,11 @@ class BluezHIDService(dbus.service.Object):
         )
 
 
-class BluezRfcommEchoService(dbus.service.Object):
-    """Bluez Service implementation for RFCOMM Echo Service."""
+class BluezRfcommService(dbus.service.Object):
+    """Bluez Service implementation for RFCOMM Service."""
 
     def __init__(self, device_type, adapter_address):
-        self._profile = None
+        self._profiles = []
         self._bus = dbus.SystemBus()
         self._bus_name = dbus.service.BusName(
             BLUEZ_RFCOMM_SERVICE_NAME,
@@ -497,25 +498,29 @@ class BluezRfcommEchoService(dbus.service.Object):
             replace_existing=True,
             allow_replacement=True,
         )
-        super(BluezRfcommEchoService, self).__init__(
+        super(BluezRfcommService, self).__init__(
             self._bus_name, BLUEZ_RFCOMM_SERVICE_PATH
         )
 
         # Init profile only if one is declared for this device type
         profile_uuid = PERIPHERAL_PROFILE_UUID.get(device_type, None)
-        if profile_uuid:
-            self._InitBluezProfile(
-                SERVICE_PROFILE_SDP_PATH.get(device_type, None),
-                BLUEZ_RFCOMM_ECHO_PROFILE_PATH,
-                profile_uuid,
-            )
+
+        if profile_uuid and ECHO_SERVICE_UUID in profile_uuid:
+            sdp_path = SERVICE_PROFILE_SDP_PATH.get(device_type, None)
+            if sdp_path and ECHO_SERVICE_UUID in sdp_path:
+                self._InitBluezProfile(
+                    sdp_path.get(ECHO_SERVICE_UUID, None),
+                    BLUEZ_RFCOMM_ECHO_PROFILE_PATH,
+                    ECHO_SERVICE_UUID,
+                )
 
     def cleanup(self):
-        logging.info("BluezRfcommEchoService: cleanup")
+        logging.info("BluezRfcommService: cleanup")
 
-        if self._profile:
-            self._profile.cleanup()
-            self._profile = None
+        if self._profiles:
+            for profile in self._profiles:
+                profile.cleanup()
+            self._profiles.clear()
 
         self.remove_from_connection()
 
@@ -553,10 +558,13 @@ class BluezRfcommEchoService(dbus.service.Object):
                 "Role": "server",
                 "RequireAuthentication": False,
                 "RequireAuthorization": False,
-                "Channel": dbus.UInt16(ECHO_SERVICE_CHANNEL),
             }
 
-            self._profile = EchoProfile(dbus.SystemBus(), profile_dbus_path)
+            if profile_uuid == ECHO_SERVICE_UUID:
+                opts["Channel"] = dbus.UInt16(ECHO_SERVICE_CHANNEL)
+                self._profiles.append(
+                    EchoProfile(dbus.SystemBus(), profile_dbus_path)
+                )
 
             manager = dbus.Interface(
                 dbus.SystemBus().get_object("org.bluez", "/org/bluez"),

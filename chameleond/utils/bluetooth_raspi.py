@@ -37,7 +37,7 @@ from chameleond.utils import pairing_agent
 from chameleond.utils import system_tools
 from chameleond.utils.bluez_observer import BlueZObserver
 from chameleond.utils.raspi_bluez_service import BluezHIDService
-from chameleond.utils.raspi_bluez_service import BluezRfcommEchoService
+from chameleond.utils.raspi_bluez_service import BluezRfcommService
 from six.moves import range
 
 from . import bluetooth_socket
@@ -545,7 +545,7 @@ class BluezPeripheral(PeripheralKit):
 
             # Set device type and initiate service based on it
             if "DEV_KIT" in device_type:
-                self._bluez_service = BluezRfcommEchoService(
+                self._bluez_service = BluezRfcommService(
                     self.device_type, self.GetLocalBluetoothAddress()
                 )
             else:
