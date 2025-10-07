@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<record>
+        <attribute id="0x0001">
+                <sequence>
+                        <uuid value="0x1132" />
+                </sequence>
+        </attribute>
+        <attribute id="0x0004">
+                <sequence>
+                        <sequence>
+                                <uuid value="0x0100" />
+                        </sequence>
+                        <sequence>
+                                <uuid value="0x0003" />
+                                <uint8 value="0x0a" />
+                        </sequence>
+                        <sequence>
+                                <uuid value="0x0008" />
+                        </sequence>
+                </sequence>
+        </attribute>
+        <attribute id="0x0005">
+                <sequence>
+                        <uuid value="0x1002" />
+                </sequence>
+        </attribute>
+        <attribute id="0x0009">
+                <sequence>
+                        <sequence>
+                                <uuid value="0x1134" />
+                                <uint16 value="0x0100" />
+                        </sequence>
+                </sequence>
+        </attribute>
+        <attribute id="0x0100">
+                <text value="Message Access Service" />
+        </attribute>
+        <attribute id="0x0315">
+                <uint8 value="0x00" />
+        </attribute>
+        <attribute id="0x0316">
+                <uint8 value="0x06" />
+        </attribute>
+        <attribute id="0x0317">
+                <uint32 value="0x000603ff" />
+        </attribute>
+</record>
