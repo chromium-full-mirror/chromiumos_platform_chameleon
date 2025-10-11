@@ -25,7 +25,7 @@ import dbus.service
 from gi.repository import GLib
 from six.moves import range
 
-from .bluez_obex_handler import ObexHandler
+from .bluez_map_server import MapServer
 from .bluez_service_consts import BLUEZ_HID_PERIPHERAL_PROFILE_PATH
 from .bluez_service_consts import BLUEZ_HID_SERVICE_NAME
 from .bluez_service_consts import BLUEZ_HID_SERVICE_PATH
@@ -47,8 +47,6 @@ MAX_CONNECT_RETRY_ATTEMPTS = 3
 
 ECHO_SERVICE_CHANNEL = 30
 MAP_SERVICE_CHANNEL = 10
-
-MAP_CONNECTION_ID = 0x00000001
 
 
 class BluezServiceException(Exception):
@@ -168,7 +166,7 @@ class MapProfile(dbus.service.Object):
         dbus.service.Object.__init__(self, bus, path)
         self.fd = None
         self.path = path
-        self.map_handler = ObexHandler(MAP_CONNECTION_ID)
+        self.map_handler = MapServer()
 
     @dbus.service.method(
         "org.bluez.Profile1", in_signature="", out_signature=""
@@ -194,29 +192,19 @@ class MapProfile(dbus.service.Object):
         try:
             done = False
             while not done:
-                opcode, data = self.map_handler.ProcessRequest(self.fd)
+                status, opcode, headers = self.map_handler.ProcessMapRequest(
+                    self.fd
+                )
                 if opcode is None:
                     time.sleep(0.1)
                     continue
 
-                if opcode == ObexHandler.REQ_CONNECT:
-                    status, flags, headers = self.map_handler.ProcessConnect(
-                        data
-                    )
-                    self.map_handler.SendResponse(self.fd, opcode, status)
-                elif opcode == ObexHandler.REQ_DISCONNECT:
-                    status, headers = self.map_handler.ProcessDisconnect(data)
-                    self.map_handler.SendResponse(self.fd, opcode, status)
+                self.map_handler.SendMapResponse(
+                    self.fd, opcode, status, headers
+                )
+
+                if opcode == MapServer.REQ_DISCONNECT:
                     done = True
-                else:
-                    logging.warning(
-                        "MapProfile: Operation not implemented: 0x{:02x}".format(
-                            opcode
-                        )
-                    )
-                    self.map_handler.SendResponse(
-                        self.fd, opcode, ObexHandler.RSP_NOT_IMPLEMENTED
-                    )
         except OSError as e:
             logging.warning(f"MapProfile: Connection closed or error: {e}")
         except Exception as e:
