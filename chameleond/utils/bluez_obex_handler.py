@@ -21,6 +21,15 @@ class ObexHeader:
     value: bytes
 
 
+@dataclasses.dataclass
+class AppParamsHeader:
+    """Application Parameters Header Format."""
+
+    id: int
+    length: int
+    value: bytes
+
+
 class ObexHandler:
     """OBEX Operations and Opcodes Implementation."""
 
@@ -52,6 +61,7 @@ class ObexHandler:
     OBJ_END_OF_BODY = 0x49
     OBJ_WHO = 0x4A
     OBJ_APP_PARAM = 0x4C
+    OBJ_LENGTH = 0xC3
     OBJ_CONN_ID = 0xCB
 
     # OBEX Response Codes (without the high bit)
@@ -146,6 +156,82 @@ class ObexHandler:
                 data += header.value
 
         return data
+
+    def ParseAppParams(self, data):
+        """Parses Application Parameters.
+
+        Args:
+            data: bytes array of raw data from App Parameters header
+
+        Returns:
+            params: a list of parsed parameters of type AppParamsHeader
+        """
+
+        params = []
+        i = 0
+
+        while i < len(data):
+            id = data[i]
+            i += 1
+
+            length = data[i]
+            i += 1
+
+            value = data[i : i + length]
+            i += length
+
+            params.append(AppParamsHeader(id, length, value))
+
+        return params
+
+    def PackAppParams(self, params):
+        """Packs application parameters into a bytes array.
+
+        Args:
+            params: a list of parameters of type AppParamsHeader
+
+        Returns:
+            data: bytes array of raw data of application parameters
+        """
+
+        data = b""
+
+        for param in params:
+            data += struct.pack(">BB", param.id, param.length)
+            data += param.value
+
+        return data
+
+    def ParseName(self, data):
+        """Parses Name Header.
+
+        Args:
+            data: bytes array of raw data from name header
+
+        Returns:
+            name: name in string format
+        """
+
+        # OBEX Name header is encoded as UCS-2 (which is UTF-16). OBEX uses
+        # network order, so decode using 'be' and strip any trailing null
+        # characters.
+
+        return data.decode("utf-16-be").strip("\x00")
+
+    def ParseType(self, data):
+        """Parses Type Header.
+
+        Args:
+            data: bytes array of raw data from type header
+
+        Returns:
+            name: type in string format
+        """
+
+        # OBEX Type header is encoded as UTF-8, so decode using standard
+        # 'utf-8' and strip any trailing null characters.
+
+        return data.decode("utf-8").strip("\x00")
 
     def CheckConnectionId(self, headers):
         """Checks if the connection ID in the headers matches the expected one.

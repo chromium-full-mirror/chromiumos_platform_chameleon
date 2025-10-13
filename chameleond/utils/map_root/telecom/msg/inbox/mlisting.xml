@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<MAP-msg-listing version="1.0">
+  <msg attachment_size="0" datetime="20241122T082404" handle="04000000000000D7" priority="no" protected="no" read="yes" reception_status="complete" recipient_addressing="" recipient_name="" sender_addressing="+15256461236" sender_name="" sent="no" size="14" subject="Test Message 3" text="yes" type="SMS_GSM" />
+  <msg attachment_size="0" datetime="20241120T082136" handle="04000000000000CA" priority="no" protected="no" read="yes" reception_status="complete" recipient_addressing="" recipient_name="" sender_addressing="+15256461235" sender_name="" sent="no" size="14" subject="Test Message 2" text="yes" type="SMS_GSM" />
+  <msg attachment_size="0" datetime="20241031T081016" handle="04000000000000A8" priority="no" protected="no" read="yes" reception_status="complete" recipient_addressing="" recipient_name="" sender_addressing="+15256461234" sender_name="" sent="no" size="14" subject="Test Message 1" text="yes" type="SMS_GSM" />
+</MAP-msg-listing>
