@@ -1,0 +1,6 @@
+BEGIN:VCARD
+VERSION:3.0
+N:3;Test;Contact;;
+FN:Test Contact 3
+TEL;X-Mobile:+15256461236
+END:VCARD

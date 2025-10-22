@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<!DOCTYPE vcard-listing SYSTEM "vcard-listing.dtd">
+<vCard-listing version="1.0">
+  <card handle="1.vcf" name="Test Contact 2"/>
+  <card handle="2.vcf" name="Test Contact 1"/>
+  <card handle="3.vcf" name="Test Contact 3"/>
+</vCard-listing>

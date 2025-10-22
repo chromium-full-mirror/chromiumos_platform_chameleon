@@ -1,0 +1,18 @@
+BEGIN:VCARD
+VERSION:3.0
+N:1;Test;Contact;;
+FN:Test Contact 1
+TEL;X-Mobile:+15256461234
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+N:2;Test;Contact;;
+FN:Test Contact 2
+TEL;X-Mobile:+15256461235
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+N:3;Test;Contact;;
+FN:Test Contact 3
+TEL;X-Mobile:+15256461236
+END:VCARD

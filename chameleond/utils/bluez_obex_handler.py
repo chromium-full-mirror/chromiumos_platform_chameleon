@@ -372,12 +372,6 @@ class ObexHandler:
 
             data = fd.read(length - FORMAT_LEN)
 
-            logging.debug(
-                "OBEX request {:02x} len {:04x} data {}".format(
-                    opcode, length, data.hex()
-                )
-            )
-
         return opcode, data
 
     def SendResponse(self, fd, opcode, rsp_code, headers=[]):
@@ -412,11 +406,5 @@ class ObexHandler:
 
         response = struct.pack(">BH", rsp_code, length)
         response += data
-
-        logging.debug(
-            "OBEX response {:02x} len {:04x} data {}".format(
-                rsp_code, length, data.hex()
-            )
-        )
 
         fd.write(response)
