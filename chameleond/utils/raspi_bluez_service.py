@@ -26,15 +26,18 @@ from gi.repository import GLib
 from six.moves import range
 
 from .bluez_map_server import MapServer
+from .bluez_pbap_server import PbapServer
 from .bluez_service_consts import BLUEZ_HID_PERIPHERAL_PROFILE_PATH
 from .bluez_service_consts import BLUEZ_HID_SERVICE_NAME
 from .bluez_service_consts import BLUEZ_HID_SERVICE_PATH
 from .bluez_service_consts import BLUEZ_RFCOMM_ECHO_PROFILE_PATH
 from .bluez_service_consts import BLUEZ_RFCOMM_MAP_PROFILE_PATH
+from .bluez_service_consts import BLUEZ_RFCOMM_PBAP_PROFILE_PATH
 from .bluez_service_consts import BLUEZ_RFCOMM_SERVICE_NAME
 from .bluez_service_consts import BLUEZ_RFCOMM_SERVICE_PATH
 from .bluez_service_consts import ECHO_SERVICE_UUID
 from .bluez_service_consts import MAP_SERVICE_UUID
+from .bluez_service_consts import PBAP_SERVICE_UUID
 from .bluez_service_consts import PERIPHERAL_PROFILE_UUID
 from .bluez_service_consts import SERVICE_PROFILE_SDP_PATH
 
@@ -47,6 +50,7 @@ MAX_CONNECT_RETRY_ATTEMPTS = 3
 
 ECHO_SERVICE_CHANNEL = 30
 MAP_SERVICE_CHANNEL = 10
+PBAP_SERVICE_CHANNEL = 20
 
 
 class BluezServiceException(Exception):
@@ -229,6 +233,77 @@ class MapProfile(dbus.service.Object):
 
     def cleanup(self):
         logging.info("MapProfile: cleanup")
+        self.remove_from_connection()
+
+
+class PbapProfile(dbus.service.Object):
+    def __init__(self, bus, path):
+        dbus.service.Object.__init__(self, bus, path)
+        self.fd = None
+        self.path = path
+        self.pbap_handler = PbapServer()
+
+    @dbus.service.method(
+        "org.bluez.Profile1", in_signature="", out_signature=""
+    )
+    def Release(self):
+        logging.info("PbapProfile: Release")
+        if self.fd:
+            self.fd.close()
+            self.fd = None
+
+    @dbus.service.method(
+        "org.bluez.Profile1", in_signature="oha{sv}", out_signature=""
+    )
+    def NewConnection(self, path, fd, properties):
+        logging.info(
+            "PbapProfile: New Connection from {} {} {}".format(
+                properties, path, fd
+            )
+        )
+
+        self.fd = os.fdopen(fd.take(), "r+b", 0)
+
+        try:
+            done = False
+            while not done:
+                status, opcode, headers = self.pbap_handler.ProcessPbapRequest(
+                    self.fd
+                )
+                if opcode is None:
+                    time.sleep(0.1)
+                    continue
+
+                self.pbap_handler.SendPbapResponse(
+                    self.fd, opcode, status, headers
+                )
+
+                if opcode == PbapServer.REQ_DISCONNECT:
+                    done = True
+        except OSError as e:
+            logging.warning(f"PbapProfile: Connection closed or error: {e}")
+        except Exception as e:
+            logging.warning(f"PbapProfile: Exception occurred: {e}")
+        finally:
+            logging.info(
+                "PbapProfile: Closing Connection from {} {} {}".format(
+                    properties, path, fd
+                )
+            )
+            self.fd.close()
+            self.fd = None
+
+    @dbus.service.method(
+        "org.bluez.Profile1", in_signature="", out_signature=""
+    )
+    def RequestDisconnection(self):
+        logging.info("PbapProfile: Request Disconnection")
+        if self.fd:
+            self.fd.close()
+            self.fd = None
+
+    def cleanup(self):
+        logging.info("PbapProfile: cleanup")
         self.remove_from_connection()
 
 
@@ -598,6 +673,15 @@ class BluezRfcommService(dbus.service.Object):
                     MAP_SERVICE_UUID,
                 )
 
+        if profile_uuid and PBAP_SERVICE_UUID in profile_uuid:
+            sdp_path = SERVICE_PROFILE_SDP_PATH.get(device_type, None)
+            if sdp_path and PBAP_SERVICE_UUID in sdp_path:
+                self._InitBluezProfile(
+                    sdp_path.get(PBAP_SERVICE_UUID, None),
+                    BLUEZ_RFCOMM_PBAP_PROFILE_PATH,
+                    PBAP_SERVICE_UUID,
+                )
+
     def cleanup(self):
         logging.info("BluezRfcommService: cleanup")
 
@@ -653,6 +737,11 @@ class BluezRfcommService(dbus.service.Object):
                 opts["Channel"] = dbus.UInt16(MAP_SERVICE_CHANNEL)
                 self._profiles.append(
                     MapProfile(dbus.SystemBus(), profile_dbus_path)
+                )
+            elif profile_uuid == PBAP_SERVICE_UUID:
+                opts["Channel"] = dbus.UInt16(PBAP_SERVICE_CHANNEL)
+                self._profiles.append(
+                    PbapProfile(dbus.SystemBus(), profile_dbus_path)
                 )
 
             manager = dbus.Interface(

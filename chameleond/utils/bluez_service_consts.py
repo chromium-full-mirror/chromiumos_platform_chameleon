@@ -20,6 +20,7 @@ BLUEZ_RFCOMM_SERVICE_NAME = "org.chromium.autotest.btrfcommservice"
 BLUEZ_RFCOMM_SERVICE_PATH = "/org/chromium/autotest/btrfcommservice"
 BLUEZ_RFCOMM_ECHO_PROFILE_PATH = "/org/chromium/autotest/btrfcommechoprofile"
 BLUEZ_RFCOMM_MAP_PROFILE_PATH = "/org/chromium/autotest/btrfcommmapprofile"
+BLUEZ_RFCOMM_PBAP_PROFILE_PATH = "/org/chromium/autotest/btrfcommpbapprofile"
 
 CLASS_OF_SERVICE_MASK = 0xFFE000
 CLASS_OF_DEVICE_MASK = 0x001FFF
@@ -87,6 +88,7 @@ PERIPHERAL_BTD_FLAGS = {
 HID_SERVICE_UUID = "00001124-0000-1000-8000-00805f9b34fb"
 ECHO_SERVICE_UUID = "eecc1700-0000-1000-8000-00805f9b34fb"
 MAP_SERVICE_UUID = "00001134-0000-1000-8000-00805f9b34fb"
+PBAP_SERVICE_UUID = "00001130-0000-1000-8000-00805f9b34fb"
 
 PERIPHERAL_PROFILE_UUID = {
     PeripheralKit.KEYBOARD: HID_SERVICE_UUID,
@@ -95,6 +97,7 @@ PERIPHERAL_PROFILE_UUID = {
     PeripheralKit.DEV_KIT: [
         ECHO_SERVICE_UUID,
         MAP_SERVICE_UUID,
+        PBAP_SERVICE_UUID,
     ],
 }
 
@@ -118,6 +121,9 @@ SERVICE_PROFILE_SDP_PATH = {
         ),
         MAP_SERVICE_UUID: (
             os.path.dirname(os.path.abspath(__file__)) + "/map_sdp_record.xml"
+        ),
+        PBAP_SERVICE_UUID: (
+            os.path.dirname(os.path.abspath(__file__)) + "/pbap_sdp_record.xml"
         ),
     },
 }
