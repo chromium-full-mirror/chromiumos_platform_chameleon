@@ -17,6 +17,7 @@ import os
 import socket
 import time
 
+from blueship import manager_pb2
 from bluetooth import BluetoothSocket
 from bluetooth import L2CAP
 import dbus
@@ -113,6 +114,7 @@ class EchoProfile(dbus.service.Object):
         dbus.service.Object.__init__(self, bus, path)
         self.fd = None
         self.path = path
+        logging.info("EchoProfile: init")
 
     @dbus.service.method(
         "org.bluez.Profile1", in_signature="", out_signature=""
@@ -139,6 +141,7 @@ class EchoProfile(dbus.service.Object):
                 if not data:
                     time.sleep(0.1)
                     continue
+                logging.debug(f"EchoProfile: Writing back {data}")
                 self.fd.write(data)  # Echo back the received data
         except OSError as e:
             logging.warn(f"EchoProfile: Connection closed or error: {e}")
@@ -171,6 +174,7 @@ class MapProfile(dbus.service.Object):
         self.fd = None
         self.path = path
         self.map_handler = MapServer()
+        logging.info("MapProfile: init")
 
     @dbus.service.method(
         "org.bluez.Profile1", in_signature="", out_signature=""
@@ -242,6 +246,7 @@ class PbapProfile(dbus.service.Object):
         self.fd = None
         self.path = path
         self.pbap_handler = PbapServer()
+        logging.info("PbapProfile: init")
 
     @dbus.service.method(
         "org.bluez.Profile1", in_signature="", out_signature=""
@@ -639,7 +644,7 @@ class BluezHIDService(dbus.service.Object):
 class BluezRfcommService(dbus.service.Object):
     """Bluez Service implementation for RFCOMM Service."""
 
-    def __init__(self, device_type, adapter_address):
+    def __init__(self, device_type, adapter_address, rfcomm_services):
         self._profiles = []
         self._bus = dbus.SystemBus()
         self._bus_name = dbus.service.BusName(
@@ -652,10 +657,16 @@ class BluezRfcommService(dbus.service.Object):
             self._bus_name, BLUEZ_RFCOMM_SERVICE_PATH
         )
 
+        logging.debug(f"Rfcomm services to start {rfcomm_services}")
+
         # Init profile only if one is declared for this device type
         profile_uuid = PERIPHERAL_PROFILE_UUID.get(device_type, None)
 
-        if profile_uuid and ECHO_SERVICE_UUID in profile_uuid:
+        if (
+            manager_pb2.ECHO_SERVICE in rfcomm_services
+            and profile_uuid
+            and ECHO_SERVICE_UUID in profile_uuid
+        ):
             sdp_path = SERVICE_PROFILE_SDP_PATH.get(device_type, None)
             if sdp_path and ECHO_SERVICE_UUID in sdp_path:
                 self._InitBluezProfile(
@@ -664,7 +675,11 @@ class BluezRfcommService(dbus.service.Object):
                     ECHO_SERVICE_UUID,
                 )
 
-        if profile_uuid and MAP_SERVICE_UUID in profile_uuid:
+        if (
+            manager_pb2.MAP_SERVICE in rfcomm_services
+            and profile_uuid
+            and MAP_SERVICE_UUID in profile_uuid
+        ):
             sdp_path = SERVICE_PROFILE_SDP_PATH.get(device_type, None)
             if sdp_path and MAP_SERVICE_UUID in sdp_path:
                 self._InitBluezProfile(
@@ -673,7 +688,11 @@ class BluezRfcommService(dbus.service.Object):
                     MAP_SERVICE_UUID,
                 )
 
-        if profile_uuid and PBAP_SERVICE_UUID in profile_uuid:
+        if (
+            manager_pb2.PBAP_SERVICE in rfcomm_services
+            and profile_uuid
+            and PBAP_SERVICE_UUID in profile_uuid
+        ):
             sdp_path = SERVICE_PROFILE_SDP_PATH.get(device_type, None)
             if sdp_path and PBAP_SERVICE_UUID in sdp_path:
                 self._InitBluezProfile(

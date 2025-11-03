@@ -74,4 +74,12 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
             ),
         ),
     ),
+    devkit=manager_pb2.DevKitConfig(
+        rfcomm_services=manager_pb2.ConfigVariant(
+            writable=True,
+            service_list=manager_pb2.RepeatedRfcommService(
+                service_list=[manager_pb2.ECHO_SERVICE]
+            ),
+        ),
+    ),
 )

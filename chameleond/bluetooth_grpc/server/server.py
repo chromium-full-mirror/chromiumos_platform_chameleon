@@ -214,7 +214,11 @@ class TestServerContext:
             if not self.btd.ExportMediaPlayer():
                 logging.info("Failed to export media player")
 
-        self.btd.SpecifyDeviceType(self.device_type)
+        self.btd.SpecifyDeviceType(
+            self.device_type,
+            self.config.devkit.rfcomm_services.service_list.service_list,
+        )
+
         # Delay 1 second to wait for power on.
         time.sleep(1)
 

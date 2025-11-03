@@ -502,7 +502,7 @@ class BluezPeripheral(PeripheralKit):
 
         return device_type
 
-    def SpecifyDeviceType(self, device_type):
+    def SpecifyDeviceType(self, device_type, rfcomm_services=None):
         """Instantiates one of our supported devices
 
         The raspi stack is designed to emulate a single device at a time. This
@@ -511,6 +511,8 @@ class BluezPeripheral(PeripheralKit):
 
         Args:
           device_type: String device type, e.g. "MOUSE"
+          rfcomm_services: A list of Rfcomm services to start (applicable only
+                           when the device_type is DEV_KIT)
         """
 
         # Do nothing if we were already bound to this device
@@ -546,7 +548,9 @@ class BluezPeripheral(PeripheralKit):
             # Set device type and initiate service based on it
             if "DEV_KIT" in device_type:
                 self._bluez_service = BluezRfcommService(
-                    self.device_type, self.GetLocalBluetoothAddress()
+                    self.device_type,
+                    self.GetLocalBluetoothAddress(),
+                    rfcomm_services,
                 )
             else:
                 self._bluez_service = BluezHIDService(

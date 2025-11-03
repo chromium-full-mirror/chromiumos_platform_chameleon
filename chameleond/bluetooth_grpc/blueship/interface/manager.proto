@@ -109,6 +109,19 @@ message RepeatedCodec { repeated Codec codec_list = 1; }
 
 message RepeatedPlayerCommands { repeated PlayerCmd player_cmd_list = 1; }
 
+message DevKitConfig {
+  ConfigVariant rfcomm_services = 1; // RepeatedRfcommService
+}
+
+enum RfcommService {
+  UNKNOWN_SERVICE = 0;
+  ECHO_SERVICE = 1;
+  MAP_SERVICE = 2;
+  PBAP_SERVICE = 3;
+}
+
+message RepeatedRfcommService { repeated RfcommService service_list = 1; }
+
 message ConfigVariant {
   bool writable = 1;
 
@@ -127,6 +140,7 @@ message ConfigVariant {
     RepeatedString string_list = 201;
     RepeatedCodec codec_list = 202;
     RepeatedPlayerCommands player_cmd_list = 203;
+    RepeatedRfcommService service_list = 204;
   }
 }
 
@@ -139,6 +153,7 @@ message Configuration {
   ControllerConfig controller = 3;
   SecurityConfig security = 4;
   AudioConfig audio = 5;
+  DevKitConfig devkit = 6;
 }
 
 message RestartServerRequest { Configuration next_config = 1; }
