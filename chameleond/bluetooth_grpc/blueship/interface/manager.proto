@@ -99,8 +99,8 @@ enum Codec {
   CODEC_LDAC = 4;
   CODEC_LC3 = 5;
   /* HFP Codec */
-  CODEC_MSBC = 101;
-  CODEC_CVSD = 102;
+  CODEC_CVSD = 101;
+  CODEC_MSBC = 102;
 }
 
 message RepeatedString { repeated string string_list = 1; }

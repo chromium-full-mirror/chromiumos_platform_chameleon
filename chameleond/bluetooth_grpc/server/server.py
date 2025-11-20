@@ -159,10 +159,10 @@ class TestServerContext:
     def hfp_codec(self):
         """Helper function to get the default HFP codec"""
         codec_list = self.config.audio.supported_codecs.codec_list.codec_list
-        if manager_pb2.CODEC_CVSD in codec_list:
-            return "CVSD"
-        elif manager_pb2.CODEC_MSBC in codec_list:
+        if manager_pb2.CODEC_MSBC in codec_list:
             return "mSBC"
+        elif manager_pb2.CODEC_CVSD in codec_list:
+            return "CVSD"
         return None
 
     @property

@@ -28,7 +28,7 @@ class AudioService(audio_grpc_aio.AudioServicer):
             shared_context: context that is shared by all service
         """
         self.ctx = shared_context
-        self.is_wbs = self.ctx.hfp_codec == "CVSD"
+        self.is_wbs = self.ctx.hfp_codec == "mSBC"
 
     async def StartRecordAudio(
         self,
