@@ -49,6 +49,9 @@ setup(
             "utils/*.xml",
             "utils/*.conf",
             "utils/data/*/*",
+            "utils/map_root/telecom/*/*/*",
+            "utils/pbap_root/telecom/*",
+            "utils/pbap_root/telecom/*/*",
         ]
     },
     url="http://www.chromium.org",
