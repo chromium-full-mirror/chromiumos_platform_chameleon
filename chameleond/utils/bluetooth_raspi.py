@@ -167,6 +167,7 @@ class BluezPeripheral(PeripheralKit):
         self._bluez_service = None
         self._service = None
         self._gatt_server = None
+        self._privacy = None
 
         # Bluez DBus constants - npnext
         self._service_iface = None
@@ -795,7 +796,11 @@ class BluezPeripheral(PeripheralKit):
             )
         # Also set discoverable in gatt server if relevant
         if self._gatt_server:
-            self._gatt_server.SetDiscoverable(discoverable)
+            if self._privacy:
+                self._gatt_server.SetDiscoverableNoConfigAdv(discoverable)
+                self.SetAdvertising(discoverable)
+            else:
+                self._gatt_server.SetDiscoverable(discoverable)
 
     def SetDiscoverableNoConfigAdv(self, discoverable):
         """Set discoverable without configuring advertisements."""
@@ -940,6 +945,12 @@ class BluezPeripheral(PeripheralKit):
 
         @return: True if able to set privacy
         """
+        # If the privacy mode has been set, especially been set as true, do not
+        # reset it to true again. This would update the IRK.
+        if self._privacy == enable:
+            logging.info("Privacy already set to %s", enable)
+            return True
+
         _control = bluetooth_socket.BluetoothControlSocket()
         if not self.AdapterPowerOff():
             logging.error("Unable to power off adapter")
@@ -955,6 +966,8 @@ class BluezPeripheral(PeripheralKit):
             self._gatt_server.SetOwnAddressType(
                 RANDOM_DEVICE_ADDRESS if enable else PUBLIC_DEVICE_ADDRESS
             )
+
+        self._privacy = enable
 
         return True
 

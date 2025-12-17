@@ -16,6 +16,9 @@ service Security {
   // It is expected that the pairing mode should be stopped when the
   // device successfully bonds to one device during the pairing mode.
   rpc StartPairingMode(stream PairingEventAnswer) returns (stream PairingEvent);
+  // Get random private address
+  rpc GetRandomAddress(google.protobuf.Empty)
+      returns (GetRandomAddressResponse);
 }
 
 message PairRequest {
@@ -72,3 +75,5 @@ message PairingEventAnswer {
     bytes pin = 4;
   };
 }
+
+message GetRandomAddressResponse { string address = 1; }

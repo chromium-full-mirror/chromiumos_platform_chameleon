@@ -83,6 +83,7 @@ message SecurityConfig {
   ConfigVariant secure_connections = 2;    // SecureConnections
   ConfigVariant secure_simple_pairing = 3; // bool
   ConfigVariant link_mode = 4;             // LinkMode
+  ConfigVariant privacy = 5;               // bool
 }
 
 message AudioConfig {

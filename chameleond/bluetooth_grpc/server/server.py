@@ -127,6 +127,11 @@ class TestServerContext:
         return None
 
     @property
+    def privacy(self):
+        """Helper function to convert Privacy from proto to bool"""
+        return self.config.security.privacy.bool_value
+
+    @property
     def device_type(self):
         """Helper function to convert Device Category from proto to String"""
         device_type = self.config.device.category.device_category
@@ -251,6 +256,8 @@ class TestServerContext:
         time.sleep(1)
 
         self.btd.SetLinkMode(self.link_mode)
+
+        self.btd.SetPrivacy(self.privacy)
 
         if self.support_classic:
             # Enable fast connectable to reduce the chance of page timeout in test.

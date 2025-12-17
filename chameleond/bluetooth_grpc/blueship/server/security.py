@@ -336,3 +336,17 @@ class SecurityService(security_grpc_aio.SecurityServicer):
                 self.pairing_events.put((None, None)),
                 self.pairing_loop,
             )
+
+    async def GetRandomAddress(
+        self,
+        request: empty_pb2.Empty,
+        context: grpc.ServicerContext,
+    ) -> security_pb2.GetRandomAddressResponse:
+        if not self.ctx.privacy:
+            logging.warning("Privacy mode is not enabled.")
+        address = self.ctx.btd.GetRandomAddress()
+        if address == "00:00:00:00:00:00":
+            logging.warning(
+                "Device is not advertising or advertising without RPA."
+            )
+        return security_pb2.GetRandomAddressResponse(address=address)
