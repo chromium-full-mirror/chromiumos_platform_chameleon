@@ -87,6 +87,15 @@ class _SystemTools(object):
         self._pi_env = {}
         self._pi_uid = None
 
+    def IsBookworm(self):
+        """Check if the OS is Debian Bookworm."""
+        try:
+            with open("/etc/os-release") as f:
+                content = f.read()
+                return "VERSION_CODENAME=bookworm" in content
+        except Exception:
+            return False
+
     def SetUpPiEnv(self, uid):
         """Set up a proper environment for the user pi.
 
@@ -103,7 +112,14 @@ class _SystemTools(object):
         self._pi_uid = uid
         self._pi_env = os.environ.copy()
         self._pi_env["XDG_RUNTIME_DIR"] = f"/run/user/{uid}"
-        self._pi_env["DBUS_SESSION_BUS_ADDRESS"] = f"/run/user/{uid}/bus"
+
+        if self.IsBookworm():
+            # Bookworm tools (like playerctl) require the strict URI format.
+            self._pi_env["DBUS_SESSION_BUS_ADDRESS"] = (
+                f"unix:path=/run/user/{uid}/bus"
+            )
+        else:
+            self._pi_env["DBUS_SESSION_BUS_ADDRESS"] = f"/run/user/{uid}/bus"
 
     def GetToolPath(self, name):
         """Get the path of the tool.

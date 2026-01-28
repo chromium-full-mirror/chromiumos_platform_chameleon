@@ -666,7 +666,8 @@ class BluetoothAudio(BluezPeripheral):
         for i in range(self.START_PULSEAUDIO_TIMES):
             logging.info("try to start pulseaudio ... %d", i)
             # Force .config to be owned by pi, otherwise pulseaudio fails to start
-            SystemTools.OrigCall("chown", "-R", "pi:pi", self.PI_CONFIG_DIR)
+            if not SystemTools.IsBookworm():
+                SystemTools.OrigCall("chown", "-R", "pi:pi", self.PI_CONFIG_DIR)
             if self._StartPulseaudio(self._UsingLocalVersion(audio_profile)):
                 time.sleep(self.WAIT_PULSEAUDIO_READY_SECS)
                 output = self._PollForCondition(
@@ -1758,12 +1759,19 @@ class BluetoothAudio(BluezPeripheral):
         """
         SystemTools.OrigCall("killall", "-9", self.MPRISPROXY)
 
-        if self.DBUS_SESSION_ENV_VAR_NAME not in os.environ:
-            os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
-                self.DBUS_SESSION_ENV_VAR_VALUE
+        if SystemTools.IsBookworm():
+            return bool(
+                SystemTools.RunInSubprocessAsPi(
+                    self.MPRISPROXY, "", use_local_version=False
+                )
             )
+        else:
+            if self.DBUS_SESSION_ENV_VAR_NAME not in os.environ:
+                os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
+                    self.DBUS_SESSION_ENV_VAR_VALUE
+                )
 
-        return bool(SystemTools.RunInSubprocess(self.MPRISPROXY))
+            return bool(SystemTools.RunInSubprocess(self.MPRISPROXY))
 
     def UnexportMediaPlayer(self):
         """Stop all mpris-proxy processes."""
@@ -1784,12 +1792,18 @@ class BluetoothAudio(BluezPeripheral):
         if self._media_player is not None:
             return self._media_player
 
-        if self.DBUS_SESSION_ENV_VAR_NAME not in os.environ:
-            os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
-                self.DBUS_SESSION_ENV_VAR_VALUE
+        if SystemTools.IsBookworm():
+            output = SystemTools.OutputAsPi(
+                self.PLAYERCTL, "--list-all", use_local_version=False
             )
+        else:
+            if self.DBUS_SESSION_ENV_VAR_NAME not in os.environ:
+                os.environ[self.DBUS_SESSION_ENV_VAR_NAME] = (
+                    self.DBUS_SESSION_ENV_VAR_VALUE
+                )
 
-        output = SystemTools.Output(self.PLAYERCTL, "--list-all")
+            output = SystemTools.Output(self.PLAYERCTL, "--list-all")
+
         if len(output.splitlines()) != 1 or output == self.NO_PLAYER_FOUND:
             return None
 
@@ -1810,7 +1824,15 @@ class BluetoothAudio(BluezPeripheral):
             logging.error("No Bluetooth media player was exported.")
             return ""
 
-        return SystemTools.Output(self.PLAYERCTL, "-p", player, *args).strip()
+        if SystemTools.IsBookworm():
+            args_str = "-p {} {}".format(player, " ".join(args))
+            return SystemTools.OutputAsPi(
+                self.PLAYERCTL, args_str, use_local_version=False
+            ).strip()
+        else:
+            return SystemTools.Output(
+                self.PLAYERCTL, "-p", player, *args
+            ).strip()
 
     def _GetTransporProperyInterface(self):
         device_path = self.remote_address.replace(":", "_")
@@ -1855,7 +1877,13 @@ class BluetoothAudio(BluezPeripheral):
             logging.error("No Bluetooth media player was exported.")
             return False
 
-        return SystemTools.OrigCall(self.PLAYERCTL, "-p", player, command) == 0
+        if SystemTools.IsBookworm():
+            args_str = "-p {} {}".format(player, command)
+            return SystemTools.OrigCallAsPi(self.PLAYERCTL, args_str) == 0
+        else:
+            return (
+                SystemTools.OrigCall(self.PLAYERCTL, "-p", player, command) == 0
+            )
 
     def GetMediaPlayerMediaInfo(self):
         """Retrieve media information through playerctl calls.
