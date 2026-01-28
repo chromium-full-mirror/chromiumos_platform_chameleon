@@ -11,12 +11,12 @@ try:
 except ImportError:
     import gobject as GObject
 
-from utils.bluez_le_hid_service import BatteryService
-from utils.bluez_le_hid_service import DevInfoService
-from utils.bluez_le_hid_service import LEApplication
-from utils.example_gatt_server import Characteristic
-from utils.example_gatt_server import GATT_CHRC_IFACE
-from utils.example_gatt_server import Service
+from chameleond.utils.bluez_le_hid_service import BatteryService
+from chameleond.utils.bluez_le_hid_service import DevInfoService
+from chameleond.utils.bluez_le_hid_service import LEApplication
+from chameleond.utils.example_gatt_server import Characteristic
+from chameleond.utils.example_gatt_server import GATT_CHRC_IFACE
+from chameleond.utils.example_gatt_server import Service
 
 
 class PhoneLEBetterTogetherApplication(LEApplication):

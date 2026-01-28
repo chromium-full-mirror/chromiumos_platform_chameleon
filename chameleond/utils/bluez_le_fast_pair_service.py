@@ -13,6 +13,10 @@ from math import floor
 from os import urandom
 
 from chameleond.utils import pairing_agent
+from chameleond.utils.bluez_le_hid_service import LEApplication
+from chameleond.utils.example_gatt_server import Characteristic
+from chameleond.utils.example_gatt_server import GATT_CHRC_IFACE
+from chameleond.utils.example_gatt_server import Service
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
@@ -21,11 +25,6 @@ from cryptography.hazmat.primitives.ciphers import algorithms
 from cryptography.hazmat.primitives.ciphers import Cipher
 from cryptography.hazmat.primitives.ciphers import modes
 import dbus
-
-from utils.bluez_le_hid_service import LEApplication
-from utils.example_gatt_server import Characteristic
-from utils.example_gatt_server import GATT_CHRC_IFACE
-from utils.example_gatt_server import Service
 
 
 class FastPairLEApplication(LEApplication):
