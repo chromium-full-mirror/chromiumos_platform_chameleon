@@ -1885,6 +1885,39 @@ class BluetoothAudio(BluezPeripheral):
                 SystemTools.OrigCall(self.PLAYERCTL, "-p", player, command) == 0
             )
 
+    def _GetLengthFromBtsnoop(self):
+        """Parses the last SongLength from /var/log/btsnoop.log using btmon.
+
+        Workaround for BlueZ 5.66 bug where the Duration property is not
+        updated via DBus if it was previously set. We parse the raw HCI/AVRCP
+        logs to find the actual value sent by the peer.
+
+        Returns:
+            The length in microseconds as a string, or None if not found.
+        """
+        btsnoop_path = "/var/log/btsnoop.log"
+        if not os.path.exists(btsnoop_path):
+            return None
+
+        try:
+            # Parse the binary btsnoop file using btmon
+            output = SystemTools.Output("btmon", "-r", btsnoop_path)
+        except Exception as e:
+            logging.error("Failed to run btmon: %s", e)
+            return None
+
+        # Search for pattern: SongLength: 0x00010c8e (68750 milliseconds)
+        # We look for the last occurrence to get the most recent update.
+        matches = re.findall(
+            r"SongLength: 0x[0-9a-fA-F]+ \((\d+) milliseconds\)", output
+        )
+        if matches:
+            last_length_ms = int(matches[-1])
+            # Convert to microseconds to match mpris:length standard
+            return str(last_length_ms * 1000)
+
+        return None
+
     def GetMediaPlayerMediaInfo(self):
         """Retrieve media information through playerctl calls.
 
@@ -1902,6 +1935,17 @@ class BluetoothAudio(BluezPeripheral):
         media_info["length"] = self._PlayerCommandOutput(
             "metadata", "mpris:length"
         )
+
+        # Workaround: BlueZ 5.66 may fail to update the length property on DBus.
+        # Try to recover the actual length from btsnoop logs if available.
+
+        if SystemTools.IsBookworm():
+            btsnoop_length = self._GetLengthFromBtsnoop()
+            if btsnoop_length:
+                logging.info(
+                    "Overriding length from btsnoop: %s", btsnoop_length
+                )
+                media_info["length"] = btsnoop_length
 
         return media_info
 
