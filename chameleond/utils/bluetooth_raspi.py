@@ -1432,6 +1432,25 @@ class BluezPeripheral(PeripheralKit):
           String containing matching advertising event if found, None otherwise
         """
 
+        def _NormalizeEvent(content):
+            """Normalizes btmon event output to legacy format"""
+            # Strip ANSI escape codes
+            ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+            content = ansi_escape.sub("", content)
+
+            # Pattern: Service Data: ... (0xXXXX)\n\s+Data[X]: YYYY
+            # Target: Service Data (UUID 0xXXXX): YYYY
+            # Use \s+ to match newlines (including \r\n) and indentation.
+            # Use Data.*?: to match "Data:", "Data[5]:", etc.
+            pattern = r"Service Data: .*? \(0x([0-9a-fA-F]+)\)\s+Data.*?: ([0-9a-fA-F]+)"
+
+            def replace_func(match):
+                return "Service Data (UUID 0x{}): {}".format(
+                    match.group(1), match.group(2)
+                )
+
+            return re.sub(pattern, replace_func, content, flags=re.MULTILINE)
+
         def _IsMatchedEvent(ev):
             """Determines whether an event matches the requested criteria
 
@@ -1441,6 +1460,10 @@ class BluezPeripheral(PeripheralKit):
             Returns: True if event matches criteria, False otherwise
             """
             content = "".join(ev)
+
+            # Use new parsing logic for Bookworm.
+            if system_tools.SystemTools.IsBookworm():
+                content = _NormalizeEvent(content)
 
             if "LE Advertising Report" not in content:
                 return False
@@ -1481,6 +1504,10 @@ class BluezPeripheral(PeripheralKit):
                 if " plen " in output:
                     if current_event and _IsMatchedEvent(current_event):
                         desired_event = "".join(current_event)
+
+                        # Use new parsing logic for Bookworm.
+                        if system_tools.SystemTools.IsBookworm():
+                            desired_event = _NormalizeEvent(desired_event)
                         break
 
                     # If we found an event header and the previous wasn't a match, start
