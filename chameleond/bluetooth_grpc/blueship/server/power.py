@@ -32,7 +32,6 @@ class PowerService(power_grpc_aio.PowerServicer):
         context: grpc.ServicerContext,
     ) -> empty_pb2.Empty:
         self.ctx.btd.AdapterPowerOn()
-        self.ctx.btd.SetPrivacy(self.ctx.privacy)
         self.ctx.btd.Init()
 
         # Wait until power on procedure completes.

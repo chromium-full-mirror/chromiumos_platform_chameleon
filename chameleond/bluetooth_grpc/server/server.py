@@ -227,6 +227,10 @@ class TestServerContext:
         # Delay 1 second to wait for power on.
         time.sleep(1)
 
+        self.apply_btmgmt_capabilities()
+
+    def apply_btmgmt_capabilities(self):
+        logging.info("apply btmgmt capabilities")
         # Set secure connection. This should be done before configuring link
         # mode, fast-connectable and the Class of Service, as powering off
         # BREDR resets these configurations.
@@ -243,29 +247,25 @@ class TestServerContext:
                     "sudo btmgmt le off",
                 ]
             )
-        cmds.extend(["sudo btmgmt power on"])
 
         logging.info(
-            "Restart BT to set secure connections to %s",
+            "Configure BT adapter settings before powering on. SC: %s",
             self.secure_connections,
         )
         for cmd in cmds:
             os.system(cmd)
             time.sleep(0.1)
-        # Delay 1 second to wait for power on.
-        time.sleep(1)
 
-        self.btd.SetLinkMode(self.link_mode)
+        self.btd.SetLinkMode(self.link_mode, power_cycle=False)
 
-        self.btd.SetPrivacy(self.privacy)
+        self.btd.SetPrivacy(self.privacy, power_cycle=False)
 
         if self.support_classic:
-            # Enable fast connectable to reduce the chance of page timeout in test.
-            self.btd.SetFastConnectable(True)
-
             self.btd.SetSecureSimplePairing(
                 self.config.security.secure_simple_pairing.bool_value
             )
+            # Enable fast connectable to reduce the chance of page timeout in test.
+            self.btd.SetFastConnectable(True)
 
         self.btd.SetIOCapability(self.io_capability)
 
@@ -273,6 +273,13 @@ class TestServerContext:
             major = (PERIPHERAL_DEVICE_CLASS[self.device_type] & 0x001F00) >> 8
             minor = PERIPHERAL_DEVICE_CLASS[self.device_type] & 0x0000FC
             self.btd.SetDeviceClass(major, minor)
+
+        cmds = ["sudo btmgmt power on"]
+        for cmd in cmds:
+            os.system(cmd)
+            time.sleep(0.1)
+        # Delay 1 second to wait for power on.
+        time.sleep(1)
 
     def unregister_signal_handler(self, signum, name):
         """Unregisters a specific signal handler.

@@ -938,10 +938,11 @@ class BluezPeripheral(PeripheralKit):
         address = os.popen(cmd).read().strip().upper()
         return address
 
-    def SetPrivacy(self, enable):
+    def SetPrivacy(self, enable, power_cycle=True):
         """Set the LE privacy state to ON/OFF
 
         @param enable: Whether to set LE privacy to True/False.
+        @param power_cycle: Whether to toggle adapter power during setting.
 
         @return: True if able to set privacy
         """
@@ -952,13 +953,13 @@ class BluezPeripheral(PeripheralKit):
             return True
 
         _control = bluetooth_socket.BluetoothControlSocket()
-        if not self.AdapterPowerOff():
+        if power_cycle and not self.AdapterPowerOff():
             logging.error("Unable to power off adapter")
             return False
         if not _control.set_privacy(0, enable):
             logging.error("Unable to set privacy state")
             return False
-        if not self.AdapterPowerOn():
+        if power_cycle and not self.AdapterPowerOn():
             logging.error("Unable to power on adapter")
             return False
 
@@ -1134,12 +1135,13 @@ class BluezPeripheral(PeripheralKit):
             return False
         return True
 
-    def SetLinkMode(self, mode):
+    def SetLinkMode(self, mode, power_cycle=True):
         """Sets controller to the specified link mode.
 
         Args:
           mode: string in 'NONE', 'ACCEPT', 'MASTER', 'AUTH', 'ENCRYPT',
                 'TRUSTED', 'RELIABLE', 'SECURE'.
+          power_cycle: boolean, whether to power cycle adapter if needed.
         """
 
         logging.info("Setting link mode to %s", mode)
@@ -1149,15 +1151,24 @@ class BluezPeripheral(PeripheralKit):
 
         # link mode only allowed to change when bredr is enabled.
         if "BLE" in self.device_type:
-            cmds.extend(
-                [
-                    "sudo btmgmt power off",
-                    "sudo btmgmt bredr on",
-                    link_mode_cmd,
-                    "sudo btmgmt bredr off",
-                    "sudo btmgmt power on",
-                ]
-            )
+            if power_cycle:
+                cmds.extend(
+                    [
+                        "sudo btmgmt power off",
+                        "sudo btmgmt bredr on",
+                        link_mode_cmd,
+                        "sudo btmgmt bredr off",
+                        "sudo btmgmt power on",
+                    ]
+                )
+            else:
+                cmds.extend(
+                    [
+                        "sudo btmgmt bredr on",
+                        link_mode_cmd,
+                        "sudo btmgmt bredr off",
+                    ]
+                )
         else:
             cmds.append(link_mode_cmd)
 
