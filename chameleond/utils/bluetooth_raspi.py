@@ -1135,6 +1135,29 @@ class BluezPeripheral(PeripheralKit):
             return False
         return True
 
+    def SetPageTimeout(self, timeout):
+        """Sets the page timeout of the controller.
+
+        @param timeout: Page timeout in slots.
+        """
+        logging.info("SetPageTimeout timeout: 0x%04X", timeout)
+        lsb = timeout & 0xFF
+        msb = (timeout >> 8) & 0xFF
+        cmd = "sudo hcitool cmd 0x03 0x0018 %02x %02x" % (lsb, msb)
+        os.system(cmd)
+
+    def SetInquiryParameters(self, window, interval):
+        """Sets the inquiry scan parameters of the controller.
+
+        @param window: Inquiry scan window in slots.
+        @param interval: Inquiry scan interval in slots.
+        """
+        logging.info(
+            "SetInquiryParameters window: %d interval: %d", window, interval
+        )
+        cmd = "sudo hciconfig hci0 inqparms %d:%d" % (window, interval)
+        os.system(cmd)
+
     def SetLinkMode(self, mode, power_cycle=True):
         """Sets controller to the specified link mode.
 

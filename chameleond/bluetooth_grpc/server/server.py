@@ -51,6 +51,13 @@ BLUEZ_RESTART_TIME = 3
 RSYS_LOG_CONFIG = "/etc/logrotate.d/rsyslog"
 BLUETOOTH_GRPC_LOG_CONFIG = "/etc/logrotate.d/bluetooth_grpc"
 
+# Page timeout: 10.24 seconds
+HCI_PAGE_TIMEOUT_SLOTS = 0x4000
+# Inquiry Activity Window: 45 ms
+HCI_INQ_WINDOW_SLOTS = 72
+# Inquiry Activity Interval: 1280 ms
+HCI_INQ_INTERVAL_SLOTS = 2048
+
 
 class TestServerContext:
     """The context of the test server."""
@@ -228,6 +235,7 @@ class TestServerContext:
         time.sleep(1)
 
         self.apply_btmgmt_capabilities()
+        self.apply_hciconfig()
 
     def apply_btmgmt_capabilities(self):
         logging.info("apply btmgmt capabilities")
@@ -280,6 +288,14 @@ class TestServerContext:
             time.sleep(0.1)
         # Delay 1 second to wait for power on.
         time.sleep(1)
+
+    def apply_hciconfig(self):
+        logging.info("apply hciconfig capabilities")
+        if self.support_classic:
+            self.btd.SetPageTimeout(HCI_PAGE_TIMEOUT_SLOTS)
+            self.btd.SetInquiryParameters(
+                HCI_INQ_WINDOW_SLOTS, HCI_INQ_INTERVAL_SLOTS
+            )
 
     def unregister_signal_handler(self, signum, name):
         """Unregisters a specific signal handler.

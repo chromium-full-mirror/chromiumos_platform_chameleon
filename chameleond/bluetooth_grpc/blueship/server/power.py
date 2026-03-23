@@ -33,6 +33,7 @@ class PowerService(power_grpc_aio.PowerServicer):
     ) -> empty_pb2.Empty:
         self.ctx.btd.AdapterPowerOn()
         self.ctx.btd.Init()
+        self.ctx.apply_hciconfig()
 
         # Wait until power on procedure completes.
         time.sleep(1)
