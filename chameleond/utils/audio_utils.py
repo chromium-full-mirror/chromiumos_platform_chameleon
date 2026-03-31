@@ -13,6 +13,7 @@ from chameleond.utils import fpga
 from chameleond.utils import ids
 from chameleond.utils import mem
 from chameleond.utils import memory_dumper
+from chameleond.utils import system_tools
 
 from . import chameleon_common  # pylint: disable=W0611, C0411
 
@@ -446,3 +447,54 @@ class AudioRouteManager(object):
           True if generator clock is required for source.
         """
         return source != fpga.AudioSource.RX_I2S
+
+
+def GetArecordCommand(input_node, record_time=None):
+    """Constructs the arecord command.
+
+    Args:
+      input_node: The ALSA input node.
+      record_time: The record duration in seconds.
+
+    Returns:
+      A list representing the command.
+    """
+    arecord_path = system_tools.SystemTools.GetToolPath("arecord")
+    cmd = [
+        arecord_path,
+        "-D",
+        input_node,
+        "-f",
+        "cd",
+        "-t",
+        "wav",
+    ]
+    if record_time is not None:
+        cmd.extend(["-d", str(record_time)])
+    return cmd
+
+
+def GetSoxEchoCommand(output_node, delay_in_sec):
+    """Constructs the sox echo command.
+
+    Args:
+      output_node: The ALSA output node.
+      delay_in_sec: The delay in seconds.
+
+    Returns:
+      A list representing the command.
+    """
+    return [
+        "sox",
+        "-t",
+        "wav",
+        "-",
+        "-t",
+        "alsa",
+        output_node,
+        "echo",
+        "0.8",
+        "0.9",
+        str(delay_in_sec * 1000),
+        "0.5",
+    ]

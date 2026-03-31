@@ -12,6 +12,9 @@ import glob
 import json
 import logging
 import os
+import re
+import subprocess
+import tempfile
 import time
 import traceback
 import uuid
@@ -28,9 +31,11 @@ from chameleond.devices import usb_audio_flow
 from chameleond.devices import usb_hid_flow
 from chameleond.devices import usb_printer_device
 from chameleond.interface import ChameleondInterface
+from chameleond.utils import audio_utils
 from chameleond.utils import bluetooth_a2dp
 from chameleond.utils import caching_server
 from chameleond.utils import device_manager
+from chameleond.utils import file_utils
 from chameleond.utils import flow_manager
 from chameleond.utils import fpga
 from chameleond.utils import i2c
@@ -148,6 +153,9 @@ class ChameleondDriver(ChameleondInterface):
 
         self._captured_params = {}
         self._process = None
+        self._route_processes = None
+        self._route_start_time = None
+        self._route_delay = None
 
         # waihong@chromium.org suggests to use a lazy wrapper which instantiates
         # the following control objects when requested at the first time.
@@ -1309,10 +1317,8 @@ class ChameleondDriver(ChameleondInterface):
         if file_size == 0:
             raise xmlrpc.client.Fault(500, "File is empty, no audio recorded.")
 
-        prefix = "/tmp/"
-        filename = path[len(prefix) :] if path.startswith(prefix) else path
-        token = uuid.uuid5(uuid.NAMESPACE_DNS, filename).hex
-        self._file_dict[token] = filename
+        token, filename = file_utils.GetFileToken(path)
+        file_utils.RegisterFileToken(self._file_dict, token, filename)
 
         response = fmt.copy()
         response["token"] = token
@@ -1414,6 +1420,140 @@ class ChameleondDriver(ChameleondInterface):
         """
         self._flow_manager.StartPlayingEcho(port_id, input_id)
 
+    def _FindALSANode(self, name_pattern, is_capture=True):
+        """Finds ALSA node like 'plughw:4,0' for given name pattern."""
+        tool = "arecord" if is_capture else "aplay"
+        try:
+            output = subprocess.check_output([tool, "-l"], encoding="utf-8")
+            for line in output.splitlines():
+                if name_pattern in line:
+                    match = re.search(r"card (\d+): .*, device (\d+):", line)
+                    if match:
+                        return f"plughw:{match.group(1)},{match.group(2)}"
+        except subprocess.CalledProcessError:
+            logging.error("Failed to run %s -l", tool)
+        except Exception as e:
+            logging.error("Error in _FindALSANode: %s", e)
+        return None
+
+    def StartRouteWithMultiTapDelay(
+        self,
+        input_device=ids.USB_AUDIO_IN,
+        output_device=ids.USB_AUDIO_OUT,
+        delay_in_sec=10,
+    ):
+        """Runs an audio echo pipeline for AEC testing.
+
+        The captured raw audio is saved to a unique file in /tmp.
+
+        Args:
+          input_device: AudioDevice identifier (from utils/ids.py).
+          output_device: AudioDevice identifier (from utils/ids.py).
+          delay_in_sec: The delay of the echo in seconds (default 10).
+
+        Returns:
+          A token that points to the captured audio data.
+        """
+
+        if self._route_processes is not None:
+            raise DriverError("A route is already in progress.")
+
+        # Check devices
+        if input_device != ids.USB_AUDIO_IN:
+            raise NotImplementedError(
+                f"Input device {input_device} is not implemented."
+            )
+        if output_device != ids.USB_AUDIO_OUT:
+            raise NotImplementedError(
+                f"Output device {output_device} is not implemented."
+            )
+
+        # Find ALSA nodes
+        input_node = self._FindALSANode("USB", is_capture=True)
+        output_node = self._FindALSANode("USB", is_capture=False)
+
+        if not input_node or not output_node:
+            raise DriverError(
+                f"Unable to find USB ALSA node. Input: {input_node}, Output: {output_node}"
+            )
+
+        # Create unique file and token
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".wav", dir="/tmp"
+        ) as f:
+            full_path = f.name
+
+        token, filename = file_utils.GetFileToken(full_path)
+        file_utils.RegisterFileToken(self._file_dict, token, filename)
+
+        arecord_cmd = audio_utils.GetArecordCommand(input_node)
+        tee_cmd = ["tee", full_path]
+        sox_cmd = audio_utils.GetSoxEchoCommand(output_node, delay_in_sec)
+
+        logging.info(
+            "Running StartRouteWithMultiTapDelay command pipeline: %s | %s | %s",
+            " ".join(arecord_cmd),
+            " ".join(tee_cmd),
+            " ".join(sox_cmd),
+        )
+
+        processes = []
+        try:
+            p1 = subprocess.Popen(arecord_cmd, stdout=subprocess.PIPE)
+            processes.append(("arecord", p1))
+            p2 = subprocess.Popen(
+                tee_cmd, stdin=p1.stdout, stdout=subprocess.PIPE
+            )
+            processes.append(("tee", p2))
+            p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
+            p3 = subprocess.Popen(sox_cmd, stdin=p2.stdout)
+            processes.append(("sox", p3))
+            p2.stdout.close()
+
+            self._route_processes = dict(processes)
+            self._route_start_time = time.time()
+            self._route_delay = delay_in_sec
+
+        except OSError as e:
+            logging.error(f"Failed to start pipeline: {e}. Cleaning up...")
+            for name, p in processes:
+                logging.info(
+                    f"Terminating orphaned process {name} (pid: {p.pid})"
+                )
+                p.terminate()
+                try:
+                    p.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    logging.warning(
+                        f"Process {name} didn't terminate, killing it."
+                    )
+                    p.kill()
+            raise DriverError(f"Failed to start pipeline: {e}") from e
+
+        return token
+
+    def StopRouteWithMultiTapDelay(self):
+        """Stops the audio echo pipeline for AEC testing."""
+        if self._route_processes is None:
+            raise DriverError("No route with multi tap delay is in progress.")
+
+        elapsed_time = time.time() - self._route_start_time
+
+        logging.info("Stopping route with multi tap delay...")
+        for name, p in self._route_processes.items():
+            logging.info(f"Terminating process {name} (pid: {p.pid})")
+            p.terminate()
+            try:
+                p.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                logging.warning(f"Process {name} didn't terminate, killing it.")
+                p.kill()
+
+        self._route_processes = None
+        self._route_start_time = None
+        self._route_delay = None
+        logging.info("Stopped route with multi tap delay.")
+
     def StopPlayingAudio(self, port_id):
         """Stops playing audio from port_id port.
 
@@ -1447,7 +1587,7 @@ class ChameleondDriver(ChameleondInterface):
                                more details.
         """
         logging.info("Copy file to chameleon:" + filename)
-        token = uuid.uuid5(uuid.NAMESPACE_DNS, filename).hex
+        token, filename = file_utils.GetFileToken(filename)
 
         if token in self._file_dict:
             logging.info("File already exist in chameleon: " + filename)
@@ -1461,7 +1601,7 @@ class ChameleondDriver(ChameleondInterface):
                 500, "Unable to write the file: " + filename
             )
 
-        self._file_dict[token] = filename
+        file_utils.RegisterFileToken(self._file_dict, token, filename)
         return token
 
     def GetFileFromChameleon(self, token):

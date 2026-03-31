@@ -891,6 +891,32 @@ class ChameleondInterface(with_metaclass(ABCMeta, object)):
         """
         raise NotImplementedError("StopPlayingAudio")
 
+    def StartRouteWithMultiTapDelay(
+        self, input_device=8, output_device=9, delay_in_sec=10
+    ):
+        """Runs an audio echo pipeline for AEC testing.
+
+        USB audio in/out are used as default audio devices.
+        The captured raw audio is saved to a unique file in /tmp.
+
+        Args:
+          input_device: AudioDevice identifier (from utils/ids.py).
+          output_device: AudioDevice identifier (from utils/ids.py).
+          delay_in_sec: The delay of the echo in seconds (default 10).
+
+        Returns:
+          A token that points to the captured audio data.
+        """
+        raise NotImplementedError("StartRouteWithMultiTapDelay")
+
+    def StopRouteWithMultiTapDelay(self):
+        """Stops the audio echo pipeline for AEC testing.
+
+        Raises:
+          DriverError: If called before delay_in_sec has passed.
+        """
+        raise NotImplementedError("StopRouteWithMultiTapDelay")
+
     def AudioBoardConnect(self, bus_number, endpoint):
         """Connects an endpoint to an audio bus.
 
