@@ -29,6 +29,14 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
     ) -> manager_pb2.IsServerReadyResponse:
         return manager_pb2.IsServerReadyResponse(value=self.ctx.is_server_ready)
 
+    async def GetApiVersion(
+        self,
+        request: empty_pb2.Empty,
+        context: grpc.ServicerContext,
+    ) -> manager_pb2.GetApiVersionResponse:
+        version = self.ctx.config.api.support_api_version.string_value
+        return manager_pb2.GetApiVersionResponse(version=version)
+
     async def ResetServer(
         self,
         request: empty_pb2.Empty,
@@ -78,7 +86,7 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
         self,
         request: manager_pb2.IsConfigOKRequest,
         context: grpc.ServicerContext,
-    ) -> bool:
+    ) -> manager_pb2.IsConfigOKResonse:
         return manager_pb2.IsConfigOKResonse(
             ok=self._to_config_dict_or_none(request.config) is not None
         )

@@ -20,6 +20,8 @@ service Manager {
   rpc IsConfigOK(IsConfigOKRequest) returns (IsConfigOKResonse);
   // Returns true or false, which indicates server readiness.
   rpc IsServerReady(google.protobuf.Empty) returns (IsServerReadyResponse);
+  // Returns the API version of the server.
+  rpc GetApiVersion(google.protobuf.Empty) returns (GetApiVersionResponse);
 }
 
 message APIConfig {
@@ -168,3 +170,5 @@ message IsConfigOKRequest { Configuration config = 1; }
 message IsConfigOKResonse { bool ok = 1; }
 
 message IsServerReadyResponse { bool value = 1; }
+
+message GetApiVersionResponse { string version = 1; }
