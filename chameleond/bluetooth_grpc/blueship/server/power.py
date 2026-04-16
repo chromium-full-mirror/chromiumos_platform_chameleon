@@ -9,6 +9,7 @@ import time
 
 from blueship import power_grpc_aio
 from blueship import power_pb2
+from chameleond.bluetooth_grpc.blueship.server.utils import check_server_ready
 from google.protobuf import empty_pb2
 import grpc
 
@@ -24,8 +25,12 @@ class PowerService(power_grpc_aio.PowerServicer):
         """
         self.ctx = shared_context
         self.connected_device = None
-        self.bredr_only = not self.ctx.support_le and self.ctx.support_classic
 
+    @property
+    def bredr_only(self):
+        return not self.ctx.support_le and self.ctx.support_classic
+
+    @check_server_ready
     async def PowerOn(
         self,
         request: empty_pb2.Empty,
@@ -50,6 +55,7 @@ class PowerService(power_grpc_aio.PowerServicer):
 
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def PowerOff(
         self,
         request: empty_pb2.Empty,
@@ -69,6 +75,7 @@ class PowerService(power_grpc_aio.PowerServicer):
 
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def SetBatteryLevel(
         self,
         request: power_pb2.SetBatteryLevelRequest,

@@ -67,7 +67,11 @@ class TestServerContext:
         self.config = config
         self.default_config = manager_pb2.Configuration()
         self.default_config.CopyFrom(config)
-        self.is_server_ready = False
+        self.is_server_ready = True
+        self.is_configured = False
+        self.btmon_manager = None
+        self.initialize_device_task = None
+        self.services = []
         self.signal_handlers = {}
         self.subprocess_sigterm_handler_name = None
         self.subprocess_sigint_handler_name = None
@@ -193,6 +197,7 @@ class TestServerContext:
             return self.chameleon.ble_phone
         elif self.device_type == "DEV_KIT":
             return self.chameleon.bluetooth_dev_kit
+        return None
 
     def reset_bluetooth_device(self):
         logging.info("reset_bluetooth_device")
@@ -391,6 +396,40 @@ class TestServerContext:
             signal.SIGINT, self.subprocess_sigint_handler_name
         )
 
+    async def initialize_device(self):
+        """Initializes the bluetooth device in background."""
+        if (
+            self.initialize_device_task
+            and not self.initialize_device_task.done()
+        ):
+            logging.info("initialize_device: Task already running, waiting...")
+            await self.initialize_device_task
+
+        async def _initialize():
+            if self.device_type != "NOT_CONFIGURED":
+                self.is_server_ready = False
+                if self.btmon_manager:
+                    self.btmon_manager.start()
+                    self.register_subprocess_cleanup(
+                        self.btmon_manager.btmon_process
+                    )
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, self.reset_bluetooth_device)
+
+                # Post-initialize all services
+                for service in self.services:
+                    if hasattr(service, "PostInitialize"):
+                        service.PostInitialize()
+
+                self.is_server_ready = True
+                self.is_configured = True
+            else:
+                logging.info("Skip resetting Bluetooth, device not configured")
+                self.is_server_ready = True
+
+        self.initialize_device_task = asyncio.create_task(_initialize())
+        await self.initialize_device_task
+
 
 def trigger_log_rotate(services_to_rotate):
     """Triggers logrotate for a list of specified logrotate configuration files.
@@ -430,83 +469,75 @@ async def start_bluetooth_test_server(port):
     """Start serving the bluetooth test server."""
 
     try:
-        server = None
         shared_context = TestServerContext(DEFAULT_CHAMELEON_CONFIG)
         btmon_manager = BtmonManager(output_directory="/var/log/btmon")
+        shared_context.btmon_manager = btmon_manager
 
-        while True:
-            trigger_log_rotate([RSYS_LOG_CONFIG, BLUETOOTH_GRPC_LOG_CONFIG])
-            server = grpc.aio.server()
+        trigger_log_rotate([RSYS_LOG_CONFIG, BLUETOOTH_GRPC_LOG_CONFIG])
+        server = grpc.aio.server()
 
-            if shared_context.device_type == "NOT_CONFIGURED":
-                logging.info("@@ Skip resetting Bluetooth")
-            else:
-                btmon_manager.start()
-                shared_context.reset_bluetooth_device()
-                shared_context.register_subprocess_cleanup(
-                    btmon_manager.btmon_process
-                )
+        # Pandora services
+        security_service = security.SecurityService(
+            shared_context,
+        )
+        security_grpc_aio.add_SecurityServicer_to_server(
+            security_service, server
+        )
+        shared_context.services.append(security_service)
 
-                # Pandora services
-                security_service = security.SecurityService(
-                    shared_context,
-                )
-                security_grpc_aio.add_SecurityServicer_to_server(
-                    security_service, server
-                )
+        host_service = host.HostService(
+            server, shared_context, security_service
+        )
+        host_grpc_aio.add_HostServicer_to_server(host_service, server)
+        shared_context.services.append(host_service)
 
-                host_service = host.HostService(
-                    server, shared_context, security_service
-                )
-                host_grpc_aio.add_HostServicer_to_server(host_service, server)
+        security_storage_service = security.SecurityStorageService(
+            shared_context
+        )
+        security_grpc_aio.add_SecurityStorageServicer_to_server(
+            security_storage_service, server
+        )
+        shared_context.services.append(security_storage_service)
 
-                security_storage_service = security.SecurityStorageService(
-                    shared_context
-                )
-                security_grpc_aio.add_SecurityStorageServicer_to_server(
-                    security_storage_service, server
-                )
+        # BlueShip services
+        blueship_security_service = blueship_security.SecurityService(
+            shared_context,
+        )
+        blueship_security_grpc_aio.add_SecurityServicer_to_server(
+            blueship_security_service, server
+        )
+        shared_context.services.append(blueship_security_service)
 
-                # BlueShip services
-                blueship_security_service = blueship_security.SecurityService(
-                    shared_context,
-                )
-                blueship_security_grpc_aio.add_SecurityServicer_to_server(
-                    blueship_security_service, server
-                )
+        audio_service = audio.AudioService(shared_context)
+        audio_grpc_aio.add_AudioServicer_to_server(audio_service, server)
+        shared_context.services.append(audio_service)
 
-                audio_service = audio.AudioService(shared_context)
-                audio_grpc_aio.add_AudioServicer_to_server(
-                    audio_service, server
-                )
+        hid_service = hid.HIDService(shared_context)
+        hid_grpc_aio.add_HIDServicer_to_server(hid_service, server)
+        shared_context.services.append(hid_service)
 
-                hid_service = hid.HIDService(shared_context)
-                hid_grpc_aio.add_HIDServicer_to_server(hid_service, server)
+        power_service = power.PowerService(
+            shared_context,
+        )
+        power_grpc_aio.add_PowerServicer_to_server(power_service, server)
+        shared_context.services.append(power_service)
 
-                power_service = power.PowerService(
-                    shared_context,
-                )
-                power_grpc_aio.add_PowerServicer_to_server(
-                    power_service, server
-                )
+        manager_service = manager.ManagerService(shared_context, server)
+        manager_grpc_aio.add_ManagerServicer_to_server(manager_service, server)
+        shared_context.services.append(manager_service)
 
-            manager_service = manager.ManagerService(shared_context, server)
-            manager_grpc_aio.add_ManagerServicer_to_server(
-                manager_service, server
-            )
+        server.add_insecure_port(f"[::]:{port}")
 
-            server.add_insecure_port(f"[::]:{port}")
+        logging.info("Starting Bluetooth test server.")
+        await server.start()
+        logging.info("Bluetooth test server started.")
 
-            logging.info("Starting Bluetooth test server.")
-            await server.start()
-            logging.info("Bluetooth test server started.")
-            shared_context.is_server_ready = True
+        await server.wait_for_termination()
 
-            await server.wait_for_termination()
-            if shared_context.device_type != "NOT_CONFIGURED":
-                btmon_manager.stop()
-                shared_context.unregister_subprocess_cleanup()
-            logging.info("Bluetooth test server stopped, restarting...")
+        if btmon_manager.btmon_process:
+            btmon_manager.stop()
+            shared_context.unregister_subprocess_cleanup()
+
     finally:
         if server is not None:
             await server.stop(None)

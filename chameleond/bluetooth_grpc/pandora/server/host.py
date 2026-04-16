@@ -34,17 +34,28 @@ class HostService(host_grpc_aio.HostServicer):
         # Context for Scan
         self.scan_async_loop = None
         self.scan_rsp_queue = None
-        self.service_data_callback_handle = (
-            self.ctx.btd.bluez_observer.RegisterServiceDataChangedCallback(
-                self._service_data_callback
-            )
-        )
+        self.service_data_callback_handle = None
+        self.on_device_found_callback_handle = None
 
-        self.on_device_found_callback_handle = (
-            self.ctx.btd.bluez_observer.RegisterDeviceFoundCallback(
-                self._on_device_found_callback
+    def PostInitialize(self):
+        """Initializes the service after the Bluetooth stack is ready."""
+        if self.ctx.btd is None:
+            logging.error("self.ctx.btd is None in PostInitialize!")
+            return
+
+        if self.service_data_callback_handle is None:
+            self.service_data_callback_handle = (
+                self.ctx.btd.bluez_observer.RegisterServiceDataChangedCallback(
+                    self._service_data_callback
+                )
             )
-        )
+
+        if self.on_device_found_callback_handle is None:
+            self.on_device_found_callback_handle = (
+                self.ctx.btd.bluez_observer.RegisterDeviceFoundCallback(
+                    self._on_device_found_callback
+                )
+            )
 
     def _service_data_callback(self, *args):
         address, service_data = args
@@ -324,6 +335,11 @@ class HostService(host_grpc_aio.HostServicer):
     async def Scan(
         self, request: host_pb2.ScanRequest, context: grpc.ServicerContext
     ) -> AsyncGenerator[host_pb2.ScanningResponse, None]:
+        if not self.ctx.is_server_ready:
+            await context.abort(
+                grpc.StatusCode.FAILED_PRECONDITION, "Server not ready"
+            )
+
         properties_changed_receiver = None
         interfaces_added_receiver = None
 

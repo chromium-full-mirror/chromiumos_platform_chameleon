@@ -8,6 +8,7 @@ import time
 
 from blueship import hid_grpc_aio
 from blueship import hid_pb2
+from chameleond.bluetooth_grpc.blueship.server.utils import check_server_ready
 from google.protobuf import empty_pb2
 import grpc
 
@@ -29,6 +30,7 @@ class HIDService(hid_grpc_aio.HIDServicer):
         """
         self.ctx = shared_context
 
+    @check_server_ready
     async def PressKey(
         self,
         request: hid_pb2.KeyPressRequest,
@@ -39,6 +41,7 @@ class HIDService(hid_grpc_aio.HIDServicer):
         time.sleep(self.KEYBOARD_DELAY)
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def ReleaseKey(
         self,
         request: empty_pb2.Empty,
@@ -49,6 +52,7 @@ class HIDService(hid_grpc_aio.HIDServicer):
         time.sleep(self.KEYBOARD_DELAY)
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def MouseMove(
         self,
         request: hid_pb2.MouseMoveRequest,

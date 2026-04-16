@@ -9,7 +9,7 @@ from blueship import manager_pb2
 DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
     api=manager_pb2.APIConfig(
         support_api_version=manager_pb2.ConfigVariant(
-            writable=False, string_value="0.0"
+            writable=False, string_value="0.1"
         ),
     ),
     device=manager_pb2.DeviceInfoConfig(

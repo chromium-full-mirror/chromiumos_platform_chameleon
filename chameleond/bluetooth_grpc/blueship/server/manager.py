@@ -42,40 +42,34 @@ class ManagerService(manager_grpc_aio.ManagerServicer):
         request: empty_pb2.Empty,
         context: grpc.ServicerContext,
     ) -> empty_pb2.Empty:
-        self.ctx.is_server_ready = False
-
-        self.ctx.config.CopyFrom(self.ctx.default_config)
-        asyncio.create_task(self.server.stop(None))
-        return empty_pb2.Empty()
+        raise NotImplementedError("Method not implemented!")
 
     async def RestartServer(
         self,
         request: manager_pb2.RestartServerRequest,
         context: grpc.ServicerContext,
     ) -> manager_pb2.RestartServerResponse:
+        raise NotImplementedError("Method not implemented!")
+
+    async def ApplyConfig(
+        self,
+        request: manager_pb2.ApplyConfigRequest,
+        context: grpc.ServicerContext,
+    ) -> manager_pb2.ApplyConfigResponse:
+        if self.ctx.is_configured:
+            logging.warning("ApplyConfig: Already configured, ignoring.")
+            return manager_pb2.ApplyConfigResponse(success=False)
+
         config_dict = self._to_config_dict_or_none(request.next_config)
         success = config_dict is not None
 
         if success:
-            if self.ctx.is_server_ready:
-                self.ctx.is_server_ready = False
-                logging.info(
-                    "RestartServer: Sets server readiness to False and "
-                    "initiates server restart."
-                )
-            else:
-                logging.warning(
-                    "RestartServer: Calling RestartServer when the "
-                    "server is not ready may cause unexpected behavior"
-                    "."
-                )
-
+            logging.info("ApplyConfig: Applying config.")
+            self.ctx.is_server_ready = False
             ParseDict(config_dict, self.ctx.config)
-            # Stop the server and rely on the |start_bluetooth_test_server|
-            # to restart.
-            asyncio.create_task(self.server.stop(None))
+            asyncio.create_task(self.ctx.initialize_device())
 
-        return manager_pb2.RestartServerResponse(success=success)
+        return manager_pb2.ApplyConfigResponse(success=success)
 
     async def ReadConfig(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext

@@ -12,6 +12,7 @@ from typing import AsyncGenerator, AsyncIterator
 
 from blueship import security_grpc_aio
 from blueship import security_pb2
+from chameleond.bluetooth_grpc.blueship.server.utils import check_server_ready
 from chameleond.bluetooth_grpc.pandora.server import utils
 import dbus
 import dbus.mainloop.glib
@@ -190,12 +191,20 @@ class SecurityService(security_grpc_aio.SecurityServicer):
             shared_context: context that is shared by all service
         """
         self.ctx = shared_context
-        self.ctx.btd.bluez_observer.RegisterDevicePairedCallback(
-            self.on_device_paired
-        )
         self.pairing_events = None
         self.pairing_loop = None
 
+    def PostInitialize(self):
+        """Initializes the service after the Bluetooth stack is ready."""
+        if self.ctx.btd is None:
+            logging.error("self.ctx.btd is None in PostInitialize!")
+            return
+
+        self.ctx.btd.bluez_observer.RegisterDevicePairedCallback(
+            self.on_device_paired
+        )
+
+    @check_server_ready
     async def Pair(
         self,
         request: security_pb2.PairRequest,
@@ -206,6 +215,7 @@ class SecurityService(security_grpc_aio.SecurityServicer):
         self.ctx.btd.Pair()
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def StartPairingMode(
         self,
         request: AsyncIterator[security_pb2.PairingEventAnswer],
@@ -318,25 +328,29 @@ class SecurityService(security_grpc_aio.SecurityServicer):
             pairing_answers = None
             self.pairing_events = None
             self.pairing_loop = None
-            self.ctx.btd.SetDiscoverable(False)
+            if self.ctx.btd:
+                self.ctx.btd.SetDiscoverable(False)
 
             logging.info("Pairing Mode: Stopped")
 
     def on_device_paired(self, address):
         logging.info("Setting device %s trusted", address)
-        self.ctx.btd.SetTrustedByRemoteAddress(address)
+        if self.ctx.btd:
+            self.ctx.btd.SetTrustedByRemoteAddress(address)
 
         if self.pairing_events is not None and self.pairing_loop is not None:
             logging.info(
                 "Pairing Mode: %s is paired. Stopping pairing mode", address
             )
-            self.ctx.btd.SetRemoteAddress(address)
+            if self.ctx.btd:
+                self.ctx.btd.SetRemoteAddress(address)
             asyncio.run_coroutine_threadsafe(
                 # Use |None| to indicate pairing is done.
                 self.pairing_events.put((None, None)),
                 self.pairing_loop,
             )
 
+    @check_server_ready
     async def GetRandomAddress(
         self,
         request: empty_pb2.Empty,

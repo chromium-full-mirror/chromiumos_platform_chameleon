@@ -13,6 +13,8 @@ service Manager {
   // Restart the gRPC server with the specified configurations
   // after clearing existing states and configurations.
   rpc RestartServer(RestartServerRequest) returns (RestartServerResponse);
+  // Apply the specified configurations and initialize the bluetooth device.
+  rpc ApplyConfig(ApplyConfigRequest) returns (ApplyConfigResponse);
   // Read the current applied configurations
   rpc ReadConfig(google.protobuf.Empty) returns (ReadConfigResponse);
   // Returns True/False if the given config is supported by the bluetooth
@@ -162,6 +164,10 @@ message Configuration {
 message RestartServerRequest { Configuration next_config = 1; }
 
 message RestartServerResponse { bool success = 1; }
+
+message ApplyConfigRequest { Configuration next_config = 1; }
+
+message ApplyConfigResponse { bool success = 1; }
 
 message ReadConfigResponse { Configuration config = 1; }
 

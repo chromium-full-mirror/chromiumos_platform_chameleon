@@ -10,6 +10,7 @@ from typing import AsyncGenerator
 
 from blueship import audio_grpc_aio
 from blueship import audio_pb2
+from chameleond.bluetooth_grpc.blueship.server.utils import check_server_ready
 from google.protobuf import empty_pb2
 import grpc
 
@@ -28,8 +29,12 @@ class AudioService(audio_grpc_aio.AudioServicer):
             shared_context: context that is shared by all service
         """
         self.ctx = shared_context
-        self.is_wbs = self.ctx.hfp_codec == "mSBC"
 
+    @property
+    def is_wbs(self):
+        return self.ctx.hfp_codec == "mSBC"
+
+    @check_server_ready
     async def StartRecordAudio(
         self,
         request: audio_pb2.StartRecordAudioRequest,
@@ -59,12 +64,14 @@ class AudioService(audio_grpc_aio.AudioServicer):
         self.ctx.btd.StartRecordingAudioSubprocess(audio_profile, test_data)
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def StopRecordAudio(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
         self.ctx.btd.StopRecordingingAudioSubprocess()
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def StartPlayAudio(
         self,
         request: audio_pb2.StartPlayAudioRequest,
@@ -90,12 +97,14 @@ class AudioService(audio_grpc_aio.AudioServicer):
         self.ctx.btd.StartPlayingAudioSubprocess(audio_profile, test_data)
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def StopPlayAudio(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
         self.ctx.btd.StopPlayingAudioSubprocess()
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def SendAvrcpCmd(
         self,
         request: audio_pb2.SendAvrcpCmdRequest,
@@ -124,6 +133,7 @@ class AudioService(audio_grpc_aio.AudioServicer):
         self.ctx.btd.SendMediaPlayerCommand(cmd)
         return empty_pb2.Empty()
 
+    @check_server_ready
     async def OnMediaInfoChanged(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> AsyncGenerator[audio_pb2.MediaInfo, None]:
