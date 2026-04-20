@@ -342,11 +342,19 @@ class SecurityService(security_grpc_aio.SecurityServicer):
             logging.info(
                 "Pairing Mode: %s is paired. Stopping pairing mode", address
             )
+
             if self.ctx.btd:
                 self.ctx.btd.SetRemoteAddress(address)
-            asyncio.run_coroutine_threadsafe(
+
+            async def schedule_pairing_stop():
+                # Delay a few seconds for waiting profile connection.
+                await asyncio.sleep(5)
+
                 # Use |None| to indicate pairing is done.
-                self.pairing_events.put((None, None)),
+                await self.pairing_events.put((None, None))
+
+            asyncio.run_coroutine_threadsafe(
+                schedule_pairing_stop(),
                 self.pairing_loop,
             )
 
