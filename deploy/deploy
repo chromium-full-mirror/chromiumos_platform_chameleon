@@ -641,6 +641,8 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     fi
 
     # Add config for daemon log rotation.
+    touch /var/log/pulse.log
+    chown pi:pi /var/log/pulse.log
     cp "${LOGROTATE_SROUCE_DIR}/${CHAMELEOND_NAME}" \
         "${LOGROTATE_DIR}/${CHAMELEOND_NAME}"
     cp "${LOGROTATE_SROUCE_DIR}/${BLUETOOTH_GRPC_NAME}" \
