@@ -13,6 +13,10 @@ DEFAULT_CHAMELEON_CONFIG = manager_pb2.Configuration(
         ),
     ),
     device=manager_pb2.DeviceInfoConfig(
+        name=manager_pb2.ConfigVariant(
+            writable=True,
+            string_value="",
+        ),
         io_capability=manager_pb2.ConfigVariant(
             writable=True,
             io_capability=manager_pb2.IO_CAPABILITY_NO_INPUT_NO_OUTPUT,

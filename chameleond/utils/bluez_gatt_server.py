@@ -48,7 +48,7 @@ RANDOM_DEVICE_ADDRESS = 0x01
 class GATTServer(object):
     """Bluez gatt server implementation"""
 
-    def __init__(self, device=None):
+    def __init__(self, device=None, local_name=None):
         bus = dbus.SystemBus()
 
         adapter = self._FindAdapter(bus)
@@ -96,7 +96,10 @@ class GATTServer(object):
         )
 
         # Start with discoverable enabled
-        self._adv_local_name = PERIPHERAL_DEVICE_NAME[self.peripheral_type]
+        if local_name:
+            self._adv_local_name = local_name
+        else:
+            self._adv_local_name = PERIPHERAL_DEVICE_NAME[self.peripheral_type]
         self._discoverable = True
         self._own_address_type = PUBLIC_DEVICE_ADDRESS
         self._advertise_name_and_hid = False

@@ -199,6 +199,11 @@ class TestServerContext:
             return self.chameleon.bluetooth_dev_kit
         return None
 
+    @property
+    def device_name(self):
+        return self.config.device.name.string_value
+
+
     def reset_bluetooth_device(self):
         logging.info("reset_bluetooth_device")
 
@@ -234,6 +239,7 @@ class TestServerContext:
         self.btd.SpecifyDeviceType(
             self.device_type,
             self.config.devkit.rfcomm_services.service_list.service_list,
+            self.device_name
         )
 
         # Delay 1 second to wait for power on.

@@ -503,7 +503,7 @@ class BluezPeripheral(PeripheralKit):
 
         return device_type
 
-    def SpecifyDeviceType(self, device_type, rfcomm_services=None):
+    def SpecifyDeviceType(self, device_type, rfcomm_services=None, alias_name=None):
         """Instantiates one of our supported devices
 
         The raspi stack is designed to emulate a single device at a time. This
@@ -514,6 +514,9 @@ class BluezPeripheral(PeripheralKit):
           device_type: String device type, e.g. "MOUSE"
           rfcomm_services: A list of Rfcomm services to start (applicable only
                            when the device_type is DEV_KIT)
+          alias_name: String. Set the alias name for the device. If None or
+                      empty string, the name would be set by the default name
+                      based on the device type.
         """
 
         # Do nothing if we were already bound to this device
@@ -537,7 +540,7 @@ class BluezPeripheral(PeripheralKit):
             self.EnableBLE(True)
 
             # Establish and run gatt server
-            self._gatt_server = GATTServer(self)
+            self._gatt_server = GATTServer(self, alias_name)
 
         else:
             logging.info("Binding to Classic device!")
@@ -560,9 +563,12 @@ class BluezPeripheral(PeripheralKit):
 
             self.Init()
 
-        self.SetAdapterAlias(
-            PERIPHERAL_DEVICE_NAME[self.GetBaseDeviceType(self.device_type)]
-        )
+        if alias_name:
+            self.SetAdapterAlias(alias_name)
+        else:
+            self.SetAdapterAlias(
+                PERIPHERAL_DEVICE_NAME[self.GetBaseDeviceType(self.device_type)]
+            )
 
         logging.info("Bluetooth peripheral now bound to %s", device_type)
 
