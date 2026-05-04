@@ -291,8 +291,68 @@ class TestServerContext:
         for cmd in cmds:
             os.system(cmd)
             time.sleep(0.1)
-        # Delay 1 second to wait for power on.
-        time.sleep(1)
+        # Wait for the adapter to power on forever.
+        # Test will restart this grpc server after its custom timeout.
+        self._wait_for_adapter_power_on("hci0", timeout=float('inf'))
+
+    def _is_adapter_powered(self, adapter="hci0"):
+        """Checks if the specified bluetooth adapter is powered on via btmgmt."""
+        try:
+            output = subprocess.check_output(
+                ["sudo", "btmgmt", "info"], stderr=subprocess.STDOUT
+            ).decode("utf-8")
+            lines = output.splitlines()
+            in_adapter_block = False
+            for line in lines:
+                # Example output of `sudo btmgmt info`:
+                # hci0: Primary controller
+                #       addr DC:A6:32:D3:53:FD version 9 manufacturer 305 class 0x200000
+                #       supported settings: powered connectable fast-connectable ...
+                #       current settings: powered bondable ssp br/edr le secure-conn
+                #       name RASPI_AUDIO
+                #       short name
+
+                # Find the start of the target adapter block (e.g., "hci0:")
+                if line.strip().startswith(f"{adapter}:"):
+                    in_adapter_block = True
+                    continue
+
+                if in_adapter_block:
+                    # If we hit another adapter block, stop parsing
+                    stripped = line.strip()
+                    if stripped.startswith("hci") and ":" in stripped.split()[0]:
+                        break
+
+                    # Check current settings for the "powered" flag
+                    if "current settings:" in line:
+                        settings = line.split("current settings:")[1].split()
+                        return "powered" in settings
+        except Exception as e:
+            logging.error("Failed to check power status for %s: %s", adapter, e)
+        return False
+
+    def _wait_for_adapter_power_on(self, adapter="hci0", timeout=5.0, interval=0.5):
+        """Waits for the specified adapter to be powered on.
+
+        Args:
+            timeout: seconds to wait before giving up.
+            interval: seconds to wait between each query.
+
+        Return:
+            Whether the bluetooth adapter powered on successfully before timeout.
+        """
+        try:
+            common.PollForCondition(
+                condition=lambda: self._is_adapter_powered(adapter),
+                timeout=timeout,
+                sleep_interval=interval,
+                desc=f"bluetooth adapter {adapter} to power on ({timeout:.1f} s)",
+            )
+            logging.info("Bluetooth adapter %s powered on successfully", adapter)
+            return True
+        except common.TimeoutError as e:
+            logging.error("Bluetooth adatper error: %s", e)
+            return False
 
     def apply_hciconfig(self):
         logging.info("apply hciconfig capabilities")
