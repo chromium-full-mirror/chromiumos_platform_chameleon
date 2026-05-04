@@ -647,6 +647,8 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         "${LOGROTATE_DIR}/${CHAMELEOND_NAME}"
     cp "${LOGROTATE_SROUCE_DIR}/${BLUETOOTH_GRPC_NAME}" \
         "${LOGROTATE_DIR}/${BLUETOOTH_GRPC_NAME}"
+    cp "${LOGROTATE_SROUCE_DIR}/pulseaudio" \
+        "${LOGROTATE_DIR}/pulseaudio"
 
     if [ -n "${need_reboot}" ]; then
         sleep 3 && reboot &
