@@ -302,37 +302,21 @@ class TestServerContext:
         self._wait_for_adapter_power_on("hci0", timeout=float('inf'))
 
     def _is_adapter_powered(self, adapter="hci0"):
-        """Checks if the specified bluetooth adapter is powered on via btmgmt."""
+        """Checks if the specified bluetooth adapter is powered on via hciconfig."""
         try:
-            output = subprocess.check_output(
-                ["sudo", "btmgmt", "info"], stderr=subprocess.STDOUT
-            ).decode("utf-8")
+            output = subprocess.check_output(["hciconfig", adapter]).decode("utf-8")
             lines = output.splitlines()
-            in_adapter_block = False
             for line in lines:
-                # Example output of `sudo btmgmt info`:
-                # hci0: Primary controller
-                #       addr DC:A6:32:D3:53:FD version 9 manufacturer 305 class 0x200000
-                #       supported settings: powered connectable fast-connectable ...
-                #       current settings: powered bondable ssp br/edr le secure-conn
-                #       name RASPI_AUDIO
-                #       short name
+                # Example output of `hciconfig hci0`:
+                # hci0:   Type: Primary  Bus: UART
+                #         BD Address: DC:A6:32:D3:53:FD  ACL MTU: 1021:8  SCO MTU: 64:1
+                #         UP RUNNING
+                #         RX bytes:2301 acl:0 sco:0 events:138 errors:0
+                #         X bytes:3516 acl:0 sco:0 commands:138 errors:0
 
-                # Find the start of the target adapter block (e.g., "hci0:")
-                if line.strip().startswith(f"{adapter}:"):
-                    in_adapter_block = True
-                    continue
-
-                if in_adapter_block:
-                    # If we hit another adapter block, stop parsing
-                    stripped = line.strip()
-                    if stripped.startswith("hci") and ":" in stripped.split()[0]:
-                        break
-
-                    # Check current settings for the "powered" flag
-                    if "current settings:" in line:
-                        settings = line.split("current settings:")[1].split()
-                        return "powered" in settings
+                # Find line with "UP"
+                if line.strip().startswith("UP"):
+                    return True
         except Exception as e:
             logging.error("Failed to check power status for %s: %s", adapter, e)
         return False
