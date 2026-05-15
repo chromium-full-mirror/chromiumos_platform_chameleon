@@ -1423,6 +1423,7 @@ class ChameleondDriver(ChameleondInterface):
     def _FindALSANode(self, name_pattern, is_capture=True):
         """Finds ALSA node like 'plughw:4,0' for given name pattern."""
         tool = "arecord" if is_capture else "aplay"
+        output = ""
         try:
             output = subprocess.check_output([tool, "-l"], encoding="utf-8")
             for line in output.splitlines():
@@ -1430,11 +1431,17 @@ class ChameleondDriver(ChameleondInterface):
                     match = re.search(r"card (\d+): .*, device (\d+):", line)
                     if match:
                         return f"plughw:{match.group(1)},{match.group(2)}"
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
             logging.error("Failed to run %s -l", tool)
+            raise DriverError(f"Failed to run {tool} -l: {e}") from e
         except Exception as e:
             logging.error("Error in _FindALSANode: %s", e)
-        return None
+            raise
+        # Unable to find ALSA node
+        raise DriverError(
+            f"Unable to find ALSA node for pattern '{name_pattern}'.\n"
+            f"{tool} -l output:\n{output}"
+        )
 
     def StartRouteWithMultiTapDelay(
         self,
@@ -1469,13 +1476,8 @@ class ChameleondDriver(ChameleondInterface):
             )
 
         # Find ALSA nodes
-        input_node = self._FindALSANode("USB", is_capture=True)
-        output_node = self._FindALSANode("USB", is_capture=False)
-
-        if not input_node or not output_node:
-            raise DriverError(
-                f"Unable to find USB ALSA node. Input: {input_node}, Output: {output_node}"
-            )
+        input_node = self._FindALSANode("UAC2", is_capture=True)
+        output_node = self._FindALSANode("UAC2", is_capture=False)
 
         # Create unique file and token
         with tempfile.NamedTemporaryFile(

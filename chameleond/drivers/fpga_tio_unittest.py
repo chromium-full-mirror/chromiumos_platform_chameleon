@@ -27,14 +27,14 @@ class TestChameleondDriverAEC(unittest.TestCase):
     def test_FindALSANode_success(self, mock_check_output):
         # Simulate output of `arecord -l`
         mock_check_output.return_value = (
-            "card 4: USB [USB Audio], device 0: USB Audio [USB Audio]\n"
+            "card 4: UAC2Gadget [UAC2_Gadget], device 0: UAC2 PCM [UAC2 PCM]\n"
             "  Subdevices: 1/1\n"
             "  Subdevice #0: subdevice #0\n"
         )
 
         self_mock = MagicMock()
         node = fpga_tio.ChameleondDriver._FindALSANode(
-            self_mock, "USB", is_capture=True
+            self_mock, "UAC2", is_capture=True
         )
         self.assertEqual(node, "plughw:4,0")
 
@@ -44,10 +44,10 @@ class TestChameleondDriverAEC(unittest.TestCase):
         mock_check_output.return_value = "card 0: ALSA [Built-in Audio]"
 
         self_mock = MagicMock()
-        node = fpga_tio.ChameleondDriver._FindALSANode(
-            self_mock, "USB", is_capture=True
-        )
-        self.assertIsNone(node)
+        with self.assertRaises(fpga_tio.DriverError):
+            fpga_tio.ChameleondDriver._FindALSANode(
+                self_mock, "UAC2", is_capture=True
+            )
 
     @patch("chameleond.drivers.fpga_tio.subprocess.check_output")
     def test_FindALSANode_command_error(self, mock_check_output):
@@ -57,10 +57,10 @@ class TestChameleondDriverAEC(unittest.TestCase):
         )
 
         self_mock = MagicMock()
-        node = fpga_tio.ChameleondDriver._FindALSANode(
-            self_mock, "USB", is_capture=True
-        )
-        self.assertIsNone(node)
+        with self.assertRaises(fpga_tio.DriverError):
+            fpga_tio.ChameleondDriver._FindALSANode(
+                self_mock, "UAC2", is_capture=True
+            )
 
     @patch("chameleond.drivers.fpga_tio.audio_utils")
     @patch("chameleond.drivers.fpga_tio.file_utils")
@@ -167,8 +167,8 @@ class TestChameleondDriverAEC(unittest.TestCase):
     def test_StartRouteWithMultiTapDelay_node_not_found(self):
         self_mock = MagicMock()
         self_mock._route_processes = None
-        # Simulate node not found
-        self_mock._FindALSANode.return_value = None
+        # Simulate node not found by raising DriverError
+        self_mock._FindALSANode.side_effect = fpga_tio.DriverError("Not found")
 
         with self.assertRaises(fpga_tio.DriverError):
             fpga_tio.ChameleondDriver.StartRouteWithMultiTapDelay(
