@@ -93,10 +93,12 @@ class BluezKeyboardClient(object):
         if key in self._char_to_key_map:
             keymapkey = self._char_to_key_map[key][0]
             self._report[2] = modmap[self._char_to_key_map[key][1]]
+            logging.debug("Transfer %r to %s.", key, keymapkey)
         else:
             # Set SHIFT key if uppercase
-            if key.upper() == key:
+            if key.isupper() and len(key) == 1:
                 self._report[2] = modmap["MOD_SHIFT_LEFT"]
+                logging.debug("Press %s with SHIFT.", key)
             keymapkey = "KEY_" + key.upper()
         self._report[4] = keymap[keymapkey]
 
