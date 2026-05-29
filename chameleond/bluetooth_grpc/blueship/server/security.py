@@ -203,6 +203,9 @@ class SecurityService(security_grpc_aio.SecurityServicer):
         self.ctx.btd.bluez_observer.RegisterDevicePairedCallback(
             self.on_device_paired
         )
+        self.ctx.btd.bluez_observer.RegisterDeviceDisconnectedCallback(
+            self.on_device_disconnected
+        )
 
     @check_server_ready
     async def Pair(
@@ -313,6 +316,7 @@ class SecurityService(security_grpc_aio.SecurityServicer):
                     event.pin_code_notification = pincode.encode("utf-8")
                 yield event
         finally:
+            logging.info("Pairing Mode: Cleaning up in background...")
             if agent_manager is not None:
                 agent_manager.UnregisterAgent(AGENT_PATH)
                 agent_manager = None
@@ -339,24 +343,26 @@ class SecurityService(security_grpc_aio.SecurityServicer):
             self.ctx.btd.SetTrustedByRemoteAddress(address)
 
         if self.pairing_events is not None and self.pairing_loop is not None:
-            logging.info(
-                "Pairing Mode: %s is paired. Stopping pairing mode", address
-            )
-
             if self.ctx.btd:
                 self.ctx.btd.SetRemoteAddress(address)
 
-            async def schedule_pairing_stop():
-                # Delay a few seconds for waiting profile connection.
-                await asyncio.sleep(5)
+    def on_device_disconnected(self, address):
+        if self.pairing_events is not None and self.pairing_loop is not None:
+            # Verify the disconnected device is the one we paired with
+            if self.ctx.btd and self.ctx.btd.remote_address == address:
+                logging.info(
+                    "Pairing Mode: Paired device %s disconnected. Stopping pairing mode",
+                    address,
+                )
 
-                # Use |None| to indicate pairing is done.
-                await self.pairing_events.put((None, None))
+                async def schedule_pairing_stop():
+                    # Use |None| to indicate pairing is done.
+                    await self.pairing_events.put((None, None))
 
-            asyncio.run_coroutine_threadsafe(
-                schedule_pairing_stop(),
-                self.pairing_loop,
-            )
+                asyncio.run_coroutine_threadsafe(
+                    schedule_pairing_stop(),
+                    self.pairing_loop,
+                )
 
     @check_server_ready
     async def GetRandomAddress(

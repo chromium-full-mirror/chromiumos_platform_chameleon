@@ -67,6 +67,9 @@ class BlueZObserver:
             name="ServiceData Changed"
         )
         self._device_found_callback_mgr = CallbackManager(name="Device Found")
+        self._disconnected_callback_mgr = CallbackManager(
+            name="Device Disconnected"
+        )
 
         # Register callback on PropertiesChanged signal
         self._property_changed_receiver = sys_dbus.add_signal_receiver(
@@ -137,6 +140,22 @@ class BlueZObserver:
         """
         self._device_found_callback_mgr.UnregisterCallback(handle)
 
+    def RegisterDeviceDisconnectedCallback(self, callback):
+        """Register the callback on device disconnected.
+
+        Args:
+          callback: The callback function to register
+        """
+        return self._disconnected_callback_mgr.RegisterCallback(callback)
+
+    def UnregisterDeviceDisconnectedCallback(self, handle):
+        """Unregister the callback on device disconnected.
+
+        Args:
+          handle: the handle of the callback.
+        """
+        self._disconnected_callback_mgr.UnregisterCallback(handle)
+
     def _service_data_from_dbus(self, service_data_dbus):
         """Helper function to convert ServiceData to built-in type.
 
@@ -182,6 +201,10 @@ class BlueZObserver:
             if dbus.String("Paired") in prop_dict:
                 if bool(prop_dict[dbus.String("Paired")]):
                     self._paired_callback_mgr.CallAll(address)
+
+            if dbus.String("Connected") in prop_dict:
+                if not bool(prop_dict[dbus.String("Connected")]):
+                    self._disconnected_callback_mgr.CallAll(address)
 
             if dbus.String("ServiceData") in prop_dict:
                 service_data_dbus = prop_dict[dbus.String("ServiceData")]
