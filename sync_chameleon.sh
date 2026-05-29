@@ -4,18 +4,52 @@
 
 #!/bin/bash
 
-# Configuration
-if [ -z "$1" ]; then
-    echo "Please specify address of Pi."
-    exit 1
-else
-    PI_HOST="$1"
-fi
-
+# Default Configuration
+DEFAULT_LOCAL_CHAMELEON_DIR="$HOME/chromiumos/src/platform/chameleon"
+LOCAL_CHAMELEON_DIR="$DEFAULT_LOCAL_CHAMELEON_DIR"
+PI_HOST=""
 PI_USER="root"
-LOCAL_CHAMELEON_DIR="$HOME/chromiumos/src/platform/chameleon"
 REMOTE_CHAMELEON_DIR="/etc/chromiumos/src/platform/chameleon"
 SSH_KEY_PATH="/root/.ssh/testing_rsa"
+
+usage() {
+    echo "Usage: $0 [--chameleon_dir=<dir>] <PI_IP_ADDRESS>"
+    echo ""
+    echo "Arguments:"
+    echo "  <PI_IP_ADDRESS>          The IP address of the target Raspberry Pi."
+    echo "Options:"
+    echo "  --chameleon_dir=<dir>    Path to your local chameleon directory."
+    echo "                           (Default: $DEFAULT_LOCAL_CHAMELEON_DIR)"
+    exit 1
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --chameleon_dir=*)
+            LOCAL_CHAMELEON_DIR="${1#*=}"
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)
+            if [ -z "$PI_HOST" ]; then
+                PI_HOST="$1"
+            else
+                echo "Error: Unexpected argument '$1'"
+                usage
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Validate required inputs
+if [ -z "$PI_HOST" ]; then
+    echo "Error: Missing target Pi IP address."
+    usage
+fi
 
 # Check if local directory exists
 if [ ! -d "$LOCAL_CHAMELEON_DIR" ]; then
