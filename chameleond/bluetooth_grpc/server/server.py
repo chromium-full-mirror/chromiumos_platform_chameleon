@@ -8,6 +8,7 @@ import os
 
 
 os.environ["PLATFORM"] = "RASPI"
+os.environ["DISABLE_AUTO_ADVERTISE_ON_DISCONNECT"] = "true"
 
 import asyncio
 import atexit

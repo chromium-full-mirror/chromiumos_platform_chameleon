@@ -11,6 +11,7 @@
 from __future__ import print_function
 
 import logging
+import os
 import sys
 
 import dbus
@@ -341,7 +342,12 @@ class GATTServer(object):
 
                 # Re-enable advertising on disconnect so server can continue
                 if not conn_status:
-                    self._ConfigureAdvertisements()
+                    if os.environ.get("DISABLE_AUTO_ADVERTISE_ON_DISCONNECT") == "true":
+                        logging.info(
+                            "Auto-enable advertisement on disconnect is disabled"
+                        )
+                    else:
+                        self._ConfigureAdvertisements()
 
         if "Adapter1" in caller:
             if dbus.String("Powered") in prop_dict:
