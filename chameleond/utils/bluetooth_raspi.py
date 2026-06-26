@@ -259,6 +259,7 @@ class BluezPeripheral(PeripheralKit):
             self._agent = None
 
     def _setup_dbus_loop(self):
+        dbus.mainloop.glib.threads_init()
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         self._loop = GLib.MainLoop()
         self._thread = threading.Thread(target=self._loop.run)
@@ -503,7 +504,9 @@ class BluezPeripheral(PeripheralKit):
 
         return device_type
 
-    def SpecifyDeviceType(self, device_type, rfcomm_services=None, alias_name=None):
+    def SpecifyDeviceType(
+        self, device_type, rfcomm_services=None, alias_name=None
+    ):
         """Instantiates one of our supported devices
 
         The raspi stack is designed to emulate a single device at a time. This
