@@ -79,12 +79,31 @@ class BluezKeyboardClient(object):
 
         modifier = self._report[2]
         logging.debug(f"Sending SendKeys ({modifier},{self._report[4:10]})")
+        t0 = time.perf_counter()
         self._iface.SendKeys(
             modifier,
             self._report[4:10],
             reply_handler=self.keys_sent_handler,
             error_handler=self.keys_error_handler,
         )
+
+        # b/516863174:
+        # This code measures the time dbus handling of the SendKeys event.
+        # SendKeys should return immediately, but due to dbus-python not
+        # initialized properly with multithread support, we may see code
+        # hang here (gRPC thread) indicating a deadlock has happened.
+        t1 = time.perf_counter()
+        duration = t1 - t0
+        first_key = next(
+            (k for k, v in keymap.items() if v == self._report[4]), None
+        )
+        logging.debug("D-bus SendKeys '%s' used %.6fs", first_key, duration)
+        if duration > 0.05:
+            logging.warning(
+                "D-Bus SendKeys '%s' call blocked the thread for %.6fs!",
+                first_key,
+                duration,
+            )
 
     def set_report_from_key(self, key):
         """Sets the press-down report given the key"""
