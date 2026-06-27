@@ -829,6 +829,8 @@ class BluezPeripheral(PeripheralKit):
                 self.SetAdvertising(discoverable)
             else:
                 self._gatt_server.SetDiscoverable(discoverable)
+        else:
+            logging.warn("No gatt server found! LE not discoverable")
 
     def SetDiscoverableNoConfigAdv(self, discoverable):
         """Set discoverable without configuring advertisements."""
