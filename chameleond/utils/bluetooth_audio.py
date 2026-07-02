@@ -642,7 +642,7 @@ class BluetoothAudio(BluezPeripheral):
             self._pulseaudio = SystemTools.RunInSubprocessAsPi(
                 self.PULSEAUDIO,
                 "--start --daemonize --disallow-exit"
-                " --exit-idle-time=-1 --scache-idle-time=-1 --log-level=debug --log-target=file:/var/log/pulse.log",
+                " --exit-idle-time=-1 --scache-idle-time=-1 --log-level=debug --log-target=syslog",
                 use_local_version,
             )
         except Exception as e:
