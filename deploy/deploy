@@ -25,6 +25,10 @@ BLUETOOTH_GRPC_NAME='bluetooth_grpc'
 TEST_DATA_DIR='/usr/share/autotest'
 PI_CONFIG_DIR="/home/pi/.config"
 
+RSYSLOG_SOURCE_DIR="${CWD}/rsyslog.d"
+RSYSLOG_DIR="/etc/rsyslog.d"
+RSYSLOG_PULSEAUDIO_NAME="pulseaudio.conf"
+
 LOGROTATE_SROUCE_DIR="${CWD}/logrotate.d"
 LOGROTATE_DIR="/etc/logrotate.d"
 
@@ -641,14 +645,16 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
     fi
 
     # Add config for daemon log rotation.
-    touch /var/log/pulse.log
-    chown pi:pi /var/log/pulse.log
     cp "${LOGROTATE_SROUCE_DIR}/${CHAMELEOND_NAME}" \
         "${LOGROTATE_DIR}/${CHAMELEOND_NAME}"
     cp "${LOGROTATE_SROUCE_DIR}/${BLUETOOTH_GRPC_NAME}" \
         "${LOGROTATE_DIR}/${BLUETOOTH_GRPC_NAME}"
     cp "${LOGROTATE_SROUCE_DIR}/pulseaudio" \
         "${LOGROTATE_DIR}/pulseaudio"
+
+    # Add config for outputing extra log files
+    cp "${RSYSLOG_SOURCE_DIR}/${RSYSLOG_PULSEAUDIO_NAME}" \
+        "${RSYSLOG_DIR}/${RSYSLOG_PULSEAUDIO_NAME}"
 
     if [ -n "${need_reboot}" ]; then
         sleep 3 && reboot &
@@ -658,6 +664,7 @@ if [ "${IS_BLUETOOTH_PEER}" -eq 1 ]; then
         # Restart chameleond and bluetoothd to ensure fresh state.
         service bluetooth restart
         "${INITD_DIR}/${CHAMELEOND_NAME}" restart
+        sudo systemctl restart rsyslog
 
         # Kill any lingering audio servers.
         # The audio servers should be started by tests dynamically.
