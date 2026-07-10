@@ -595,6 +595,14 @@ class BluetoothAudio(BluezPeripheral):
     def _UsingLocalVersion(self, audio_profile):
         """Is it preferaable to use a local version of the executable?
 
+        For bookworm version (pigen-btpeer):
+        The /usr/bin/pulseaudio is 16.1, which natively supports WBS and HFP.
+        Moreover, /usr/local/bin/pulseaudio will dynamically link with against
+        Bookwarm's system library, causing symbol collisions between
+        `libpulsecommon-12.0.so and `libpulsecommon-16.1.so`, causing PulseAudio
+        to not function correctly all the time.
+
+        For older versions:
         Use /usr/local/bin/pulseaudio for the 'hfp_wbs' and 'hfp_nbs' profiles
             - This version was made with a vendor patch to enable WBS.
               It suffers from stability issues. The pulseaudio process
@@ -610,6 +618,8 @@ class BluetoothAudio(BluezPeripheral):
         Returns:
           True if a local version is preferred.
         """
+        if SystemTools.IsBookworm():
+            return False
         return False if audio_profile == "a2dp" else True
 
     def _StartPulseaudio(self, use_local_version):
