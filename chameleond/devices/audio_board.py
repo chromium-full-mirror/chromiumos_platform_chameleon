@@ -242,13 +242,21 @@ class _JackPlugger(object):
 
     # The I/O expander index is 1.
     _INDEX = 1
-    # The mapping from register name to bit offset. The current design of jack
-    # pluggers is different from 2018. The stat0 and stat1 are opposite.
+    # The mapping from register name to bit offset.
     _MODEL_2018_BIT_MAP = {"cmd0": 8, "cmd1": 9, "stat0": 10, "stat1": 11}
-    _MODEL_CUR_BIT_MAP = {"cmd0": 8, "cmd1": 9, "stat0": 11, "stat1": 10}
+    # Reserved: 2022 model was hypothetical (reversed status pins). Fleet scans show no active devices use this.
+    _MODEL_2022_BIT_MAP = {"cmd0": 8, "cmd1": 9, "stat0": 11, "stat1": 10}
+    # Model 2026 maps cmd0=9, cmd1=8 so values=(0, 1) plugs and (1, 0) unplugs consistently in _SetPlugState.
+    _MODEL_2026_BIT_MAP = {"cmd0": 9, "cmd1": 8, "stat0": 10, "stat1": 11}
+
+    _MODEL_2018 = 2018
+    _MODEL_2022 = 2022
+    _MODEL_2026 = 2026
+
     # The mapping from plug state to string.
     _STATE_TO_STR = {True: "Plug", False: "Unplug"}
     _DELAY_AFTER_PLUG_UNPLUG = 4
+    _DELAY_PULSE = 0.5
 
     def __init__(self, io_controller):
         """Constructs an _JackPlugger.
@@ -257,61 +265,81 @@ class _JackPlugger(object):
           io_controller: An _AudioBoardIOController object.
         """
         self._io_controller = io_controller
-        self._bit_map = self._DetectBitMap()
+        self._model, self._bit_map = self._DetectBitMap()
         self.Reset()
 
-        logging.info("_JackPlugger initialized")
+        logging.info("_JackPlugger initialized (Model %s)", self._model)
+
+    def _SetCommandBaseline(self, bit_map):
+        """Sets a (0,0) command baseline to prevent hardware lockups on newer Audioboxes."""
+        self._io_controller.SetBit(self._INDEX, bit_map["cmd0"], 0)
+        self._io_controller.SetBit(self._INDEX, bit_map["cmd1"], 0)
+        time.sleep(0.05)
 
     def _DetectBitMap(self):
-        # Try to plug the jack
-        self._io_controller.SetBit(
-            self._INDEX, self._MODEL_2018_BIT_MAP["cmd0"], 0
-        )
-        self._io_controller.SetBit(
-            self._INDEX, self._MODEL_2018_BIT_MAP["cmd1"], 1
-        )
-        time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
-        plug_v0 = self._io_controller.ReadBit(
-            self._INDEX, self._MODEL_2018_BIT_MAP["stat0"]
-        )
-        plug_v1 = self._io_controller.ReadBit(
-            self._INDEX, self._MODEL_2018_BIT_MAP["stat1"]
-        )
+        cmd0 = 8
+        cmd1 = 9
+        stat0 = 10
+        stat1 = 11
 
-        # Try to unplug the jack
-        self._io_controller.SetBit(
-            self._INDEX, self._MODEL_2018_BIT_MAP["cmd0"], 1
-        )
-        self._io_controller.SetBit(
-            self._INDEX, self._MODEL_2018_BIT_MAP["cmd1"], 0
-        )
+        def _SetCmd(b0, b1):
+            self._io_controller.SetBit(self._INDEX, cmd0, b0)
+            self._io_controller.SetBit(self._INDEX, cmd1, b1)
+
+        def _GetRawStat():
+            b10 = self._io_controller.ReadBit(self._INDEX, stat0)
+            b11 = self._io_controller.ReadBit(self._INDEX, stat1)
+            return (b10, b11)
+
+        def _ResetCmd():
+            _SetCmd(0, 0)
+            time.sleep(0.05)
+
+        # 1. Reset command baseline
+        _ResetCmd()
+
+        # 2. Issue New-Audiobox Unplug Pulse (cmd0=0, cmd1=1)
+        _SetCmd(0, 1)
+        time.sleep(self._DELAY_PULSE)
+        _ResetCmd()
         time.sleep(self._DELAY_AFTER_PLUG_UNPLUG)
-        unplug_v0 = self._io_controller.ReadBit(
-            self._INDEX, self._MODEL_2018_BIT_MAP["stat0"]
-        )
-        unplug_v1 = self._io_controller.ReadBit(
-            self._INDEX, self._MODEL_2018_BIT_MAP["stat1"]
-        )
+
+        # 3. Read raw status pins (bit 10, bit 11)
+        b10, b11 = _GetRawStat()
 
         logging.info(
-            "Detecting jack plugger model. Plug: (%d %d), Unplug: (%d %d)",
-            plug_v0,
-            plug_v1,
-            unplug_v0,
-            unplug_v1,
+            "Detecting jack plugger model with pulse (0, 1): (%d %d)",
+            b10,
+            b11,
         )
-        if (plug_v0, plug_v1, unplug_v0, unplug_v1) == (0, 1, 1, 0):
-            return self._MODEL_2018_BIT_MAP
-        elif (plug_v0, plug_v1, unplug_v0, unplug_v1) == (1, 0, 0, 1):
-            return self._MODEL_CUR_BIT_MAP
+
+        # For Model 2018 (old level-triggered), pulse (0, 1) plugged the arm -> status (0, 1)
+        if (b10, b11) == (0, 1):
+            logging.info(
+                "Detected Model 2018 (Level-controlled). Restoring unplugged state."
+            )
+            _SetCmd(1, 0)
+            return self._MODEL_2018, self._MODEL_2018_BIT_MAP
+
+        # For Model 2026 (new pulse-controlled), pulse (0, 1) unplugged the arm -> status (1, 0)
+        elif (b10, b11) == (1, 0):
+            logging.info(
+                "Detected Model 2026 (Pulse-controlled). State is unplugged."
+            )
+            return self._MODEL_2026, self._MODEL_2026_BIT_MAP
+
+        # Model 2022 bit map definition kept for reference
+        elif False:
+            return self._MODEL_2022, self._MODEL_2022_BIT_MAP
+
         else:
-            raise _JackPluggerException("No valid jack plugger detected.")
+            raise _JackPluggerException(
+                "No valid jack plugger detected. Raw status bits: (%d, %d)"
+                % (b10, b11)
+            )
 
     def Reset(self):
         """Unplugs the jack and checks status."""
-        # Set to false as we want to keep the audio cables constantly unplugged.
-        # Tests require 3.5mm jack plugged ideally should be scheduled to devices
-        # with the audio_cable label.
         self.SetPlugStateAndCheck(False)
 
     def _SetPlugState(self, plug):
@@ -320,10 +348,10 @@ class _JackPlugger(object):
         Args:
           plug: True to plug. False otherwise.
         """
-        if plug:
-            values = (0, 1)
-        else:
-            values = (1, 0)
+        values = (0, 1) if plug else (1, 0)
+
+        if self._model == self._MODEL_2026:
+            self._SetCommandBaseline(self._bit_map)
 
         self._io_controller.SetBit(
             self._INDEX, self._bit_map["cmd0"], values[0]
@@ -331,6 +359,10 @@ class _JackPlugger(object):
         self._io_controller.SetBit(
             self._INDEX, self._bit_map["cmd1"], values[1]
         )
+
+        if self._model == self._MODEL_2026:
+            time.sleep(self._DELAY_PULSE)
+            self._SetCommandBaseline(self._bit_map)
 
     def _GetPlugState(self):
         """Gets plugger current state.
