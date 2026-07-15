@@ -15,6 +15,7 @@ from __future__ import print_function
 import logging
 import os
 import socket
+import subprocess
 import time
 
 from blueship import manager_pb2
@@ -519,6 +520,56 @@ class BluezHIDService(dbus.service.Object):
                     logging.info("Registering profile again... %s", str(e))
                     time.sleep(0.1)
 
+    def _log_bluetooth_diagnostics(self, context_msg):
+        """Log bluetoothd error for incorrect launch arguments.
+
+        b/529302267:
+        This is for debugging the `[Errno 98] Address already in use]`
+        error that happens in btpeer-based REF images.
+
+        Currently suspect that bluetoothd's launch flag missing `-P input`,
+        which causes bluetoothd to activate its internal input plugin, locking
+        L2CAP PSM 17(P_CTRL) & PSM 19(P_INTR), and prevents self._scontrol and
+        self._sinterrupt to listen to.
+        """
+        logging.error(
+            "--- Bluetooth Diagnostics Triggered: %s ---", context_msg
+        )
+        try:
+            service_file = "/lib/systemd/system/bluetooth.service"
+            if os.path.exists(service_file):
+                with open(service_file, "r") as f:
+                    for line in f:
+                        if "ExecStart" in line:
+                            logging.error(
+                                "Current bluetooth.service ExecStart: %s",
+                                line.strip(),
+                            )
+        except Exception as err:
+            logging.error("Failed to read bluetooth.service: %s", err)
+
+        try:
+            out = subprocess.check_output(
+                ["ps", "-ef"], universal_newlines=True
+            )
+            for line in out.splitlines():
+                if "bluetoothd" in line:
+                    logging.error(
+                        "Running bluetoothd process: %s", line.strip()
+                    )
+        except Exception as err:
+            logging.error("Failed to query bluetoothd processes: %s", err)
+
+        try:
+            out = subprocess.check_output(
+                ["journalctl", "-u", "bluetooth", "-n", "30", "--no-pager"],
+                universal_newlines=True,
+            )
+            logging.error("Recent bluetooth journal logs:\n%s", out.strip())
+        except Exception as err:
+            logging.error("Failed to get journalctl logs: %s", err)
+        logging.error("--- End Bluetooth Diagnostics ---")
+
     def _Listen(self, dev_addr):
         logging.info("start listening HID socket")
 
@@ -538,8 +589,17 @@ class BluezHIDService(dbus.service.Object):
         self._scch = GLib.IOChannel(self._scontrol.fileno())
         self._sich = GLib.IOChannel(self._sinterrupt.fileno())
 
-        self._scontrol.bind((dev_addr, P_CTRL))
-        self._sinterrupt.bind((dev_addr, P_INTR))
+        try:
+            self._scontrol.bind((dev_addr, P_CTRL))
+            self._sinterrupt.bind((dev_addr, P_INTR))
+        except Exception as e:
+            logging.error(
+                "Failed to bind L2CAP sockets for control/interrupt (dev_addr=%s): %s",
+                dev_addr,
+                e,
+            )
+            self._log_bluetooth_diagnostics("L2CAP socket bind failure")
+            raise
 
         # Start listening on server sockets. Add watch to process connection
         # asynchronously.

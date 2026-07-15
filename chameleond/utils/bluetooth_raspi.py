@@ -589,16 +589,22 @@ class BluezPeripheral(PeripheralKit):
 
         @param device_type: String device type, e.g. "MOUSE"
         """
+        base_device_type = self.GetBaseDeviceType(device_type)
+        desired_btd_flags = PERIPHERAL_BTD_FLAGS[base_device_type]
+
+        logging.info(
+            "SetBtdFlags: device_type=%s, base_device_type=%s, desired_flags=%s",
+            device_type,
+            base_device_type,
+            desired_btd_flags,
+        )
+
         # Define regex to separate executable from flags. Example contents:
         # ExecStart=/usr/libexec/bluetooth/bluetoothd -d -P input
         PLUGIN_RE = re.compile(
             r"^(?P<prefix>\s*ExecStart=.*?)"
             r"(?P<flags>\s*-.*)?$"  # pre-flags
         )  # optional flags block
-
-        desired_btd_flags = PERIPHERAL_BTD_FLAGS[
-            self.GetBaseDeviceType(device_type)
-        ]
 
         file_contents = []
         with open(BTD_CONF_FILE, "r") as mf:
@@ -628,7 +634,12 @@ class BluezPeripheral(PeripheralKit):
         if m.group("prefix") not in file_contents[exec_line - 1]:
             file_contents.insert(exec_line, "# {}".format(old_line))
 
-        logging.info("Applying bluetoothd flags: %s", desired_btd_flags)
+        logging.info(
+            "Applying bluetoothd flags to %s: %s (old line: %s)",
+            BTD_CONF_FILE,
+            desired_btd_flags,
+            old_line.strip(),
+        )
 
         # Write new contents back to the file
         with open(BTD_CONF_FILE, "w") as mf:
@@ -637,7 +648,15 @@ class BluezPeripheral(PeripheralKit):
     def ResetStack(self, next_device_type=None, restart_chameleond=True):
         """Restores BT stack to pristine state by restarting running services"""
 
-        logging.info("ResetStack")
+        logging.info(
+            "ResetStack: next_device_type=%s, restart_chameleond=%s",
+            next_device_type,
+            restart_chameleond,
+        )
+        if not next_device_type:
+            logging.warning(
+                "ResetStack: next_device_type is None! Unmodified bluetooth.service flags will persist across reset."
+            )
         reset_cmds = [
             "systemctl daemon-reload",
             "service bluetooth restart",
