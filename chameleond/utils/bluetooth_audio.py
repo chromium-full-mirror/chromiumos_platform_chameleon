@@ -479,9 +479,12 @@ class BluetoothAudio(BluezPeripheral):
         if not os.path.exists(audio_record_dir):
             os.makedirs(audio_record_dir)
 
-            # Let all users have the right to r,w,x.
-            # This is required for a pi user to write into this directory.
+        # Let all users have the right to r,w,x.
+        # This is required for a pi user to write into this directory.
+        try:
             os.chmod(audio_record_dir, 0o777)
+        except Exception:
+            pass
 
     def ConnectToRemoteAddress(self, remote_address):
         """Connect to a remote device with a specified address.
@@ -1387,6 +1390,12 @@ class BluetoothAudio(BluezPeripheral):
             pass
 
         self._MakeAudioRecordDirectory(os.path.split(file_path)[0])
+        try:
+            with open(file_path, "a") as f:
+                pass
+            os.chmod(file_path, 0o666)
+        except Exception:
+            pass
 
         if audio_profile.startswith("a2dp"):
             # default is .raw (not .wav)
@@ -1460,6 +1469,12 @@ class BluetoothAudio(BluezPeripheral):
             pass
 
         self._MakeAudioRecordDirectory(os.path.split(file_path)[0])
+        try:
+            with open(file_path, "a") as f:
+                pass
+            os.chmod(file_path, 0o666)
+        except Exception:
+            pass
 
         bluez_id = self.GetPipewireBluezId()
         if bluez_id is None:

@@ -113,6 +113,11 @@ class HostService(host_grpc_aio.HostServicer):
     async def ReadLocalAddress(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> host_pb2.ReadLocalAddressResponse:
+        if not self.ctx.is_server_ready or self.ctx.btd is None:
+            await context.abort(
+                grpc.StatusCode.UNAVAILABLE,
+                f"Bluetooth device is not yet configured. {self.ctx.is_server_ready=}, {self.ctx.btd=}",
+            )
         address = self.ctx.btd.GetLocalBluetoothAddress()
         return host_pb2.ReadLocalAddressResponse(
             address=utils.address_to(address)

@@ -559,6 +559,8 @@ class BluezPeripheral(PeripheralKit):
                     self.GetLocalBluetoothAddress(),
                     rfcomm_services,
                 )
+            elif device_type == "BLUETOOTH_AUDIO":
+                self._bluez_service = None
             else:
                 self._bluez_service = BluezHIDService(
                     self.device_type, self.GetLocalBluetoothAddress()
