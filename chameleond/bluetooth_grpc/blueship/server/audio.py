@@ -61,14 +61,18 @@ class AudioService(audio_grpc_aio.AudioServicer):
                 test_data["rate"] = 8000
                 test_data["channels"] = 1
 
-        self.ctx.btd.StartRecordingAudioSubprocess(audio_profile, test_data)
+        if not self.ctx.btd.StartRecordingAudioSubprocess(
+            audio_profile, test_data
+        ):
+            context.abort(grpc.StatusCode.INTERNAL, "Failed to start recording")
         return empty_pb2.Empty()
 
     @check_server_ready
     async def StopRecordAudio(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
-        self.ctx.btd.StopRecordingingAudioSubprocess()
+        if not self.ctx.btd.StopRecordingingAudioSubprocess():
+            context.abort(grpc.StatusCode.INTERNAL, "Failed to stop recording")
         return empty_pb2.Empty()
 
     @check_server_ready
@@ -94,14 +98,18 @@ class AudioService(audio_grpc_aio.AudioServicer):
                 "format": "S16_LE",
             }
 
-        self.ctx.btd.StartPlayingAudioSubprocess(audio_profile, test_data)
+        if not self.ctx.btd.StartPlayingAudioSubprocess(
+            audio_profile, test_data
+        ):
+            context.abort(grpc.StatusCode.INTERNAL, "Failed to start playing")
         return empty_pb2.Empty()
 
     @check_server_ready
     async def StopPlayAudio(
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> empty_pb2.Empty:
-        self.ctx.btd.StopPlayingAudioSubprocess()
+        if not self.ctx.btd.StopPlayingAudioSubprocess():
+            context.abort(grpc.StatusCode.INTERNAL, "Failed to stop playing")
         return empty_pb2.Empty()
 
     @check_server_ready

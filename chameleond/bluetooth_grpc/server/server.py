@@ -204,7 +204,6 @@ class TestServerContext:
     def device_name(self):
         return self.config.device.name.string_value
 
-
     def reset_bluetooth_device(self):
         logging.info("reset_bluetooth_device")
 
@@ -232,7 +231,8 @@ class TestServerContext:
             # from the dashboard, the test
             # `au_hfp_wbs_to_a2dp_dut_as_source_test` is quite stable,
             # therefore, we use the specialized audio server as default here
-            self.btd.StartAudioServer("hfp_wbs")
+            if not self.btd.StartAudioServer("hfp_wbs"):
+                raise RuntimeError("Failed to start audio server")
             self.btd.StartOfono()
             if not self.btd.ExportMediaPlayer():
                 logging.info("Failed to export media player")
@@ -240,7 +240,7 @@ class TestServerContext:
         self.btd.SpecifyDeviceType(
             self.device_type,
             self.config.devkit.rfcomm_services.service_list.service_list,
-            self.device_name
+            self.device_name,
         )
 
         # Delay 1 second to wait for power on.
@@ -300,12 +300,14 @@ class TestServerContext:
             time.sleep(0.1)
         # Wait for the adapter to power on forever.
         # Test will restart this grpc server after its custom timeout.
-        self._wait_for_adapter_power_on("hci0", timeout=float('inf'))
+        self._wait_for_adapter_power_on("hci0", timeout=float("inf"))
 
     def _is_adapter_powered(self, adapter="hci0"):
         """Checks if the specified bluetooth adapter is powered on via hciconfig."""
         try:
-            output = subprocess.check_output(["hciconfig", adapter]).decode("utf-8")
+            output = subprocess.check_output(["hciconfig", adapter]).decode(
+                "utf-8"
+            )
             lines = output.splitlines()
             for line in lines:
                 # Example output of `hciconfig hci0`:
@@ -322,7 +324,9 @@ class TestServerContext:
             logging.error("Failed to check power status for %s: %s", adapter, e)
         return False
 
-    def _wait_for_adapter_power_on(self, adapter="hci0", timeout=5.0, interval=0.5):
+    def _wait_for_adapter_power_on(
+        self, adapter="hci0", timeout=5.0, interval=0.5
+    ):
         """Waits for the specified adapter to be powered on.
 
         Args:
@@ -339,7 +343,9 @@ class TestServerContext:
                 sleep_interval=interval,
                 desc=f"bluetooth adapter {adapter} to power on ({timeout:.1f} s)",
             )
-            logging.info("Bluetooth adapter %s powered on successfully", adapter)
+            logging.info(
+                "Bluetooth adapter %s powered on successfully", adapter
+            )
             return True
         except common.TimeoutError as e:
             logging.error("Bluetooth adatper error: %s", e)
