@@ -71,9 +71,9 @@ audio device.
 
 The uppercased '-P' flag disables the comma-separated plugins that follow it
 """
-AUDIO_BTD_FLAGS = "-d -P input --noplugin=sap"
-NON_AUDIO_BTD_FLAGS = "-d -P input,avrcp,a2dp --noplugin=sap"
-SERIAL_PORT_BTD_FLAGS = "-C -d -P input,avrcp,a2dp --noplugin=sap"
+AUDIO_BTD_FLAGS = "-d -P input,sap"
+NON_AUDIO_BTD_FLAGS = "-d -P input,avrcp,a2dp,sap"
+SERIAL_PORT_BTD_FLAGS = "-C -d -P input,avrcp,a2dp,sap"
 
 PERIPHERAL_BTD_FLAGS = {
     PeripheralKit.KEYBOARD: NON_AUDIO_BTD_FLAGS,
