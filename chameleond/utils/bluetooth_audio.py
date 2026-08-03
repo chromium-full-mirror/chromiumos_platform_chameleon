@@ -1403,13 +1403,27 @@ class BluetoothAudio(BluezPeripheral):
         else:
             file_format = "--file-format=wav"
 
+        latency_msec = 15
+
+        # --record: Tell pacat to record.
+        # --device={d}: Specifies PusleAudio source device {d} to record from.
+        # --format={s}: Specifies audio sample format.
+        # --rate={r}: Specifies sample rate in Hz.
+        # --channels={c}: Specifies number of channels.
+        # --latency-msec={l}: Requests PulseAudio server to config recording
+        #                     stream with latency of 15ms. By default PulseAudio
+        #                     may choose a higher latency to save power.
+        # --raw: Tell pacat to record raw PCM data.
+        # {ff}: File format placeholder.
+        # {fp}: Output file path.
         args = "--record --device={d} --format={s} --rate={r} --channels={c} "
-        args += "--raw {ff} {fp}"
+        args += "--latency-msec={l} --raw {ff} {fp}"
         args = args.format(
             d=device_number,
             s=sample_format,
             r=test_data["rate"],
             c=test_data["channels"],
+            l=latency_msec,
             ff=file_format,
             fp=file_path,
         )
