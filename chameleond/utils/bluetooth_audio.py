@@ -446,14 +446,14 @@ class BluetoothAudio(BluezPeripheral):
         #   5 bluez_source.DC_71_96_68_E0_9C.headset_audio_gateway \
         #           module-bluez5-device.c  s16le 1ch 8000Hz RUNNING
         self._hfp_source_pattern = re.compile(
-            r"(\d+)\s+bluez_source.*headset_audio_gateway"
+            r"(\d+)\s+bluez_source.*(headset|handsfree)_audio_gateway"
         )
 
         # A target bluez_source HFP device looks like:
         #   1 bluez_sink.34_13_E8_DB_47_5E.headset_audio_gateway
         #           module-bluez5-device.c  s16le 1ch 16000Hz
         self._hfp_sink_pattern = re.compile(
-            r"(\d+)\s+bluez_sink.*headset_audio_gateway"
+            r"(\d+)\s+bluez_sink.*(headset|handsfree)_audio_gateway"
         )
 
         # An a2dp source device looks like
