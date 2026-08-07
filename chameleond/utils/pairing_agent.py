@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -135,18 +134,18 @@ class Agent(dbus.service.Object):
         logging.info("Cancel")
 
 
-def SetupAgent(capability, agent_registered_event):
+def SetupAgent(capability, agent_registered_event=None):
     """Sets up a pairing agent and runs it.
 
     It sets up and registers the pairing agent, and runs the main loop. It is a
     blocking call.
 
     Args:
-      capability: the capability of the device. The capability parameter can
-                  have the values: DisplayOnly, DisplayYesNo, KeyboardOnly,
-                  NoInputNoOutput and KeyboardDisplay.
-      agent_registered_event: A threading.Event to signal after the pairing
-                              agent is registered.
+        capability: the capability of the device. The capability parameter can
+            have the values: DisplayOnly, DisplayYesNo, KeyboardOnly,
+            NoInputNoOutput and KeyboardDisplay.
+        agent_registered_event: A threading.Event to signal after the pairing
+            agent is registered.
     """
     global _unique_pairing_agent  # pylint: disable=global-statement
 
@@ -167,7 +166,8 @@ def SetupAgent(capability, agent_registered_event):
     agent_manager.RegisterAgent(AGENT_PATH, dbus.String(capability))
     agent_manager.RequestDefaultAgent(AGENT_PATH)
 
-    agent_registered_event.set()
+    if agent_registered_event:
+        agent_registered_event.set()
 
     main_loop.run()
 
@@ -180,11 +180,21 @@ def StopAgent():
     global _unique_pairing_agent  # pylint: disable=global-statement
 
     if _unique_pairing_agent:
-        bluez_obj = _unique_pairing_agent.bus.get_object(
-            BUS_NAME, BLUEZ_OBJECT_PATH
-        )
-        agent_manager = dbus.Interface(bluez_obj, AGENT_MANAGER_INTERFACE)
-        agent_manager.UnregisterAgent(AGENT_PATH)
+        try:
+            bluez_obj = _unique_pairing_agent.bus.get_object(
+                BUS_NAME, BLUEZ_OBJECT_PATH
+            )
+            agent_manager = dbus.Interface(bluez_obj, AGENT_MANAGER_INTERFACE)
+            agent_manager.UnregisterAgent(AGENT_PATH)
+        except dbus.DBusException as e:
+            if e.get_dbus_name() == "org.bluez.Error.DoesNotExist":
+                logging.warning(
+                    "Agent did not exist in BlueZ "
+                    "(likely crashed/restarted): %s",
+                    e,
+                )
+            else:
+                raise
 
         _unique_pairing_agent.remove_from_connection()
 
