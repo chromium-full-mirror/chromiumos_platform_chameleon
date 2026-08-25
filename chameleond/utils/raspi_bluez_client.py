@@ -35,7 +35,7 @@ class BluezKeyboardClient(object):
 
     def __init__(self):
         self._report = [
-            0xA1,  # Input report
+            0xA1,  # Input Data report see HID_v1.1.2.pdf 3.1.2.9 for format
             0x01,  # Usage report = Keyboard
             # Bitmap for Modifier keys
             # See bluetooth_bluez_service_consts.modmap for mapping

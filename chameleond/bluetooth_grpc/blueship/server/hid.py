@@ -62,3 +62,15 @@ class HIDService(hid_grpc_aio.HIDServicer):
             request.delta_x, request.delta_y, delay=self.MOUSE_DELAY
         )
         return empty_pb2.Empty()
+
+    @check_server_ready
+    async def MouseScroll(
+        self,
+        request: hid_pb2.MouseScrollRequest,
+        context: grpc.ServicerContext,
+    ) -> empty_pb2.Empty:
+        self.ctx.btd.Scroll(
+            request.steps
+        )
+        return empty_pb2.Empty()
+

@@ -13,6 +13,8 @@ service HID {
   rpc ReleaseKey(google.protobuf.Empty) returns (google.protobuf.Empty);
   // Simulates a mouse movement
   rpc MouseMove(MouseMoveRequest) returns (google.protobuf.Empty);
+  // Simulates a mouse scroll
+  rpc MouseScroll(MouseScrollRequest) returns (google.protobuf.Empty);
 }
 
 // Request for the `PressKey` method.
@@ -22,4 +24,9 @@ message KeyPressRequest { string key = 1; }
 message MouseMoveRequest {
   int32 delta_x = 1;
   int32 delta_y = 2;
+}
+
+// Request for the `MouseScroll` method.
+message MouseScrollRequest {
+  int32 steps = 1;
 }
