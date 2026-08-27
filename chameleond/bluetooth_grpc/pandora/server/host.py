@@ -116,7 +116,7 @@ class HostService(host_grpc_aio.HostServicer):
         if not self.ctx.is_server_ready or self.ctx.btd is None:
             await context.abort(
                 grpc.StatusCode.UNAVAILABLE,
-                f"Bluetooth device is not yet configured. {self.ctx.is_server_ready=}, {self.ctx.btd=}",
+                f"Bluetooth device is not yet configured. is_server_ready={self.ctx.is_server_ready}, btd={self.ctx.btd}",
             )
         address = self.ctx.btd.GetLocalBluetoothAddress()
         return host_pb2.ReadLocalAddressResponse(
