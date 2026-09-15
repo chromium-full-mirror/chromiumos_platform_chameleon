@@ -647,6 +647,57 @@ class BluezPeripheral(PeripheralKit):
         with open(BTD_CONF_FILE, "w") as mf:
             mf.write("".join(file_contents))
 
+    def HardwareReset(self):
+        """Performs a hardware reset of the Bluetooth controller.
+
+        On modern Linux kernels (Linux 6.x / Bookworm) with serdev, unbinding
+        and rebinding the Broadcom UART driver forces a hardware power cycle
+        and reloads the firmware patch (.hcd).
+        Falls back to rfkill and service restart if serdev is unavailable.
+        """
+        logging.info("HardwareReset: Resetting Bluetooth controller hardware")
+        driver_dir = "/sys/bus/serial/drivers/hci_uart_bcm"
+        reset_via_serdev = False
+
+        os.system("sudo service bluetooth stop")
+
+        try:
+            if os.path.exists(driver_dir):
+                devices = [
+                    d for d in os.listdir(driver_dir) if d.startswith("serial")
+                ]
+                if devices:
+                    for dev in devices:
+                        logging.info(
+                            "HardwareReset: Unbinding %s from hci_uart_bcm", dev
+                        )
+                        with open(os.path.join(driver_dir, "unbind"), "w") as f:
+                            f.write("{}\n".format(dev))
+                    time.sleep(1.0)
+                    for dev in devices:
+                        logging.info(
+                            "HardwareReset: Binding %s to hci_uart_bcm", dev
+                        )
+                        with open(os.path.join(driver_dir, "bind"), "w") as f:
+                            f.write("{}\n".format(dev))
+                    time.sleep(1.0)
+                    reset_via_serdev = True
+        except Exception as e:
+            logging.error("HardwareReset: serdev rebind failed: %s", e)
+
+        if not reset_via_serdev:
+            logging.info("HardwareReset: Falling back to rfkill reset")
+            os.system(
+                "sudo rfkill block bluetooth && sleep 0.5 && "
+                "sudo rfkill unblock bluetooth && sleep 0.5"
+            )
+
+        # Invalidate DBus properties cache handle
+        self._dbus_hci_props = None
+
+        # Restart bluetooth daemon so it picks up the re-enumerated controller
+        os.system("sudo service bluetooth start")
+
     def ResetStack(self, next_device_type=None, restart_chameleond=True):
         """Restores BT stack to pristine state by restarting running services"""
 
@@ -659,9 +710,15 @@ class BluezPeripheral(PeripheralKit):
             logging.warning(
                 "ResetStack: next_device_type is None! Unmodified bluetooth.service flags will persist across reset."
             )
+
+        # Stop Bluetooth audio related daemons first before touching adapter power
+        # or cached files. This prevents audio streams from wedging the UART link
+        # during teardown.
+        os.system("sudo killall pulseaudio")
+        os.system("sudo service ofono stop")
+
         reset_cmds = [
             "systemctl daemon-reload",
-            "service bluetooth restart",
         ]
 
         if restart_chameleond:
@@ -673,25 +730,27 @@ class BluezPeripheral(PeripheralKit):
             self.SetBtdFlags(next_device_type)
 
         self.CleanCachedFiles()
-        self.AdapterPowerOff()
+
+        try:
+            self.AdapterPowerOff()
+        except Exception as e:
+            logging.warning("AdapterPowerOff failed during ResetStack: %s", e)
 
         # Since bluetoothd is going to be restarted, clean up the dbus proxy to
         # enforce we create a new one once restarted.
         self._dbus_hci_props = None
 
-        # Stop Bluetooth audio related daemons which may interfere
-        # with HID tests.
-        # Since these commands may return non zero value if they are not
-        # running, we should not put them in the reset_cmds below.
-        os.system("sudo killall pulseaudio")
-        os.system("sudo service ofono stop")
+        # Perform hardware reset of the controller
+        self.HardwareReset()
 
         # Restart chameleon and bluetooth service
         os.system(" && ".join(reset_cmds))
 
     # Power cycle the device
     def PowerCycle(self):
-        return self.Reboot()
+        logging.info("PowerCycle: Triggering HardwareReset")
+        self.HardwareReset()
+        return self.Init()
 
     # Override BluetoothHID's implementation of init
     def Init(self, factory_reset=True):
@@ -700,8 +759,22 @@ class BluezPeripheral(PeripheralKit):
 
         # Make sure device is powered up and discoverable
         if not self._get_hci_prop("org.bluez.Adapter1", "Powered"):
-            logging.info("Init: Adapter not powered")
+            logging.info("Init: Adapter not powered, attempting to power on")
+            self.AdapterPowerOn()
+            time.sleep(0.5)
+
+        if not self._get_hci_prop("org.bluez.Adapter1", "Powered"):
+            logging.warning(
+                "Init: Adapter still not powered, attempting HardwareReset"
+            )
+            self.HardwareReset()
+            self.AdapterPowerOn()
+            time.sleep(0.5)
+
+        if not self._get_hci_prop("org.bluez.Adapter1", "Powered"):
+            logging.error("Init: Adapter not powered after recovery attempts")
             return False
+
         self.SetDiscoverable(True)
 
         # Set class based on device we're emulating
@@ -799,8 +872,7 @@ class BluezPeripheral(PeripheralKit):
     def Reboot(self):
         logging.info("REBOOTING")
 
-        self.AdapterPowerOff()
-        self.AdapterPowerOn()
+        self.HardwareReset()
 
         # Put ourselves back into correct state for discovery
         return self.Init()
