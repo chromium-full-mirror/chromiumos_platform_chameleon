@@ -142,6 +142,16 @@ class Ofono(object):
     DBUS_STATE_WAITING = "waiting"
     DBUS_STATE_DISCONNECTED = "disconnected"
 
+    DBUS_BLUEZ_SERVICE = "org.bluez"
+    DBUS_BLUEZ_ADAPTER_PATH = "/org/bluez/hci0"
+    DBUS_BLUEZ_ADAPTER_INTERFACE = "org.bluez.Adapter1"
+    DBUS_PROPERTIES_INTERFACE = "org.freedesktop.DBus.Properties"
+
+    HFP_HF_UUID = "0000111e-0000-1000-8000-00805f9b34fb"
+    START_OFONO_RETRIES = 3
+    WAIT_UUID_TIMEOUT_SECS = 3.0
+    WAIT_UUID_INTERVAL_SECS = 0.1
+
     def __init__(self):
         self._dbus_system_bus = dbus.SystemBus()
 
@@ -169,21 +179,97 @@ class Ofono(object):
                 return calls
         return []
 
+    def IsHfpHfUuidRegistered(self):
+        """Check if ofonod's HFP_HF SDP record is present on /org/bluez/hci0.
+
+        Adapter1.UUIDs is built from bluetoothd's SDP records, so this returns
+        True once ofonod has called RegisterProfile, even if the kernel
+        rejected MGMT_OP_ADD_UUID (e.g. Busy). That is exactly what PulseAudio
+        snapshots via GetManagedObjects at startup, so it is the correct gate
+        for starting PulseAudio after ofono.
+
+        Returns:
+          True if HFP_HF_UUID is listed in Adapter1.UUIDs.
+        """
+        try:
+            hci0_obj = self._dbus_system_bus.get_object(
+                self.DBUS_BLUEZ_SERVICE, self.DBUS_BLUEZ_ADAPTER_PATH
+            )
+            adapter_props = dbus.Interface(
+                hci0_obj,
+                self.DBUS_PROPERTIES_INTERFACE,
+            )
+            uuids = adapter_props.Get(
+                self.DBUS_BLUEZ_ADAPTER_INTERFACE, "UUIDs"
+            )
+            return any(
+                str(u).lower() == self.HFP_HF_UUID for u in uuids
+            )
+        except dbus.exceptions.DBusException as e:
+            logging.debug("Failed to query Adapter1 UUIDs: %s", e)
+            return False
+
     def Start(self):
-        """Start/restart Ofono process.
+        """Start/restart Ofono process and wait for HFP_HF UUID registration.
 
         Returns:
           True if it starts successfully.
         """
-
-        self.Stop()
-        try:
-            SystemTools.Call("service", self.OFONO, "start")
-            logging.info("%s is started.", self.OFONO)
+        if (
+            SystemTools.OrigCall(
+                "systemctl", "is-active", "--quiet", self.OFONO
+            )
+            == 0
+            and self.IsHfpHfUuidRegistered()
+        ):
+            logging.info(
+                "%s is already active and HFP_HF UUID (%s) is registered.",
+                self.OFONO,
+                self.HFP_HF_UUID,
+            )
             return True
-        except Exception as e:
-            logging.error("Failed to start %s: %s.", self.OFONO, e)
-            return False
+
+        for attempt in range(self.START_OFONO_RETRIES):
+            self.Stop()
+            try:
+                SystemTools.Call("service", self.OFONO, "start")
+                logging.info(
+                    "%s is started (attempt %d/%d).",
+                    self.OFONO,
+                    attempt + 1,
+                    self.START_OFONO_RETRIES,
+                )
+            except Exception as e:
+                logging.error("Failed to start %s: %s.", self.OFONO, e)
+                return False
+
+            deadline = time.time() + self.WAIT_UUID_TIMEOUT_SECS
+            while time.time() < deadline:
+                if self.IsHfpHfUuidRegistered():
+                    logging.info(
+                        "HFP_HF UUID (%s) registered on /org/bluez/hci0.",
+                        self.HFP_HF_UUID,
+                    )
+                    return True
+                time.sleep(self.WAIT_UUID_INTERVAL_SECS)
+
+            logging.warning(
+                "HFP_HF UUID (%s) not registered on /org/bluez/hci0 "
+                "within %.1fs (attempt %d/%d); restarting %s.",
+                self.HFP_HF_UUID,
+                self.WAIT_UUID_TIMEOUT_SECS,
+                attempt + 1,
+                self.START_OFONO_RETRIES,
+                self.OFONO,
+            )
+
+        logging.error(
+            "Failed to confirm HFP_HF UUID (%s) registration "
+            "after %d attempts.",
+            self.HFP_HF_UUID,
+            self.START_OFONO_RETRIES,
+        )
+        return False
 
     def Stop(self):
         """Stop Ofono process.
@@ -676,6 +762,18 @@ class BluetoothAudio(BluezPeripheral):
         Returns:
           True if it starts successfully.
         """
+        if "hfp" in audio_profile and not self._ofono.IsHfpHfUuidRegistered():
+            logging.info(
+                "Starting ofono prior to pulseaudio for %s "
+                "so HFP_HF UUID is registered.",
+                audio_profile,
+            )
+            if not self._ofono.Start():
+                logging.warning(
+                    "ofono failed to register HFP_HF UUID; PulseAudio may omit "
+                    "handsfree_audio_gateway and abort on HFP transport changes."
+                )
+
         for i in range(self.START_PULSEAUDIO_TIMES):
             logging.info("try to start pulseaudio ... %d", i)
             # Force .config to be owned by pi, otherwise pulseaudio fails to start

@@ -224,19 +224,6 @@ class TestServerContext:
         # Restart Chameleond
         self.chameleon = fpga_tio.ChameleondDriver()
 
-        if self.device_type == "BLUETOOTH_AUDIO":
-            # Use the specialized audio server to enable WBS.
-            # The specialized version was claimed that it suffered from
-            # stability issues so it was not a default option, but at least
-            # from the dashboard, the test
-            # `au_hfp_wbs_to_a2dp_dut_as_source_test` is quite stable,
-            # therefore, we use the specialized audio server as default here
-            if not self.btd.StartAudioServer("hfp_wbs"):
-                raise RuntimeError("Failed to start audio server")
-            self.btd.StartOfono()
-            if not self.btd.ExportMediaPlayer():
-                logging.info("Failed to export media player")
-
         self.btd.SpecifyDeviceType(
             self.device_type,
             self.config.devkit.rfcomm_services.service_list.service_list,
@@ -248,6 +235,23 @@ class TestServerContext:
 
         self.apply_btmgmt_capabilities()
         self.apply_hciconfig()
+
+        if self.device_type == "BLUETOOTH_AUDIO":
+            # Start ofono first while hci0 is stable and UP RUNNING so that
+            # HFP_HF_UUID (0x111e) is registered on /org/bluez/hci0 before
+            # PulseAudio starts.
+            if not self.btd.StartOfono():
+                raise RuntimeError("Failed to start ofono")
+            # Use the specialized audio server to enable WBS.
+            # The specialized version was claimed that it suffered from
+            # stability issues so it was not a default option, but at least
+            # from the dashboard, the test
+            # `au_hfp_wbs_to_a2dp_dut_as_source_test` is quite stable,
+            # therefore, we use the specialized audio server as default here
+            if not self.btd.StartAudioServer("hfp_wbs"):
+                raise RuntimeError("Failed to start audio server")
+            if not self.btd.ExportMediaPlayer():
+                logging.info("Failed to export media player")
 
     def apply_btmgmt_capabilities(self):
         logging.info("apply btmgmt capabilities")
