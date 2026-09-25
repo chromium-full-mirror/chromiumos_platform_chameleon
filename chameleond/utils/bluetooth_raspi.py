@@ -303,8 +303,13 @@ class BluezPeripheral(PeripheralKit):
         Returns: dbus interface to bluetoothd properties
         """
 
+        # Follow org.bluez owner changes so the handle keeps working when
+        # bluetoothd crashes or is restarted (e.g. by dbus activation). A proxy
+        # bound to the old unique name fails every call with ServiceUnknown.
         return dbus.Interface(
-            self._dbus_system_bus.get_object("org.bluez", "/org/bluez/hci0"),
+            self._dbus_system_bus.get_object(
+                "org.bluez", "/org/bluez/hci0", follow_name_owner_changes=True
+            ),
             "org.freedesktop.DBus.Properties",
         )
 
@@ -742,6 +747,14 @@ class BluezPeripheral(PeripheralKit):
         # Since bluetoothd is going to be restarted, clean up the dbus proxy to
         # enforce we create a new one once restarted.
         self._dbus_hci_props = None
+
+        # HardwareReset() restarts bluetoothd, which would make the current
+        # GATT server re-register its application and re-enable advertising.
+        # The stack is being reset to a pristine state and chameleond is
+        # restarted by the caller, so tear the GATT server down first.
+        if self._gatt_server:
+            self._gatt_server.cleanup()
+            self._gatt_server = None
 
         # Perform hardware reset of the controller
         self.HardwareReset()

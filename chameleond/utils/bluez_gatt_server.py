@@ -50,6 +50,12 @@ class GATTServer(object):
     """Bluez gatt server implementation"""
 
     def __init__(self, device=None, local_name=None):
+        self.app = None
+        self.receiver = None
+        self.interfaces_receiver = None
+        self._bus = None
+        self._reregistering = False
+
         bus = dbus.SystemBus()
 
         adapter = self._FindAdapter(bus)
@@ -106,6 +112,8 @@ class GATTServer(object):
         self._advertise_name_and_hid = False
         self._ConfigureAdvertisements()
 
+        self._bus = bus
+
         # Add a handler for changes in state, specifically requesting caller's
         # device_path in the callback
         self.receiver = bus.add_signal_receiver(
@@ -113,6 +121,17 @@ class GATTServer(object):
             signal_name="PropertiesChanged",
             bus_name="org.bluez",
             path_keyword="device_path",
+        )
+
+        # bluetoothd forgets registered GATT applications whenever it restarts
+        # (HardwareReset(), crash + dbus activation) or the adapter object is
+        # re-created. Watch for the adapter's GattManager1 to (re)appear so the
+        # application can be registered again.
+        self.interfaces_receiver = bus.add_signal_receiver(
+            self.OnInterfacesAdded,
+            signal_name="InterfacesAdded",
+            dbus_interface=DBUS_OM_IFACE,
+            bus_name=BLUEZ_SERVICE_NAME,
         )
 
     def cleanup(self):
@@ -123,6 +142,10 @@ class GATTServer(object):
         if self.receiver:
             self.receiver.remove()
             self.receiver = None
+
+        if self.interfaces_receiver:
+            self.interfaces_receiver.remove()
+            self.interfaces_receiver = None
 
     def _RegisterAppCB(self):
         """Callback for app registration"""
@@ -342,7 +365,10 @@ class GATTServer(object):
 
                 # Re-enable advertising on disconnect so server can continue
                 if not conn_status:
-                    if os.environ.get("DISABLE_AUTO_ADVERTISE_ON_DISCONNECT") == "true":
+                    if (
+                        os.environ.get("DISABLE_AUTO_ADVERTISE_ON_DISCONNECT")
+                        == "true"
+                    ):
                         logging.info(
                             "Auto-enable advertisement on disconnect is disabled"
                         )
@@ -353,9 +379,53 @@ class GATTServer(object):
             if dbus.String("Powered") in prop_dict:
                 power_status = bool(prop_dict[dbus.String("Powered")])
 
-                # Re-enable advertising on power up so server can continue
-                if power_status:
+                # Re-enable advertising on power up so server can continue.
+                # While the application is being re-registered, advertising is
+                # started by the registration callback instead, so that the DUT
+                # can't reconnect before our services exist again.
+                if power_status and not self._reregistering:
                     self._ConfigureAdvertisements()
+
+    def OnInterfacesAdded(self, object_path, interfaces):
+        """Re-registers the application when bluez (re)creates the adapter.
+
+        Args:
+          object_path: dbus object path that got new interfaces.
+          interfaces: dict of the added interfaces and their properties.
+        """
+        if GATT_MANAGER_IFACE not in interfaces:
+            return
+
+        logging.info(
+            "%s appeared on %s, re-registering %s application",
+            GATT_MANAGER_IFACE,
+            object_path,
+            self.device_type,
+        )
+        self._reregistering = True
+        service_manager = dbus.Interface(
+            self._bus.get_object(
+                BLUEZ_SERVICE_NAME, object_path, introspect=False
+            ),
+            GATT_MANAGER_IFACE,
+        )
+        service_manager.RegisterApplication(
+            self.app.GetPath(),
+            {},
+            reply_handler=self._ReRegisterAppCB,
+            error_handler=self._ReRegisterAppErrCB,
+        )
+
+    def _ReRegisterAppCB(self):
+        """Callback for successful app re-registration"""
+        logging.info("Re-registered %s application", self.device_type)
+        self._reregistering = False
+        self._ConfigureAdvertisements()
+
+    def _ReRegisterAppErrCB(self, error):
+        """Callback for app re-registration error"""
+        logging.error("Failed to re-register application: %s", error)
+        self._reregistering = False
 
 
 def main():
