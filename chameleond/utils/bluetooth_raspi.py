@@ -574,7 +574,7 @@ class BluezPeripheral(PeripheralKit):
                     self.device_type, self.GetLocalBluetoothAddress()
                 )
 
-            self.Init()
+        self.Init()
 
         if alias_name:
             self.SetAdapterAlias(alias_name)
@@ -917,15 +917,21 @@ class BluezPeripheral(PeripheralKit):
             self._gatt_server.SetBatteryLevel(level)
 
     def SetDiscoverable(self, discoverable):
-        self._set_hci_prop(
-            "org.bluez.Adapter1", "Discoverable", dbus.Boolean(discoverable)
-        )
-
-        # Set discoverable timeout to 0 so that it won't expire.
-        if discoverable:
+        # Set discoverable timeout to 0 before enabling Discoverable so
+        # bluetoothd does not issue a second MGMT Set Discoverable command
+        # that overwrites HciTool LE advertising parameters.
+        if (
+            discoverable
+            and self._get_hci_prop("org.bluez.Adapter1", "DiscoverableTimeout")
+            != 0
+        ):
             self._set_hci_prop(
                 "org.bluez.Adapter1", "DiscoverableTimeout", dbus.UInt32(0)
             )
+
+        self._set_hci_prop(
+            "org.bluez.Adapter1", "Discoverable", dbus.Boolean(discoverable)
+        )
         # Also set discoverable in gatt server if relevant
         if self._gatt_server:
             if self._privacy:
@@ -938,15 +944,19 @@ class BluezPeripheral(PeripheralKit):
 
     def SetDiscoverableNoConfigAdv(self, discoverable):
         """Set discoverable without configuring advertisements."""
-        self._set_hci_prop(
-            "org.bluez.Adapter1", "Discoverable", dbus.Boolean(discoverable)
-        )
-
         # Set discoverable timeout to 0 so that it won't expire.
-        if discoverable:
+        if (
+            discoverable
+            and self._get_hci_prop("org.bluez.Adapter1", "DiscoverableTimeout")
+            != 0
+        ):
             self._set_hci_prop(
                 "org.bluez.Adapter1", "DiscoverableTimeout", dbus.UInt32(0)
             )
+
+        self._set_hci_prop(
+            "org.bluez.Adapter1", "Discoverable", dbus.Boolean(discoverable)
+        )
         # Also set discoverable in gatt server if relevant
         if self._gatt_server:
             self._gatt_server.SetDiscoverableNoConfigAdv(discoverable)

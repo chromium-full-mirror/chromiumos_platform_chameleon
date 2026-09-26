@@ -102,15 +102,16 @@ class GATTServer(object):
             error_handler=self._RegisterAppErrCB,
         )
 
-        # Start with discoverable enabled
+        # Start with discoverable disabled until BluezPeripheral.Init() /
+        # SetDiscoverable(True) enables Adapter1.Discoverable and configures
+        # advertisements.
         if local_name:
             self._adv_local_name = local_name
         else:
             self._adv_local_name = PERIPHERAL_DEVICE_NAME[self.peripheral_type]
-        self._discoverable = True
+        self._discoverable = False
         self._own_address_type = PUBLIC_DEVICE_ADDRESS
         self._advertise_name_and_hid = False
-        self._ConfigureAdvertisements()
 
         self._bus = bus
 
@@ -280,7 +281,8 @@ class GATTServer(object):
     def SetDiscoverable(self, discoverable):
         """Change whether device is discoverable and configure advertisements.
 
-        Only configures advertisements if the discoverable value has changed.
+        Only configures advertisements if discoverable is True or the
+        discoverable value has changed.
 
         Args:
           discoverable: Whether the device should advertise.
@@ -288,7 +290,7 @@ class GATTServer(object):
         prev_discoverable = self._discoverable
         self._discoverable = discoverable
 
-        if discoverable != prev_discoverable:
+        if discoverable or discoverable != prev_discoverable:
             self._ConfigureAdvertisements()
 
     def SetDiscoverableNoConfigAdv(self, discoverable):
