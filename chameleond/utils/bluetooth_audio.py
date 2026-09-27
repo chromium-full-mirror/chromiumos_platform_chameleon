@@ -941,10 +941,15 @@ class BluetoothAudio(BluezPeripheral):
         logging.info("audio server: %s", audio_server)
         if audio_server == self.PULSEAUDIO:
             self.StopPipewire()
-            return self.StartPulseaudio(audio_profile)
+            ret = self.StartPulseaudio(audio_profile)
         else:
             self.StopPulseaudio()
-            return self.StartPipewire()
+            ret = self.StartPipewire()
+        if ret and self.device_type and "BLE" not in self.device_type:
+            # Starting PulseAudio/PipeWire registers UUIDs via MGMT_OP_ADD_UUID,
+            # which recalculates the controller Class of Device. Restore CoD.
+            self.SetClassOfService(PERIPHERAL_DEVICE_CLASS[self.device_type])
+        return ret
 
     def ChangeWpSettings(self, audio_config):
         """Change the Wireplumber settings dynamically.

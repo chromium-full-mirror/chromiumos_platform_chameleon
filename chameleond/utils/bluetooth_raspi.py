@@ -1237,6 +1237,12 @@ class BluezPeripheral(PeripheralKit):
     def SetClassOfService(self, class_of_service):
         logging.info("SetClassOfService class_of_service: %s", class_of_service)
 
+        # Update kernel MGMT major/minor device class cache so subsequent
+        # MGMT_OP_ADD_UUID calls do not reset Major/Minor class to 0x00.
+        major = (class_of_service & 0x001F00) >> 8
+        minor = class_of_service & 0x0000FC
+        self.SetDeviceClass(major, minor)
+
         # Class is a read-only DBus property, so needs to be set using system calls.
         cmd = "sudo hciconfig hci0 class {}".format(hex(class_of_service))
         os.system(cmd)
