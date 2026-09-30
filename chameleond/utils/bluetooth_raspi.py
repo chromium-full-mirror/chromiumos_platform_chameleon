@@ -66,6 +66,9 @@ DBUS_OBJECT_MANAGER_INTERFACE = "org.freedesktop.DBus.ObjectManager"
 BLUETOOTHD_WAIT_TIME = 30
 MAX_DBUS_RETRY_ATTEMPTS = 3
 CONNECTION_WAIT_TIME = 10
+# Max time to wait for org.bluez.Device1.Disconnect() to complete. Matches the
+# default libdbus method call timeout used by the former blocking call.
+DISCONNECT_TIMEOUT_SECS = 25
 
 # Definitions of mouse button HID encodings
 RAW_HID_BUTTONS_RELEASED = 0x0
@@ -748,8 +751,18 @@ class BluezPeripheral(PeripheralKit):
 
     # Power cycle the device
     def PowerCycle(self):
-        logging.info("PowerCycle: Triggering HardwareReset")
-        self.HardwareReset()
+        # A real peripheral keeps its GATT server and the CCC state of bonded
+        # centrals across a power cycle, and centrals such as Floss rely on
+        # that on reconnection. HardwareReset() restarts bluetoothd, which
+        # drops our registered GATT application and all CCC state, so the DUT
+        # reconnects but never gets HID notifications. Toggle adapter power
+        # instead and only reset the hardware if the controller is wedged.
+        logging.info("PowerCycle: Toggling adapter power")
+        if not (self.AdapterPowerOff() and self.AdapterPowerOn()):
+            logging.warning(
+                "PowerCycle: Soft power cycle failed, triggering HardwareReset"
+            )
+            self.HardwareReset()
         return self.Init()
 
     # Override BluetoothHID's implementation of init
@@ -870,6 +883,10 @@ class BluezPeripheral(PeripheralKit):
         )
 
     def Reboot(self):
+        # Unlike PowerCycle(), which emulates a peripheral power cycle and must
+        # keep GATT/CCC state, Reboot() is the explicit full-reset entry point
+        # and keeps doing a HardwareReset() to recover wedged controllers
+        # (b/561938112). The LE HID reconnect tests don't call it.
         logging.info("REBOOTING")
 
         self.HardwareReset()
@@ -1787,7 +1804,38 @@ class BluezPeripheral(PeripheralKit):
             )
             return False
 
-        device.Disconnect()
+        if threading.current_thread() is self._thread:
+            # Already on the dbus mainloop thread; waiting for an async reply
+            # here would deadlock, so keep the blocking call.
+            device.Disconnect()
+            return True
+
+        # A blocking dbus call holds the I/O path of the shared system bus
+        # connection until it returns, so replies to GATT requests from
+        # bluetoothd (e.g. ReadValue) that are handled on the mainloop thread
+        # can't be sent until the link is down. bluetoothd 5.66 (RPi OS 12) then
+        # crashes when the stale read times out, dropping our GATT application.
+        # Call Disconnect asynchronously so the mainloop keeps serving GATT
+        # requests.
+        done = threading.Event()
+        errors = []
+
+        def _on_error(err):
+            errors.append(err)
+            done.set()
+
+        device.Disconnect(
+            reply_handler=done.set,
+            error_handler=_on_error,
+            timeout=DISCONNECT_TIMEOUT_SECS,
+        )
+        if not done.wait(DISCONNECT_TIMEOUT_SECS):
+            logging.error(
+                "Disconnect did not complete in %d s", DISCONNECT_TIMEOUT_SECS
+            )
+            return False
+        if errors:
+            raise errors[0]
 
         return True
 
