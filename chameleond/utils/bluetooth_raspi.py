@@ -2100,10 +2100,10 @@ class BluezPeripheral(PeripheralKit):
             hex_value = value.to_bytes(2, byteorder="little")
             if trigger == PeripheralKit.GAMEPAD_BUTTON_LEFT_TRIGGER:
                 index = GAMEPAD_BUTTONS_REPORT_INDEX["LEFT_TRIGGER"]
-                self.gamepad_report[index : index + 1] = bytearray(hex_value)
+                self.gamepad_report[index : index + 2] = bytearray(hex_value)
             elif trigger == PeripheralKit.GAMEPAD_BUTTON_RIGHT_TRIGGER:
                 index = GAMEPAD_BUTTONS_REPORT_INDEX["RIGHT_TRIGGER"]
-                self.gamepad_report[index : index + 1] = bytearray(hex_value)
+                self.gamepad_report[index : index + 2] = bytearray(hex_value)
         self.SendGamepadHIDReport()
 
     def GamepadThumbstickMove(self, stick, delta_x=4095, delta_y=4095):
