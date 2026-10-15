@@ -133,7 +133,7 @@ class AudioService(audio_grpc_aio.AudioServicer):
         elif request.cmd == audio_pb2.AUDIO_PLAYER_NEXT:
             cmd = "next"
         elif request.cmd == audio_pb2.AUDIO_PLAYER_PREV:
-            cmd = "prev"
+            cmd = "previous"
         else:
             logging.error("Unrecognized command %s", request.cmd)
             return empty_pb2.Empty()
