@@ -224,17 +224,19 @@ class TestServerContext:
         # Restart Chameleond
         self.chameleon = fpga_tio.ChameleondDriver()
 
+        self.apply_btmgmt_capabilities()
+        self.apply_hciconfig()
+
         self.btd.SpecifyDeviceType(
             self.device_type,
             self.config.devkit.rfcomm_services.service_list.service_list,
             self.device_name,
+            enable_ble=False,
+            discoverable=False,
         )
 
         # Delay 1 second to wait for power on.
         time.sleep(1)
-
-        self.apply_btmgmt_capabilities()
-        self.apply_hciconfig()
 
         if self.device_type == "BLUETOOTH_AUDIO":
             # Start ofono first while hci0 is stable and UP RUNNING so that
@@ -280,8 +282,6 @@ class TestServerContext:
             os.system(cmd)
             time.sleep(0.1)
 
-        self.btd.SetLinkMode(self.link_mode, power_cycle=False)
-
         self.btd.SetPrivacy(self.privacy, power_cycle=False)
 
         if self.support_classic:
@@ -294,6 +294,7 @@ class TestServerContext:
         self.btd.SetIOCapability(self.io_capability)
 
         if self.device_type and "BLE" not in self.device_type:
+            self.btd.SetLinkMode(self.link_mode, power_cycle=False)
             major = (PERIPHERAL_DEVICE_CLASS[self.device_type] & 0x001F00) >> 8
             minor = PERIPHERAL_DEVICE_CLASS[self.device_type] & 0x0000FC
             self.btd.SetDeviceClass(major, minor)

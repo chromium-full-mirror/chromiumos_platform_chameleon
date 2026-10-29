@@ -513,7 +513,12 @@ class BluezPeripheral(PeripheralKit):
         return device_type
 
     def SpecifyDeviceType(
-        self, device_type, rfcomm_services=None, alias_name=None
+        self,
+        device_type,
+        rfcomm_services=None,
+        alias_name=None,
+        enable_ble=True,
+        discoverable=True,
     ):
         """Instantiates one of our supported devices
 
@@ -528,6 +533,8 @@ class BluezPeripheral(PeripheralKit):
           alias_name: String. Set the alias name for the device. If None or
                       empty string, the name would be set by the default name
                       based on the device type.
+          enable_ble: Boolean. Whether to call EnableBLE during device binding.
+          discoverable: Boolean. Whether to make the device discoverable in Init.
         """
 
         # Do nothing if we were already bound to this device
@@ -548,17 +555,25 @@ class BluezPeripheral(PeripheralKit):
 
             # Enable le only, to make sure our test device isn't connecting
             # via BT classic
-            self.EnableBLE(True)
+            if enable_ble:
+                self.EnableBLE(True)
 
             # Establish and run gatt server
             self._gatt_server = GATTServer(self, alias_name)
+            if self._privacy is not None:
+                self._gatt_server.SetOwnAddressType(
+                    RANDOM_DEVICE_ADDRESS
+                    if self._privacy
+                    else PUBLIC_DEVICE_ADDRESS
+                )
 
         else:
             logging.info("Binding to Classic device!")
 
             # Enable bt classic only, to make sure our test device isn't connecting
             # via LE
-            self.EnableBLE(False)
+            if enable_ble:
+                self.EnableBLE(False)
 
             # Set device type and initiate service based on it
             if "DEV_KIT" in device_type:
@@ -574,7 +589,7 @@ class BluezPeripheral(PeripheralKit):
                     self.device_type, self.GetLocalBluetoothAddress()
                 )
 
-        self.Init()
+        self.Init(discoverable=discoverable)
 
         if alias_name:
             self.SetAdapterAlias(alias_name)
@@ -779,7 +794,7 @@ class BluezPeripheral(PeripheralKit):
         return self.Init()
 
     # Override BluetoothHID's implementation of init
-    def Init(self, factory_reset=True):
+    def Init(self, factory_reset=True, discoverable=True):
         """Ensures our chip is in the correct state for the tests to be run"""
         logging.info("Init")
 
@@ -801,7 +816,7 @@ class BluezPeripheral(PeripheralKit):
             logging.error("Init: Adapter not powered after recovery attempts")
             return False
 
-        self.SetDiscoverable(True)
+        self.SetDiscoverable(discoverable)
 
         # Set class based on device we're emulating
         if self.device_type and "BLE" not in self.device_type:
@@ -1323,7 +1338,7 @@ class BluezPeripheral(PeripheralKit):
         link_mode_cmd = "sudo hciconfig hci0 lm {}".format(mode)
 
         # link mode only allowed to change when bredr is enabled.
-        if "BLE" in self.device_type:
+        if self.device_type and "BLE" in self.device_type:
             if power_cycle:
                 cmds.extend(
                     [
