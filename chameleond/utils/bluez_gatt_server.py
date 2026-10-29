@@ -13,15 +13,19 @@ from __future__ import print_function
 import logging
 import os
 import sys
+import threading
 
 import dbus
 import dbus.mainloop.glib
+import dbus.service
 
 
 try:
     from gi.repository import GObject
 except ImportError:
     import gobject as GObject
+
+from chameleond.utils import system_tools
 
 from .bluetooth_peripheral_kit import PeripheralKit
 from .bluez_le_better_together_service import PhoneLEBetterTogetherApplication
@@ -34,16 +38,85 @@ from .bluez_service_consts import PERIPHERAL_DEVICE_NAME
 from .example_gatt_server import Application
 from .example_gatt_server import BLUEZ_SERVICE_NAME
 from .example_gatt_server import DBUS_OM_IFACE
+from .example_gatt_server import DBUS_PROP_IFACE
 from .example_gatt_server import GATT_MANAGER_IFACE
+from .example_gatt_server import InvalidArgsException
 from .hci_cmd import HciCommands
 from .hci_cmd import HciTool
 
 
 mainloop = None
 
+LE_ADVERTISING_MANAGER_IFACE = "org.bluez.LEAdvertisingManager1"
+LE_ADVERTISEMENT_IFACE = "org.bluez.LEAdvertisement1"
+
 # Advertising parameter own address type
 PUBLIC_DEVICE_ADDRESS = 0x00
 RANDOM_DEVICE_ADDRESS = 0x01
+
+
+class Advertisement(dbus.service.Object):
+    """org.bluez.LEAdvertisement1 interface implementation."""
+
+    PATH_BASE = "/org/bluez/example/advertisement"
+
+    def __init__(self, bus, index, gatt_server):
+        self.path = self.PATH_BASE + str(index)
+        self._server = gatt_server
+        dbus.service.Object.__init__(self, bus, self.path)
+
+    def get_path(self):
+        return dbus.ObjectPath(self.path)
+
+    def get_properties(self):
+        properties = {
+            "Type": dbus.String("peripheral"),
+            "Discoverable": dbus.Boolean(True),
+            "MinInterval": dbus.UInt32(30),
+            "MaxInterval": dbus.UInt32(35),
+        }
+        if "FAST_PAIR" in self._server.device_type:
+            service_data = self._server.app.GetServiceData()
+            properties["ServiceData"] = dbus.Dictionary(
+                {
+                    "FE2C": dbus.Array(
+                        [dbus.Byte(b) for b in service_data], signature="y"
+                    )
+                },
+                signature="sv",
+            )
+            if self._server.GetAdvertiseNameAndHID():
+                properties["LocalName"] = dbus.String(
+                    self._server.GetAdvLocalName()
+                )
+                properties["ServiceUUIDs"] = dbus.Array(["1812"], signature="s")
+        else:
+            properties["LocalName"] = dbus.String(
+                self._server.GetAdvLocalName()
+            )
+            properties["ServiceUUIDs"] = dbus.Array(["1812"], signature="s")
+            appearance_bytes = PERIPHERAL_DEVICE_APPEARANCE.get(
+                self._server.peripheral_type, [0, 0]
+            )
+            appearance = appearance_bytes[0] | (appearance_bytes[1] << 8)
+            properties["Appearance"] = dbus.UInt16(appearance)
+
+        return {LE_ADVERTISEMENT_IFACE: properties}
+
+    @dbus.service.method(
+        DBUS_PROP_IFACE, in_signature="s", out_signature="a{sv}"
+    )
+    def GetAll(self, interface):
+        if interface != LE_ADVERTISEMENT_IFACE:
+            raise InvalidArgsException()
+        return self.get_properties()[LE_ADVERTISEMENT_IFACE]
+
+    @dbus.service.method(
+        LE_ADVERTISEMENT_IFACE, in_signature="", out_signature=""
+    )
+    def Release(self):
+        logging.info("%s: Released!", self.path)
+        self._server.OnAdvertisementReleased()
 
 
 class GATTServer(object):
@@ -114,6 +187,12 @@ class GATTServer(object):
         self._advertise_name_and_hid = False
 
         self._bus = bus
+        self._adapter_path = adapter
+        self._advertisement = None
+        self._ad_registered = False
+        self._ad_reg_event = threading.Event()
+        if system_tools.SystemTools.IsBookworm():
+            self._advertisement = Advertisement(bus, 0, self)
 
         # Add a handler for changes in state, specifically requesting caller's
         # device_path in the callback
@@ -137,6 +216,11 @@ class GATTServer(object):
 
     def cleanup(self):
         logging.info("GATTServer: cleanup")
+        if self._advertisement:
+            self._UnregisterAdvertisement()
+            self._advertisement.remove_from_connection()
+            self._advertisement = None
+
         if self.app:
             self.app.cleanup()
 
@@ -147,6 +231,73 @@ class GATTServer(object):
         if self.interfaces_receiver:
             self.interfaces_receiver.remove()
             self.interfaces_receiver = None
+
+    def OnAdvertisementReleased(self):
+        """Callback invoked when bluetoothd releases the D-Bus advertisement."""
+        self._ad_registered = False
+
+    def _GetAdManager(self):
+        if not self._bus or not self._adapter_path:
+            return None
+        return dbus.Interface(
+            self._bus.get_object(BLUEZ_SERVICE_NAME, self._adapter_path),
+            LE_ADVERTISING_MANAGER_IFACE,
+        )
+
+    def _RegisterAdvertisementCB(self):
+        logging.info("Registered LE advertisement via LEAdvertisingManager1")
+        self._ad_registered = True
+        self._ad_reg_event.set()
+
+    def _RegisterAdvertisementErrCB(self, error):
+        err_str = str(error)
+        if "AlreadyExists" in err_str:
+            logging.info("LE advertisement already registered")
+            self._ad_registered = True
+        else:
+            logging.error("Failed to register LE advertisement: %s", error)
+            self._ad_registered = False
+        self._ad_reg_event.set()
+
+    def _RegisterAdvertisement(self):
+        if not self._advertisement or self._ad_registered:
+            return
+        ad_manager = self._GetAdManager()
+        if not ad_manager:
+            return
+        self._ad_reg_event.clear()
+        ad_manager.RegisterAdvertisement(
+            self._advertisement.get_path(),
+            {},
+            reply_handler=self._RegisterAdvertisementCB,
+            error_handler=self._RegisterAdvertisementErrCB,
+        )
+        if not GObject.MainContext.default().is_owner():
+            self._ad_reg_event.wait(timeout=2.0)
+
+    def _UnregisterAdvertisement(self):
+        if not self._advertisement or not self._ad_registered:
+            return
+        ad_manager = self._GetAdManager()
+        self._ad_registered = False
+        if not ad_manager:
+            return
+        try:
+            ad_manager.UnregisterAdvertisement(self._advertisement.get_path())
+            logging.info(
+                "Unregistered LE advertisement via LEAdvertisingManager1"
+            )
+        except Exception as e:
+            logging.debug("UnregisterAdvertisement ignored error: %s", e)
+
+    def _ConfigureDBusAdvertisements(self, force_refresh=False):
+        """Configures LE advertisement via BlueZ LEAdvertisingManager1."""
+        if not self._discoverable:
+            self._UnregisterAdvertisement()
+            return
+        if force_refresh and self._ad_registered:
+            self._UnregisterAdvertisement()
+        self._RegisterAdvertisement()
 
     def _RegisterAppCB(self):
         """Callback for app registration"""
@@ -189,6 +340,9 @@ class GATTServer(object):
 
     def _ConfigureAdvertisements(self):
         """Configures and registers LE advertisement"""
+        if system_tools.SystemTools.IsBookworm():
+            self._ConfigureDBusAdvertisements()
+            return
 
         FULL_LOCAL_NAME_ID = 0x09
         FLAGS_ID = 0x01
@@ -305,7 +459,10 @@ class GATTServer(object):
 
     def SetAdvLocalName(self, adv_local_name):
         self._adv_local_name = adv_local_name
-        self._ConfigureAdvertisements()
+        if system_tools.SystemTools.IsBookworm():
+            self._ConfigureDBusAdvertisements(force_refresh=True)
+        else:
+            self._ConfigureAdvertisements()
 
     def SetOwnAddressType(self, addr_type):
         """Change own address type for advertising parameters."""
@@ -319,7 +476,13 @@ class GATTServer(object):
 
     def SetAdvertiseNameAndHID(self, enabled):
         self._advertise_name_and_hid = enabled
-        self._ConfigureAdvertisements()
+        if system_tools.SystemTools.IsBookworm():
+            self._ConfigureDBusAdvertisements(force_refresh=True)
+        else:
+            self._ConfigureAdvertisements()
+
+    def GetAdvertiseNameAndHID(self):
+        return self._advertise_name_and_hid
 
     def SetBatteryLevel(self, level):
         """Sets the device battery level.
@@ -365,8 +528,15 @@ class GATTServer(object):
                 )
                 logging.info(info_msg)
 
-                # Re-enable advertising on disconnect so server can continue
-                if not conn_status:
+                if conn_status:
+                    if (
+                        os.environ.get("DISABLE_AUTO_ADVERTISE_ON_DISCONNECT")
+                        == "true"
+                        and system_tools.SystemTools.IsBookworm()
+                    ):
+                        self._UnregisterAdvertisement()
+                else:
+                    # Re-enable advertising on disconnect so server can continue
                     if (
                         os.environ.get("DISABLE_AUTO_ADVERTISE_ON_DISCONNECT")
                         == "true"
@@ -374,6 +544,8 @@ class GATTServer(object):
                         logging.info(
                             "Auto-enable advertisement on disconnect is disabled"
                         )
+                        if system_tools.SystemTools.IsBookworm():
+                            self._UnregisterAdvertisement()
                     else:
                         self._ConfigureAdvertisements()
 
@@ -386,7 +558,10 @@ class GATTServer(object):
                 # started by the registration callback instead, so that the DUT
                 # can't reconnect before our services exist again.
                 if power_status and not self._reregistering:
-                    self._ConfigureAdvertisements()
+                    if system_tools.SystemTools.IsBookworm():
+                        self._ConfigureDBusAdvertisements(force_refresh=True)
+                    else:
+                        self._ConfigureAdvertisements()
 
     def OnInterfacesAdded(self, object_path, interfaces):
         """Re-registers the application when bluez (re)creates the adapter.
@@ -395,6 +570,23 @@ class GATTServer(object):
           object_path: dbus object path that got new interfaces.
           interfaces: dict of the added interfaces and their properties.
         """
+        device_props = interfaces.get("org.bluez.Device1")
+        if device_props is not None:
+            conn_status = bool(device_props.get(dbus.String("Connected"), False))
+            if conn_status:
+                remote_addr = str(object_path).split("dev_")[-1]
+                logging.info(
+                    "Connection change to %s: %s (InterfacesAdded)",
+                    remote_addr,
+                    conn_status,
+                )
+                if (
+                    os.environ.get("DISABLE_AUTO_ADVERTISE_ON_DISCONNECT")
+                    == "true"
+                    and system_tools.SystemTools.IsBookworm()
+                ):
+                    self._UnregisterAdvertisement()
+
         if GATT_MANAGER_IFACE not in interfaces:
             return
 
@@ -404,6 +596,8 @@ class GATTServer(object):
             object_path,
             self.device_type,
         )
+        self._adapter_path = object_path
+        self._ad_registered = False
         self._reregistering = True
         service_manager = dbus.Interface(
             self._bus.get_object(

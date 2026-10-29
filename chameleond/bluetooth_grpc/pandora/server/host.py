@@ -206,14 +206,11 @@ class HostService(host_grpc_aio.HostServicer):
         # TODO(johnlai): Checks controller config before starting the
         # advertising.
 
-        # Chameleon can only advertise one advertising set, disables
-        # current advertising firstly.
-        self.ctx.btd.SetDiscoverable(False)
-
         # TODO(johnlai): Configure advertisement data.
 
         connections = None
         properties_changed_receiver = None
+        interfaces_added_receiver = None
         default_gatt_server_removed = False
         if request.connectable:
             connections = asyncio.Queue()
@@ -255,23 +252,20 @@ class HostService(host_grpc_aio.HostServicer):
                         logging.info(
                             f"Connection change to {address}: {connected}"
                         )
+                        if not connected:
+                            # Re-enable advertising after disconnection so that
+                            # reconnect tests can connect again without cycling
+                            # advertising during active LE SMP pairing.
+                            loop.call_soon_threadsafe(
+                                self.ctx.btd.SetDiscoverable, True
+                            )
                     elif dbus.String("Paired") in prop_dict:
                         paired = bool(prop_dict[dbus.String("Paired")])
                         logging.info(
                             f"Pairing state change to {paired}: {paired}"
                         )
 
-                    # According to the Pandora interface definition, restarting
-                    # advertising again after any incoming connection has been
-                    # established.
                     if paired or connected:
-                        loop.call_soon_threadsafe(
-                            self.ctx.btd.SetDiscoverable, False
-                        )
-                        loop.call_soon_threadsafe(
-                            self.ctx.btd.SetDiscoverable, True
-                        )
-
                         # Puts new connection into the queue.
                         asyncio.run_coroutine_threadsafe(
                             connections.put(address), loop
@@ -288,6 +282,25 @@ class HostService(host_grpc_aio.HostServicer):
                                 self.ctx.btd.SetDiscoverable, True
                             )
 
+            def on_interfaces_added(object_path, interfaces):
+                device_props = interfaces.get("org.bluez.Device1")
+                if device_props is None:
+                    return
+                connected = bool(
+                    device_props.get(dbus.String("Connected"), False)
+                )
+                paired = bool(device_props.get(dbus.String("Paired"), False))
+                if connected or paired:
+                    address = utils.address_from_bluez_device_path(
+                        str(object_path)
+                    )
+                    logging.info(
+                        f"InterfacesAdded Device1 {address}: connected={connected}, paired={paired}"
+                    )
+                    asyncio.run_coroutine_threadsafe(
+                        connections.put(address), loop
+                    )
+
             bus = dbus.SystemBus()
             if self.ctx.btd._gatt_server.receiver:
                 self.ctx.btd._gatt_server.receiver.remove()
@@ -299,6 +312,12 @@ class HostService(host_grpc_aio.HostServicer):
                 signal_name="PropertiesChanged",
                 bus_name="org.bluez",
                 path_keyword="device_path",
+            )
+            interfaces_added_receiver = bus.add_signal_receiver(
+                on_interfaces_added,
+                signal_name="InterfacesAdded",
+                dbus_interface="org.freedesktop.DBus.ObjectManager",
+                bus_name="org.bluez",
             )
 
         # Starts advertising.
@@ -323,6 +342,9 @@ class HostService(host_grpc_aio.HostServicer):
 
             if properties_changed_receiver:
                 properties_changed_receiver.remove()
+
+            if interfaces_added_receiver:
+                interfaces_added_receiver.remove()
 
             if (
                 not self.ctx.btd._gatt_server.receiver

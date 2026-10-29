@@ -934,7 +934,7 @@ class BluezPeripheral(PeripheralKit):
         )
         # Also set discoverable in gatt server if relevant
         if self._gatt_server:
-            if self._privacy:
+            if self._privacy and not system_tools.SystemTools.IsBookworm():
                 self._gatt_server.SetDiscoverableNoConfigAdv(discoverable)
                 self.SetAdvertising(discoverable)
             else:
