@@ -371,10 +371,22 @@ class SecurityService(security_grpc_aio.SecurityServicer):
         context: grpc.ServicerContext,
     ) -> security_pb2.GetRandomAddressResponse:
         if not self.ctx.privacy:
-            logging.warning("Privacy mode is not enabled.")
+            msg = "Privacy mode is not enabled."
+            logging.warning(msg)
+            return security_pb2.GetRandomAddressResponse(
+                address="", message=msg
+            )
+        if not self.ctx.btd.IsDiscoverable():
+            msg = "Device is not discoverable."
+            logging.warning(msg)
+            return security_pb2.GetRandomAddressResponse(
+                address="", message=msg
+            )
         address = self.ctx.btd.GetRandomAddress()
-        if address == "00:00:00:00:00:00":
-            logging.warning(
-                "Device is not advertising or advertising without RPA."
+        if address in ("", "00:00:00:00:00:00"):
+            msg = "Device is advertising without RPA."
+            logging.warning(msg)
+            return security_pb2.GetRandomAddressResponse(
+                address="", message=msg
             )
         return security_pb2.GetRandomAddressResponse(address=address)

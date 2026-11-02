@@ -76,4 +76,7 @@ message PairingEventAnswer {
   };
 }
 
-message GetRandomAddressResponse { string address = 1; }
+message GetRandomAddressResponse {
+  string address = 1;
+  string message = 2;
+}
