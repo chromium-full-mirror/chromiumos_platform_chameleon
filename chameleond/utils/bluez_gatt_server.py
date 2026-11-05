@@ -457,6 +457,15 @@ class GATTServer(object):
         prev_discoverable = self._discoverable
         self._discoverable = discoverable
 
+    def IsDiscoverable(self):
+        """Returns whether LE advertising is requested to be enabled.
+
+        Returns:
+          True if the GATT server has been set discoverable via
+          SetDiscoverable() or SetDiscoverableNoConfigAdv().
+        """
+        return bool(self._discoverable)
+
     def SetAdvLocalName(self, adv_local_name):
         self._adv_local_name = adv_local_name
         if system_tools.SystemTools.IsBookworm():

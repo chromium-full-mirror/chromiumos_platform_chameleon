@@ -1088,6 +1088,15 @@ class BluezPeripheral(PeripheralKit):
                 return dbus.Interface(obj, DBUS_BLUEZ_DEVICE_IFACE)
         return None
 
+    def IsDiscoverable(self):
+        """Returns whether the LE GATT server is set discoverable.
+
+        Returns:
+          True if a GATT server exists and is set discoverable, False
+          otherwise (including Classic-only devices without a GATT server).
+        """
+        return bool(self._gatt_server and self._gatt_server.IsDiscoverable())
+
     def GetRandomAddress(self):
         """Read the random address of BT
 
