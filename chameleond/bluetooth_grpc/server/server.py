@@ -168,8 +168,15 @@ class TestServerContext:
             # Classic phone is not implemented
         elif device_type == manager_pb2.DEVICE_CATEGORY_DEV_KIT:
             return "DEV_KIT"
+        elif device_type == manager_pb2.DEVICE_CATEGORY_GAMEPAD:
+            return "GAMEPAD"
         elif device_type == manager_pb2.DEVICE_CATEGORY_NOT_CONFIGURED:
             return "NOT_CONFIGURED"
+        else:
+            logging.warning(
+                "Unsupported device category: %s",
+                manager_pb2.DeviceCategory.Name(device_type),
+            )
         return None
 
     @property
@@ -196,6 +203,8 @@ class TestServerContext:
             return self.chameleon.bluetooth_mouse
         elif self.device_type == "BLE_PHONE":
             return self.chameleon.ble_phone
+        elif self.device_type == "GAMEPAD":
+            return self.chameleon.bluetooth_gamepad
         elif self.device_type == "DEV_KIT":
             return self.chameleon.bluetooth_dev_kit
         return None

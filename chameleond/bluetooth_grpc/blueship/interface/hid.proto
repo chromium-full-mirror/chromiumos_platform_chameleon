@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-option java_outer_classname = "HIDProto";
-
 package blueship;
 
 import "google/protobuf/empty.proto";
+
+option java_outer_classname = "HIDProto";
 
 service HID {
   // Simulates a keyboard press
@@ -15,10 +15,124 @@ service HID {
   rpc MouseMove(MouseMoveRequest) returns (google.protobuf.Empty);
   // Simulates a mouse scroll
   rpc MouseScroll(MouseScrollRequest) returns (google.protobuf.Empty);
+
+  // --- Gamepad RPCs ---
+  // Simulates pressing a gamepad button (e.g. A, B, DPad, Bumper, Start, etc.)
+  rpc GamepadButtonPress(GamepadButtonPressRequest)
+      returns (google.protobuf.Empty);
+
+  // Simulates moving a gamepad thumbstick (Left or Right).
+  rpc GamepadThumbstickMove(GamepadThumbstickMoveRequest)
+      returns (google.protobuf.Empty);
+
+  // Simulates pressing a gamepad analog trigger (LT or RT).
+  rpc GamepadTriggerPress(GamepadTriggerPressRequest)
+      returns (google.protobuf.Empty);
+
+  // Simulates releasing all pressed gamepad buttons and resetting
+  // stick/trigger states.
+  rpc ReleaseGamepad(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  // Executes a batch sequence of gamepad actions with a specified interval.
+  rpc ExecuteGamepadBulkActions(GamepadBulkActionsRequest)
+      returns (google.protobuf.Empty);
+}
+
+// Gamepad button identifiers matching Linux gamepad specification and
+// PeripheralKit constants.
+enum GamepadButton {
+  option allow_alias = true;
+
+  GAMEPAD_BUTTON_UNSPECIFIED = 0;
+
+  // Action Buttons
+  // The Linux gamepad specification defines action buttons by physical
+  // position (NORTH, SOUTH, WEST, EAST), aliased to A/B/X/Y.
+  GAMEPAD_BUTTON_A = 1;
+  GAMEPAD_BUTTON_SOUTH = 1;  // Linux spec BTN_SOUTH / BTN_GAMEPAD (alias for A)
+  GAMEPAD_BUTTON_B = 2;
+  GAMEPAD_BUTTON_EAST = 2;  // Linux spec BTN_EAST (alias for B)
+  GAMEPAD_BUTTON_X = 3;
+  GAMEPAD_BUTTON_NORTH = 3;  // Linux spec BTN_NORTH (alias for X)
+  GAMEPAD_BUTTON_Y = 4;
+  GAMEPAD_BUTTON_WEST = 4;  // Linux spec BTN_WEST (alias for Y)
+
+  // D-Pad Directional Inputs (HID Hat Switch 0x39 -> ABS_HAT0X, ABS_HAT0Y)
+  GAMEPAD_BUTTON_DPAD_UP = 5;
+  GAMEPAD_BUTTON_DPAD_DOWN = 6;
+  GAMEPAD_BUTTON_DPAD_LEFT = 7;
+  GAMEPAD_BUTTON_DPAD_RIGHT = 8;
+
+  // Bumpers / Upper Triggers (Linux spec BTN_TL, BTN_TR)
+  GAMEPAD_BUTTON_LEFT_BUMPER = 9;
+  GAMEPAD_BUTTON_RIGHT_BUMPER = 10;
+
+  // Thumbstick Clicks (Linux spec BTN_THUMBL, BTN_THUMBR)
+  GAMEPAD_BUTTON_LEFT_THUMBSTICK = 11;
+  GAMEPAD_BUTTON_RIGHT_THUMBSTICK = 12;
+
+  // Menu Buttons (Linux spec BTN_START, BTN_SELECT, BTN_MODE)
+  GAMEPAD_BUTTON_START = 13;
+}
+
+enum GamepadThumbstick {
+  GAMEPAD_THUMBSTICK_UNSPECIFIED = 0;
+  // Left analog stick (HID X/Y -> Linux EV_ABS ABS_X, ABS_Y)
+  GAMEPAD_THUMBSTICK_LEFT = 1;
+  // Right analog stick (HID Z/Rz -> Linux EV_ABS ABS_Z, ABS_RZ)
+  GAMEPAD_THUMBSTICK_RIGHT = 2;
+}
+
+enum GamepadTrigger {
+  GAMEPAD_TRIGGER_UNSPECIFIED = 0;
+  // Left lower trigger (HID Simulation Brake 0xC5 -> Linux EV_ABS ABS_BRAKE)
+  GAMEPAD_TRIGGER_LEFT = 1;
+  // Right lower trigger (HID Accelerator 0xC4 -> Linux EV_ABS ABS_GAS)
+  GAMEPAD_TRIGGER_RIGHT = 2;
+}
+
+// Request for the `PressGamepadButton` method.
+message GamepadButtonPressRequest {
+  GamepadButton button = 1;
+  // If true, releases the button automatically after delay; if false, holds
+  // button down.
+  bool auto_release = 2;
+}
+
+message GamepadThumbstickMoveRequest {
+  GamepadThumbstick stick = 1;
+  // Unsigned 16-bit logical axis value in range [0, 65535].
+  int32 delta_x = 2;
+  int32 delta_y = 3;
+  bool auto_release = 4;
+}
+
+message GamepadTriggerPressRequest {
+  GamepadTrigger trigger = 1;
+  // Value in range [0, 1023].
+  int32 value = 2;
+  bool auto_release = 3;
+}
+
+message GamepadAction {
+  oneof action {
+    GamepadButton button_press = 1;
+    GamepadThumbstickMoveRequest thumbstick_move = 2;
+    GamepadTriggerPressRequest trigger_press = 3;
+    bool release_all = 4;
+  }
+}
+
+// Request for executing a sequence of actions with interval.
+message GamepadBulkActionsRequest {
+  repeated GamepadAction actions = 1;
+  float interval_seconds = 2;
 }
 
 // Request for the `PressKey` method.
-message KeyPressRequest { string key = 1; }
+message KeyPressRequest {
+  string key = 1;
+}
 
 // Request for the `MouseMove` method.
 message MouseMoveRequest {
