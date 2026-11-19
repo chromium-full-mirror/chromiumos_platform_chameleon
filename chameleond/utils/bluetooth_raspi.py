@@ -19,6 +19,8 @@ import re
 import sys
 import threading
 import time
+from typing import Any
+import weakref
 
 import dbus
 import dbus.mainloop.glib
@@ -159,8 +161,11 @@ class BluezPeripheralException(PeripheralKitException):
 class BluezPeripheral(PeripheralKit):
     """This is an abstraction of a Bluez peripheral."""
 
+    _instances: Any = weakref.WeakSet()
+
     def __init__(self):
         super(BluezPeripheral, self).__init__()
+        BluezPeripheral._instances.add(self)
         self._settings = {}
         self._setup_dbus_loop()
 
@@ -198,8 +203,8 @@ class BluezPeripheral(PeripheralKit):
         """Quit the mainloop when done."""
         self._loop.quit()
 
-    def cleanup(self):
-        logging.info("BluezPeripheral: cleanup")
+    def _teardown_active_services(self) -> None:
+        """Tears down active GATT, Classic HID/RFCOMM, and pairing agent."""
         if self._gatt_server:
             self._gatt_server.cleanup()
             self._gatt_server = None
@@ -210,6 +215,12 @@ class BluezPeripheral(PeripheralKit):
 
         if self._agent:
             self.StopPairingAgent()
+
+        self.device_type = None
+
+    def cleanup(self):
+        logging.info("BluezPeripheral: cleanup")
+        self._teardown_active_services()
 
         if self.bluez_observer:
             self.bluez_observer.cleanup()
@@ -359,6 +370,8 @@ class BluezPeripheral(PeripheralKit):
 
         # Make sure we have a working handle to bluetoothd
         self._refresh_hci_prop_handle()
+        if self._dbus_hci_props is None:
+            return False
 
         for _ in range(MAX_DBUS_RETRY_ATTEMPTS):
             try:
@@ -396,6 +409,8 @@ class BluezPeripheral(PeripheralKit):
 
         # Make sure we have a working handle to bluetoothd
         self._refresh_hci_prop_handle()
+        if self._dbus_hci_props is None:
+            return None
 
         for _ in range(MAX_DBUS_RETRY_ATTEMPTS):
             try:
@@ -759,17 +774,16 @@ class BluezPeripheral(PeripheralKit):
         except Exception as e:
             logging.warning("AdapterPowerOff failed during ResetStack: %s", e)
 
-        # Since bluetoothd is going to be restarted, clean up the dbus proxy to
-        # enforce we create a new one once restarted.
+        # All BluezPeripheral instances (bluetooth_keyboard, bluetooth_mouse,
+        # bluetooth_gamepad, etc.) share the single physical controller, and
+        # callers like Tast always invoke bluetooth_keyboard.ResetStack()
+        # regardless of which peripheral was used. Tear down active services
+        # across every instance so open L2CAP/RFCOMM sockets do not pin hci0
+        # during HardwareReset().
         self._dbus_hci_props = None
-
-        # HardwareReset() restarts bluetoothd, which would make the current
-        # GATT server re-register its application and re-enable advertising.
-        # The stack is being reset to a pristine state and chameleond is
-        # restarted by the caller, so tear the GATT server down first.
-        if self._gatt_server:
-            self._gatt_server.cleanup()
-            self._gatt_server = None
+        for instance in list(BluezPeripheral._instances):
+            instance._dbus_hci_props = None  # pylint: disable=protected-access
+            instance._teardown_active_services()  # pylint: disable=protected-access
 
         # Perform hardware reset of the controller
         self.HardwareReset()

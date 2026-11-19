@@ -17,6 +17,7 @@ import os
 import socket
 import subprocess
 import time
+from typing import Any
 
 from blueship import manager_pb2
 from bluetooth import BluetoothSocket
@@ -53,6 +54,20 @@ MAX_CONNECT_RETRY_ATTEMPTS = 3
 ECHO_SERVICE_CHANNEL = 30
 MAP_SERVICE_CHANNEL = 10
 PBAP_SERVICE_CHANNEL = 20
+
+
+def _CloseSocket(sock: Any) -> None:
+    """Safely shuts down and closes a Bluetooth socket."""
+    if sock is None:
+        return
+    try:
+        sock.shutdown(socket.SHUT_RDWR)
+    except Exception:
+        pass
+    try:
+        sock.close()
+    except Exception:
+        pass
 
 
 class BluezServiceException(Exception):
@@ -107,6 +122,9 @@ class BluezServiceProfile(dbus.service.Object):
 
     def cleanup(self):
         logging.info("BluezServiceProfile: cleanup")
+        if self.fd > 0:
+            os.close(self.fd)
+            self.fd = -1
         self.remove_from_connection()
 
 
@@ -152,8 +170,9 @@ class EchoProfile(dbus.service.Object):
                     properties, path, fd
                 )
             )
-            self.fd.close()
-            self.fd = None
+            if self.fd:
+                self.fd.close()
+                self.fd = None
 
     @dbus.service.method(
         "org.bluez.Profile1", in_signature="", out_signature=""
@@ -166,6 +185,9 @@ class EchoProfile(dbus.service.Object):
 
     def cleanup(self):
         logging.info("EchoProfile: cleanup")
+        if self.fd:
+            self.fd.close()
+            self.fd = None
         self.remove_from_connection()
 
 
@@ -224,8 +246,9 @@ class MapProfile(dbus.service.Object):
                     properties, path, fd
                 )
             )
-            self.fd.close()
-            self.fd = None
+            if self.fd:
+                self.fd.close()
+                self.fd = None
 
     @dbus.service.method(
         "org.bluez.Profile1", in_signature="", out_signature=""
@@ -238,6 +261,9 @@ class MapProfile(dbus.service.Object):
 
     def cleanup(self):
         logging.info("MapProfile: cleanup")
+        if self.fd:
+            self.fd.close()
+            self.fd = None
         self.remove_from_connection()
 
 
@@ -296,8 +322,9 @@ class PbapProfile(dbus.service.Object):
                     properties, path, fd
                 )
             )
-            self.fd.close()
-            self.fd = None
+            if self.fd:
+                self.fd.close()
+                self.fd = None
 
     @dbus.service.method(
         "org.bluez.Profile1", in_signature="", out_signature=""
@@ -310,6 +337,9 @@ class PbapProfile(dbus.service.Object):
 
     def cleanup(self):
         logging.info("PbapProfile: cleanup")
+        if self.fd:
+            self.fd.close()
+            self.fd = None
         self.remove_from_connection()
 
 
@@ -369,14 +399,15 @@ class BluezHIDService(dbus.service.Object):
             self._profile.cleanup()
             self._profile = None
 
-        if self._scontrol:
-            self._scontrol.shutdown(socket.SHUT_RDWR)
-            self._scontrol.close()
-            self._scontrol = None
-        if self._sinterrupt:
-            self._sinterrupt.shutdown(socket.SHUT_RDWR)
-            self._sinterrupt.close()
-            self._sinterrupt = None
+        _CloseSocket(self._ccontrol)
+        self._ccontrol = None
+        _CloseSocket(self._cinterrupt)
+        self._cinterrupt = None
+        _CloseSocket(self._scontrol)
+        self._scontrol = None
+        _CloseSocket(self._sinterrupt)
+        self._sinterrupt = None
+        self._connected = False
 
         if self._scch_watch_id:
             GLib.source_remove(self._scch_watch_id)
@@ -442,24 +473,31 @@ class BluezHIDService(dbus.service.Object):
         """Called when disconnection occurs"""
 
         logging.info("Bluez service disconnected")
+        normalized_addr = remote_addr.replace("_", ":").upper()
 
         if self._ccontrol is not None and self._ccontrol.fileno() > 0:
             try:
-                peer_addr, _ = self._ccontrol.getpeername()[0]
-                if peer_addr == remote_addr:
-                    self._ccontrol.close()
-            except:
-                # getpeername throw an exception when it is not connected.
+                peer_addr, _ = self._ccontrol.getpeername()
+                if peer_addr.upper() == normalized_addr:
+                    _CloseSocket(self._ccontrol)
+                    self._ccontrol = None
+            except Exception:
+                # getpeername throws an exception when it is not connected.
                 logging.info("Control socket is already disconnected")
+                _CloseSocket(self._ccontrol)
+                self._ccontrol = None
 
         if self._cinterrupt is not None and self._cinterrupt.fileno() > 0:
             try:
-                peer_addr, _ = self._cinterrupt.getpeername()[0]
-                if peer_addr == remote_addr:
-                    self._cinterrupt.close()
-            except:
-                # getpeername throw an exception when it is not connected.
+                peer_addr, _ = self._cinterrupt.getpeername()
+                if peer_addr.upper() == normalized_addr:
+                    _CloseSocket(self._cinterrupt)
+                    self._cinterrupt = None
+            except Exception:
+                # getpeername throws an exception when it is not connected.
                 logging.info("Interrupt socket is already disconnected")
+                _CloseSocket(self._cinterrupt)
+                self._cinterrupt = None
 
         self._connected = False
         self._Listen(self._address)
@@ -577,12 +615,8 @@ class BluezHIDService(dbus.service.Object):
             GLib.source_remove(self._scch_watch_id)
         if self._sich_watch_id:
             GLib.source_remove(self._sich_watch_id)
-        if self._scontrol:
-            self._scontrol.shutdown(socket.SHUT_RDWR)
-            self._scontrol.close()
-        if self._sinterrupt:
-            self._sinterrupt.shutdown(socket.SHUT_RDWR)
-            self._sinterrupt.close()
+        _CloseSocket(self._scontrol)
+        _CloseSocket(self._sinterrupt)
 
         self._scontrol = BluetoothSocket(L2CAP)
         self._sinterrupt = BluetoothSocket(L2CAP)
@@ -616,10 +650,11 @@ class BluezHIDService(dbus.service.Object):
     def Connect(self, addr):
         """Initiates connection to remote host"""
 
-        # Close sockets in case they are still open (a closed socket has fileno -1)
-        if self._ccontrol is not None and self._ccontrol.fileno() > 0:
-            self._ccontrol.close()
-            self._cinterrupt.close()
+        # Close sockets in case they are still open.
+        _CloseSocket(self._ccontrol)
+        self._ccontrol = None
+        _CloseSocket(self._cinterrupt)
+        self._cinterrupt = None
 
         # Connect can fail if host isn't ready yet. Try a couple times to be safe
         for _ in range(0, MAX_CONNECT_RETRY_ATTEMPTS):
@@ -635,13 +670,19 @@ class BluezHIDService(dbus.service.Object):
 
             except Exception as e:
                 logging.warn("\tConnect failed, retrying: %s", str(e))
+                _CloseSocket(self._ccontrol)
+                self._ccontrol = None
+                _CloseSocket(self._cinterrupt)
+                self._cinterrupt = None
 
                 time.sleep(0.5)
 
     def OnConnect(self, fd, _):
         if fd == self._scch:
+            _CloseSocket(self._ccontrol)
             self._ccontrol, _ = self._scontrol.accept()
         elif fd == self._sich:
+            _CloseSocket(self._cinterrupt)
             self._cinterrupt, _ = self._sinterrupt.accept()
             self.Connected()
 
