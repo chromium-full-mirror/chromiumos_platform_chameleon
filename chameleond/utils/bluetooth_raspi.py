@@ -16,6 +16,7 @@ from __future__ import print_function
 import logging
 import os
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -114,6 +115,10 @@ RAW_REPORT_FORMAT_GAMEPAD_DESCRIPTOR = 4
 
 # Time to wait about the pairing agent to exit.
 AGENT_EXIT_TIMEOUT_SECS = 5
+# Block up to init.d/chameleond's maximum RETRY_PERIOD (10s) for SIGTERM so
+# ResetStack(restart_chameleond=True) drops the XMLRPC connection with EOF as
+# Tast expects instead of returning HTTP 200 before the old daemon stops.
+_CHAMELEOND_STOP_WAIT_SECONDS = 10
 
 GAMEPAD_BUTTONS_MAP = {
     PeripheralKit.GAMEPAD_BUTTON_START: RAW_HID_GAMEPAD_BTN_START,
@@ -256,6 +261,7 @@ class BluezPeripheral(PeripheralKit):
         self._agent = threading.Thread(
             target=pairing_agent.SetupAgent,
             args=(capability, agent_registered_event),
+            daemon=True,
         )
         self._agent.start()
         agent_registered_event.wait()
@@ -276,7 +282,7 @@ class BluezPeripheral(PeripheralKit):
         dbus.mainloop.glib.threads_init()
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         self._loop = GLib.MainLoop()
-        self._thread = threading.Thread(target=self._loop.run)
+        self._thread = threading.Thread(target=self._loop.run, daemon=True)
         self._thread.start()
 
     def _kill_bluetoothd(self):
@@ -755,13 +761,6 @@ class BluezPeripheral(PeripheralKit):
         os.system("sudo killall pulseaudio")
         os.system("sudo service ofono stop")
 
-        reset_cmds = [
-            "systemctl daemon-reload",
-        ]
-
-        if restart_chameleond:
-            reset_cmds.append("service chameleond restart")
-
         # If we know what device type is used next, we can specify which plugins
         # bluetoothd should be loaded with before the service is restarted
         if next_device_type:
@@ -788,8 +787,20 @@ class BluezPeripheral(PeripheralKit):
         # Perform hardware reset of the controller
         self.HardwareReset()
 
-        # Restart chameleon and bluetooth service
-        os.system(" && ".join(reset_cmds))
+        # Reload systemd units and optionally restart chameleond.
+        os.system("systemctl daemon-reload")
+        if restart_chameleond:
+            subprocess.Popen(  # pylint: disable=consider-using-with
+                ["/usr/sbin/service", "chameleond", "restart"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+                close_fds=True,
+            )
+            # Block without returning an HTTP response until SIGTERM stops this
+            # daemon, so callers like Tast observe the expected EOF/timeout.
+            time.sleep(_CHAMELEOND_STOP_WAIT_SECONDS)
 
     # Power cycle the device
     def PowerCycle(self):

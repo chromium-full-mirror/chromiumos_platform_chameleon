@@ -6,9 +6,9 @@
 """Chameleon Server."""
 
 import logging
+import os
 import signal
 import socket
-import sys
 
 
 try:
@@ -94,26 +94,33 @@ class ChameleonServer(object):
         class SimpleXMLRPCServerV6(SimpleXMLRPCServer):
             address_family = socket.AF_INET6
 
-        server = SimpleXMLRPCServerV6(
-            (host, port),
-            allow_none=True,
-            requestHandler=ChameleonXMLRPCRequestHandler,
-            logRequests=True,
-        )
-        server.register_introspection_functions()
-        # Setting allow_dotted_names=True allows a client to access the object
-        # members of self._driver. This is useful to group methods into
-        # different objects, e.g., audio, video, bluetooth hid, etc., in addition
-        # to some generic methods.
-        server.register_instance(self._driver, allow_dotted_names=True)
-
-        signal_handler = lambda signum, frame: sys.exit(0)
-        signal.signal(signal.SIGTERM, signal_handler)
+        def signal_handler(signum: int, frame: object) -> None:
+            del signum, frame
+            try:
+                caching.terminate()
+            finally:
+                os._exit(0)  # pylint: disable=protected-access
 
         try:
-            # Launch the caching server on the next port, serving cached files.
+            # Launch the caching server before binding the XMLRPC socket or
+            # installing signal_handler so the forked child neither inherits the
+            # port 9992 listen FD nor runs parent-only caching.terminate().
             logging.info("Start the caching server process.")
             caching.start()
+            signal.signal(signal.SIGTERM, signal_handler)
+
+            server = SimpleXMLRPCServerV6(
+                (host, port),
+                allow_none=True,
+                requestHandler=ChameleonXMLRPCRequestHandler,
+                logRequests=True,
+            )
+            server.register_introspection_functions()
+            # Setting allow_dotted_names=True allows a client to access the
+            # object members of self._driver. This is useful to group methods
+            # into different objects, e.g., audio, video, bluetooth hid, etc.,
+            # in addition to some generic methods.
+            server.register_instance(self._driver, allow_dotted_names=True)
 
             # Launch the XMLRPC server to serve Chameleond APIs.
             logging.info("Listening on %s port %d...", host, port)

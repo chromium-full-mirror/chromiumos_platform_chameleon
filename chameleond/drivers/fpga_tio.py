@@ -58,6 +58,12 @@ if os.environ.get("PLATFORM") == "RASPI":
     from chameleond.devices import raspi_bluetooth_flow
 
 
+# Block up to init.d/chameleond's maximum RETRY_PERIOD (10s) for SIGTERM so
+# restart_chameleond drops the XMLRPC connection instead of returning HTTP 200
+# while the old daemon is still alive.
+_CHAMELEOND_STOP_WAIT_SECONDS = 10
+
+
 class DriverError(Exception):
     """Exception raised when any error on FPGA driver."""
 
@@ -393,10 +399,28 @@ class ChameleondDriver(ChameleondInterface):
         logging.info("The chameleon board is going to reboot.")
         system_tools.SystemTools.Call("reboot")
 
-    def restart_chameleond(self):
-        """Restart chamelon service."""
+    def restart_chameleond(self) -> None:
+        """Restarts chameleond service."""
         self._ready = False
-        os.system("service chameleond restart")
+        if self._platform == "RASPI":
+            try:
+                self.cleanup()
+            except Exception as e:
+                logging.warning(
+                    "Cleanup before restart_chameleond failed: %s", e
+                )
+        subprocess.Popen(  # pylint: disable=consider-using-with
+            ["/usr/sbin/service", "chameleond", "restart"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            close_fds=True,
+        )
+        # Block without returning an HTTP response until SIGTERM stops this
+        # daemon, so XMLRPC clients see the expected connection close and
+        # reconnect to the newly started chameleond.
+        time.sleep(_CHAMELEOND_STOP_WAIT_SECONDS)
 
     def dump_bt_peer_info(self):
         """Dump the kernel, BlueZ, chameleon bundle info"""

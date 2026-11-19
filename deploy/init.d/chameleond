@@ -66,10 +66,10 @@ do_start () {
 
 do_stop () {
     if is_already_running; then
-        start-stop-daemon --stop --pidfile "${PIDFILE}" --retry ${RETRY_PERIOD}
+        start-stop-daemon --stop --pidfile "${PIDFILE}" \
+            --retry "${RETRY_PERIOD}" --remove-pidfile
         # Sometimes a hanging thread is left. Kill all instances of this script
-        killall -q ${DAEMON}
-        echo "kill ${DAEMON}, rc = $?"
+        pkill -9 -f '[r]un_chameleond' 2>/dev/null || true
         rm -f "${PIDFILE}"
     else
         echo "${DAEMON_NAME} is already stopped"
