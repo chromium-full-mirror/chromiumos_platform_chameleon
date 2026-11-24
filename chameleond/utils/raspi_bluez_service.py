@@ -114,7 +114,10 @@ class BluezServiceProfile(dbus.service.Object):
         print("RequestDisconnection(%s)" % (path))
 
         if self.fd > 0:
-            os.close(self.fd)
+            try:
+                os.close(self.fd)
+            except OSError:
+                pass
             self.fd = -1
 
     def __init__(self, bus, path):
@@ -123,7 +126,10 @@ class BluezServiceProfile(dbus.service.Object):
     def cleanup(self):
         logging.info("BluezServiceProfile: cleanup")
         if self.fd > 0:
-            os.close(self.fd)
+            try:
+                os.close(self.fd)
+            except OSError:
+                pass
             self.fd = -1
         self.remove_from_connection()
 
@@ -399,6 +405,13 @@ class BluezHIDService(dbus.service.Object):
             self._profile.cleanup()
             self._profile = None
 
+        if self._scch_watch_id:
+            GLib.source_remove(self._scch_watch_id)
+            self._scch_watch_id = None
+        if self._sich_watch_id:
+            GLib.source_remove(self._sich_watch_id)
+            self._sich_watch_id = None
+
         _CloseSocket(self._ccontrol)
         self._ccontrol = None
         _CloseSocket(self._cinterrupt)
@@ -408,13 +421,6 @@ class BluezHIDService(dbus.service.Object):
         _CloseSocket(self._sinterrupt)
         self._sinterrupt = None
         self._connected = False
-
-        if self._scch_watch_id:
-            GLib.source_remove(self._scch_watch_id)
-            self._scch_watch_id = None
-        if self._sich_watch_id:
-            GLib.source_remove(self._sich_watch_id)
-            self._sich_watch_id = None
 
         if self.property_changed_match:
             self.property_changed_match.remove()
